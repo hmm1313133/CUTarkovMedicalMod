@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <!-- Set this to the game's main folder -->
+    <BaseGamePath>O:/SteamLibrary/steamapps/common/Casualties Unknown Demo</BaseGamePath>
+    <BepInExDir>$(BaseGamePath)/BepInEx</BepInExDir>
+    <GameAssembliesDir>$(BaseGamePath)/CasualtiesUnknown_Data/Managed</GameAssembliesDir>
+    <PluginDirName>CUTarkovMedicalMod</PluginDirName>
+  </PropertyGroup>
+</Project>
+

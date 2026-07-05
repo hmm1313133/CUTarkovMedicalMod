@@ -1,0 +1,20 @@
+# Ignore everything by default; only the mod project itself is tracked.
+# 用白名单方式确保只推送 CUTarkovMedicalMod 本身的文件。
+
+*
+
+# 项目解决方案与说明
+!.gitignore
+!README.md
+!CasualtiesUnknownTarkovMedicalMod.sln
+
+# 构建路径配置（csproj 引用，构建/部署所需）
+!vars.targets
+
+# 模组源码与资产
+!CUTarkovMedicalMod/
+!CUTarkovMedicalMod/**
+
+# 仍然排除构建产物
+CUTarkovMedicalMod/bin/
+CUTarkovMedicalMod/obj/

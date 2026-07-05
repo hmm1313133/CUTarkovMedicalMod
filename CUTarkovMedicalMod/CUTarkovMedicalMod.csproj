@@ -1,0 +1,85 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>CUTarkovMedicalMod</AssemblyName>
+    <RootNamespace>CUTarkovMedicalMod</RootNamespace>
+    <Product>Casualties: Unknown - Tarkov-Style Medical Mod</Product>
+    <Version>0.1.0</Version>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>$(NoWarn);0649</NoWarn>
+    <Platforms>AnyCPU;x64;x86</Platforms>
+    <RestoreAdditionalProjectSources>
+      https://api.nuget.org/v3/index.json;
+      https://nuget.bepinex.dev/v3/index.json;
+      https://nuget.samboy.dev/v3/index.json
+    </RestoreAdditionalProjectSources>
+  </PropertyGroup>
+
+  <Import Project="../vars.targets" />
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.Core" Version="5.*" />
+    <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
+    <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.2" PrivateAssets="all" />
+    <PackageReference Include="UnityEngine.Modules" Version="2022.3.18" IncludeAssets="compile" />
+
+    <Reference Include="Assembly-CSharp" Publicize="true">
+      <HintPath>$(GameAssembliesDir)/Assembly-CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(GameAssembliesDir)/UnityEngine.UI.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>$(GameAssembliesDir)/Unity.TextMeshPro.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Framework\Assets\etg.webp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Framework\Assets\etg.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Framework\Assets\zagustin.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Framework\Assets\Zagustin.webp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Framework\Assets\morphine.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Framework\Assets\Morphine.webp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Folder Include="Framework\Assets\" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <RequiredFilesToCopy>$(AssemblyName).dll</RequiredFilesToCopy>
+  </PropertyGroup>
+
+  <Target Name="CopyOutputDllsToPluginsFolder" AfterTargets="AfterBuild">
+    <MakeDir Directories="$(BepInExDir)/plugins/$(PluginDirName)" />
+    <MakeDir Directories="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" />
+    <CombinePath BasePath="$(OutDir)" Paths="$(RequiredFilesToCopy)">
+      <Output TaskParameter="CombinedPaths" ItemName="RequiredFilesToCopy_Combined" />
+    </CombinePath>
+    <Copy SourceFiles="@(RequiredFilesToCopy_Combined)" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)" />
+    <Copy SourceFiles="$(OutDir)Framework\Assets\etg.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\etg.webp')" />
+    <Copy SourceFiles="$(OutDir)Framework\Assets\etg.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\etg.png')" />
+    <Copy SourceFiles="$(OutDir)Framework\Assets\zagustin.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\zagustin.png')" />
+    <Copy SourceFiles="$(OutDir)Framework\Assets\Zagustin.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\Zagustin.webp')" />
+    <Copy SourceFiles="$(OutDir)Framework\Assets\morphine.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\morphine.png')" />
+    <Copy SourceFiles="$(OutDir)Framework\Assets\Morphine.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\Morphine.webp')" />
+  </Target>
+</Project>
+
