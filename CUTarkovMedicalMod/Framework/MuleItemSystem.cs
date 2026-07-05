@@ -330,8 +330,9 @@ public sealed class MuleEffectController : MonoBehaviour
     private Body? _body;
     private float _remaining;
     private float _delayTimer;
+    private float _drainAccumulator;
     private bool _active;
-    private object? _sideEffectToken;
+    private int _lastLimbIndex = -1;
 
     /// <summary>
     /// 当前活跃的 M.U.L.E. 控制器实例（静态），供 Harmony 补丁读取。
@@ -356,7 +357,9 @@ public sealed class MuleEffectController : MonoBehaviour
     {
         _delayTimer = ActivationDelay;
         _remaining = Duration;
+        _drainAccumulator = 0f;
         _active = true;
+        _lastLimbIndex = -1;
         ActiveInstance = this;
         enabled = true;
 
@@ -375,7 +378,6 @@ public sealed class MuleEffectController : MonoBehaviour
     {
         if (_body == null || !_active)
         {
-            CleanupSideEffect();
             StimBuffIndicator.HideBuff(MuleItemSystem.ItemKey);
             enabled = false;
             return;
@@ -393,20 +395,20 @@ public sealed class MuleEffectController : MonoBehaviour
                 ActivationDelay + Duration,
                 new Color(0.95f, 0.75f, 0.2f));
             if (_delayTimer <= 0f)
-            {
                 Plugin.Log.LogInfo($"[M.U.L.E.] Effect active: +{EncumberanceBonusMult*100}% encumberance, -{HealthDrainPerSecond}/s random limb health for {Duration}s");
-                // 延迟期结束，注册副作用到统一管理器
-                if (_sideEffectToken == null)
-                {
-                    _sideEffectToken = StimSideEffectManager.GetOrCreate(_body)
-                        .Register(MuleItemSystem.ItemKey, 0f, 0f, HealthDrainPerSecond);
-                }
-            }
             return;
         }
 
         // 效果期
         _remaining -= Time.deltaTime;
+
+        // 每秒随机选一个部位扣除健康（生命恢复减少）
+        _drainAccumulator += Time.deltaTime;
+        while (_drainAccumulator >= 1f && _remaining > 0f)
+        {
+            _drainAccumulator -= 1f;
+            DrainRandomLimbHealth();
+        }
 
         StimBuffIndicator.ShowBuff(
             MuleItemSystem.ItemKey,
@@ -418,7 +420,6 @@ public sealed class MuleEffectController : MonoBehaviour
 
         if (_remaining <= 0f)
         {
-            CleanupSideEffect();
             _active = false;
             ActiveInstance = null;
             StimBuffIndicator.HideBuff(MuleItemSystem.ItemKey);
@@ -427,28 +428,56 @@ public sealed class MuleEffectController : MonoBehaviour
         }
     }
 
-    private void CleanupSideEffect()
+    /// <summary>
+    /// 每秒随机选择一个非断肢、非要害部位，扣除 muscleHealth 和 skinHealth。
+    /// 避免连续选到同一部位，使损伤分散到全身。
+    /// </summary>
+    private void DrainRandomLimbHealth()
     {
-        if (_sideEffectToken != null && _body != null)
+        if (_body == null || _body.limbs == null || _body.limbs.Length == 0) return;
+
+        // 筛选可用部位：未断肢、非要害（避免直接致死）
+        var candidates = new List<int>();
+        for (var i = 0; i < _body.limbs.Length; i++)
         {
-            var manager = _body.GetComponent<StimSideEffectManager>();
-            manager?.Unregister(_sideEffectToken);
-            _sideEffectToken = null;
+            var limb = _body.limbs[i];
+            if (limb == null || limb.dismembered) continue;
+            if (limb.isVital || limb.isHead) continue; // 跳过头部和要害
+            candidates.Add(i);
         }
+
+        if (candidates.Count == 0) return;
+
+        // 随机选一个，尽量避免与上次相同（若有多个候选）
+        int chosenIndex;
+        if (candidates.Count > 1 && _lastLimbIndex >= 0)
+        {
+            do
+            {
+                chosenIndex = candidates[UnityEngine.Random.Range(0, candidates.Count)];
+            } while (chosenIndex == _lastLimbIndex);
+        }
+        else
+        {
+            chosenIndex = candidates[UnityEngine.Random.Range(0, candidates.Count)];
+        }
+        _lastLimbIndex = chosenIndex;
+
+        var target = _body.limbs[chosenIndex];
+        target.muscleHealth = Mathf.Max(0f, target.muscleHealth - HealthDrainPerSecond);
+        target.skinHealth = Mathf.Max(0f, target.skinHealth - HealthDrainPerSecond);
     }
 
     private void OnDisable()
     {
         if (ActiveInstance == this)
             ActiveInstance = null;
-        CleanupSideEffect();
     }
 
     private void OnDestroy()
     {
         if (ActiveInstance == this)
             ActiveInstance = null;
-        CleanupSideEffect();
     }
 
     private static Sprite? TryGetMuleIcon()

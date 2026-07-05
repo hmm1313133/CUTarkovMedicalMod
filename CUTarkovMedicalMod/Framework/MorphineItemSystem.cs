@@ -141,11 +141,8 @@ public static class MorphineItemSystem
         MorphineEffectController.Attach(body).ActivateOrRefresh();
 
         // 立即扣除饱食度 10、水分 15（一次性副作用，塔科夫原版数值）
-        // 用统一管理器直接改字段，避免 Eat/Drink 的 pain/sickness/eatTime 副作用
-        StimSideEffectManager.ApplyInstant(body,
-            MorphineEffectController.HungerCostInstant,
-            MorphineEffectController.ThirstCostInstant,
-            0f);
+        body.Eat(-MorphineEffectController.HungerCostInstant, 0f);
+        body.Drink(-MorphineEffectController.ThirstCostInstant);
 
         // 消耗物品
         try { body.DropItem(item); } catch { }

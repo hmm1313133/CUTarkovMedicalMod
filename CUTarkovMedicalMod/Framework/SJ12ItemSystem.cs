@@ -440,13 +440,13 @@ public sealed class SJ12EffectController : MonoBehaviour
 
     private void UpdateBuff()
     {
-        // 每秒恢复能量与水分（直接改字段，避免 Eat/Drink 副作用）
+        // 每秒恢复能量与水分（原生 Eat/Drink 方法）
         _tickAccumulator += Time.deltaTime;
         while (_tickAccumulator >= 1f)
         {
             _tickAccumulator -= 1f;
-            _body!.hunger = Mathf.Clamp(_body.hunger + EnergyRestorePerSecond, -50f, 125f);
-            _body.thirst = Mathf.Clamp(_body.thirst + WaterRestorePerSecond, -50f, 250f);
+            _body!.Eat(EnergyRestorePerSecond, 0f);
+            _body.Drink(WaterRestorePerSecond);
         }
 
         StimBuffIndicator.ShowBuff(
