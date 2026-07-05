@@ -313,6 +313,8 @@ public static class EtgStimRegistryPatch
         EtgCItemSystem.EnsureRegisteredInItemTable();
         ZagustinItemSystem.EnsureRegisteredInItemTable();
         MorphineItemSystem.EnsureRegisteredInItemTable();
+        SJ12ItemSystem.EnsureRegisteredInItemTable();
+        MuleItemSystem.EnsureRegisteredInItemTable();
     }
 }
 
@@ -341,6 +343,7 @@ public sealed class EtgStimEffectController : MonoBehaviour
     private Body? _body;
     private float _remaining;
     private float _accumulator;
+    private object? _sideEffectToken;
 
     public static EtgStimEffectController Attach(Body body)
     {
@@ -356,6 +359,13 @@ public sealed class EtgStimEffectController : MonoBehaviour
         _remaining = DurationSeconds;
         _accumulator = 0f;
         enabled = true;
+
+        // 注册饱食/水分消耗到统一副作用管理器
+        if (_sideEffectToken == null && _body != null)
+        {
+            _sideEffectToken = StimSideEffectManager.GetOrCreate(_body)
+                .Register(EtgCItemSystem.EtgItemKey, HungerDrainPerSecond, ThirstDrainPerSecond, 0f);
+        }
 
         // 显示 buff 图标
         StimBuffIndicator.ShowBuff(
@@ -373,6 +383,7 @@ public sealed class EtgStimEffectController : MonoBehaviour
     {
         if (_body == null || _remaining <= 0f)
         {
+            CleanupSideEffect();
             if (_body != null) _body.miscShakeIntensity = 0f;
             StimBuffIndicator.HideBuff(EtgCItemSystem.EtgItemKey);
             enabled = false;
@@ -401,11 +412,25 @@ public sealed class EtgStimEffectController : MonoBehaviour
 
         if (_remaining <= 0f)
         {
+            CleanupSideEffect();
             _body.miscShakeIntensity = 0f;
             StimBuffIndicator.HideBuff(EtgCItemSystem.EtgItemKey);
             enabled = false;
         }
     }
+
+    private void CleanupSideEffect()
+    {
+        if (_sideEffectToken != null && _body != null)
+        {
+            var manager = _body.GetComponent<StimSideEffectManager>();
+            manager?.Unregister(_sideEffectToken);
+            _sideEffectToken = null;
+        }
+    }
+
+    private void OnDisable() => CleanupSideEffect();
+    private void OnDestroy() => CleanupSideEffect();
 
     private static Sprite? TryGetEtgIcon()
     {
@@ -426,9 +451,9 @@ public sealed class EtgStimEffectController : MonoBehaviour
                 HealLimb(limb, HealPerSecondPerLimb);
             }
         }
-        _body.Eat(-HungerDrainPerSecond, 0f);
-        _body.Drink(-ThirstDrainPerSecond);
+        // 饱食/水分消耗由 StimSideEffectManager 统一处理
     }
+
 
     private static void HealLimb(Limb limb, float amount)
     {

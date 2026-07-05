@@ -57,6 +57,10 @@ public static class StimBuffIndicator
             InjectIcon(icons, ZagustinItemSystem.ItemKey, "zagustin");
             // 注入 Morphine 图标
             InjectIcon(icons, MorphineItemSystem.ItemKey, "morphine");
+            // 注入 SJ12 图标
+            InjectIcon(icons, SJ12ItemSystem.ItemKey, "sj12");
+            // 注入 M.U.L.E. 图标
+            InjectIcon(icons, MuleItemSystem.ItemKey, "mule");
 
             _iconsInjected = true;
         }
@@ -84,6 +88,18 @@ public static class StimBuffIndicator
         else if (key == MorphineItemSystem.ItemKey)
         {
             var method = typeof(MorphineItemSystem).GetMethod("TryLoadIcon",
+                BindingFlags.Static | BindingFlags.NonPublic);
+            sprite = method?.Invoke(null, null) as Sprite;
+        }
+        else if (key == SJ12ItemSystem.ItemKey)
+        {
+            var method = typeof(SJ12ItemSystem).GetMethod("TryLoadIcon",
+                BindingFlags.Static | BindingFlags.NonPublic);
+            sprite = method?.Invoke(null, null) as Sprite;
+        }
+        else if (key == MuleItemSystem.ItemKey)
+        {
+            var method = typeof(MuleItemSystem).GetMethod("TryLoadIcon",
                 BindingFlags.Static | BindingFlags.NonPublic);
             sprite = method?.Invoke(null, null) as Sprite;
         }

@@ -60,6 +60,18 @@
     <Content Include="Framework\Assets\Morphine.webp">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Framework\Assets\sj12.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Framework\Assets\sj12.webp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Framework\Assets\mule.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Framework\Assets\M.U.L.E.webp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Folder Include="Framework\Assets\" />
   </ItemGroup>
 
@@ -80,6 +92,10 @@
     <Copy SourceFiles="$(OutDir)Framework\Assets\Zagustin.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\Zagustin.webp')" />
     <Copy SourceFiles="$(OutDir)Framework\Assets\morphine.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\morphine.png')" />
     <Copy SourceFiles="$(OutDir)Framework\Assets\Morphine.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\Morphine.webp')" />
+    <Copy SourceFiles="$(OutDir)Framework\Assets\sj12.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\sj12.png')" />
+    <Copy SourceFiles="$(OutDir)Framework\Assets\sj12.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\sj12.webp')" />
+    <Copy SourceFiles="$(OutDir)Framework\Assets\mule.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\mule.png')" />
+    <Copy SourceFiles="$(OutDir)Framework\Assets\M.U.L.E.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\M.U.L.E.webp')" />
   </Target>
 </Project>
 

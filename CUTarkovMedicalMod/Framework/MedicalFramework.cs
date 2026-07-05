@@ -125,6 +125,8 @@ public static class MedicalCatalog
         new MedicalItemDefinition("etg_c", "eTG-change再生兴奋剂注射器【eTG-c】", MedicalItemCategory.Stim, 6, 1, 1, "syringe"),
         new MedicalItemDefinition("zagustin", "Zagustin止血剂【紫针】", MedicalItemCategory.Hemostatic, 8, 1, 1, "syringe"),
         new MedicalItemDefinition("cu_morphine", "吗啡注射器【Morphine】", MedicalItemCategory.Painkiller, 10, 1, 1, "syringe"),
+        new MedicalItemDefinition("sj12", "SJ12 TGLabs战斗兴奋剂注射器【SJ12】", MedicalItemCategory.Stim, 7, 1, 1, "syringe"),
+        new MedicalItemDefinition("mule", "M.U.L.E. 兴奋剂注射器【M.U.L.E】", MedicalItemCategory.Stim, 6, 1, 1, "syringe"),
         new MedicalItemDefinition("adhesivebandage", "Adhesive Bandage", MedicalItemCategory.Bandage, 28, 1, 2, "adhesivebandage"),
         new MedicalItemDefinition("bandage", "Bandage", MedicalItemCategory.Bandage, 35, 1, 2, "bandage"),
         new MedicalItemDefinition("sterilizedbandage", "Sterilized Bandage", MedicalItemCategory.Bandage, 24, 1, 2, "sterilizedbandage"),

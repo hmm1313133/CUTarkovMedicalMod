@@ -338,6 +338,7 @@ public sealed class ZagustinEffectController : MonoBehaviour
     private Body? _body;
     private float _remaining;
     private float _accumulator;
+    private object? _sideEffectToken;
 
     public static ZagustinEffectController Attach(Body body)
     {
@@ -353,6 +354,13 @@ public sealed class ZagustinEffectController : MonoBehaviour
         _remaining = DurationSeconds;
         _accumulator = 0f;
         enabled = true;
+
+        // 注册饱食/水分消耗到统一副作用管理器
+        if (_sideEffectToken == null && _body != null)
+        {
+            _sideEffectToken = StimSideEffectManager.GetOrCreate(_body)
+                .Register(ZagustinItemSystem.ItemKey, HungerDrainPerSecond, ThirstDrainPerSecond, 0f);
+        }
 
         // 显示 buff 图标
         StimBuffIndicator.ShowBuff(
@@ -370,6 +378,7 @@ public sealed class ZagustinEffectController : MonoBehaviour
     {
         if (_body == null || _remaining <= 0f)
         {
+            CleanupSideEffect();
             if (_body != null) _body.miscShakeIntensity = 0f;
             StimBuffIndicator.HideBuff(ZagustinItemSystem.ItemKey);
             enabled = false;
@@ -409,11 +418,25 @@ public sealed class ZagustinEffectController : MonoBehaviour
 
         if (_remaining <= 0f)
         {
+            CleanupSideEffect();
             _body.miscShakeIntensity = 0f;
             StimBuffIndicator.HideBuff(ZagustinItemSystem.ItemKey);
             enabled = false;
         }
     }
+
+    private void CleanupSideEffect()
+    {
+        if (_sideEffectToken != null && _body != null)
+        {
+            var manager = _body.GetComponent<StimSideEffectManager>();
+            manager?.Unregister(_sideEffectToken);
+            _sideEffectToken = null;
+        }
+    }
+
+    private void OnDisable() => CleanupSideEffect();
+    private void OnDestroy() => CleanupSideEffect();
 
     private static Sprite? TryGetZagustinIcon()
     {
@@ -424,14 +447,10 @@ public sealed class ZagustinEffectController : MonoBehaviour
 
     private void TickEffect()
     {
-        // 代谢降低：饱食度消耗加快
-        _body!.Eat(-HungerDrainPerSecond, 0f);
-
-        // 水分流失
-        _body.Drink(-ThirstDrainPerSecond);
+        // 饱食/水分消耗由 StimSideEffectManager 统一处理
 
         // 活力提升：加速肢体愈合
-        _body.hungerLimbHealCurrent = Mathf.Max(_body.hungerLimbHealCurrent, HealBoostPerSecond);
+        _body!.hungerLimbHealCurrent = Mathf.Max(_body.hungerLimbHealCurrent, HealBoostPerSecond);
     }
 }
 

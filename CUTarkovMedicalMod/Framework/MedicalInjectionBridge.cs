@@ -70,6 +70,18 @@ public sealed class DefaultMedicalItemGrantSink : IMedicalItemGrantSink
                 MorphineItemSystem.ItemKey, MorphineItemSystem.DisplayName,
                 1, "GuaranteedMorphine", MorphineItemSystem.BaseGameItemId));
         }
+        if (!mutablePlan.Any(SJ12ItemSystem.IsSJ12Request))
+        {
+            mutablePlan.Insert(3, new MedicalGrantRequest(
+                SJ12ItemSystem.ItemKey, SJ12ItemSystem.DisplayName,
+                1, "GuaranteedSJ12", SJ12ItemSystem.BaseGameItemId));
+        }
+        if (!mutablePlan.Any(MuleItemSystem.IsMuleRequest))
+        {
+            mutablePlan.Insert(4, new MedicalGrantRequest(
+                MuleItemSystem.ItemKey, MuleItemSystem.DisplayName,
+                1, "GuaranteedMule", MuleItemSystem.BaseGameItemId));
+        }
 
         // 针剂装入 medkit 发放，其它物品直接发放，避免开局库存被针剂挤占
         var injectorRequests = new List<MedicalGrantRequest>();
@@ -104,7 +116,9 @@ public sealed class DefaultMedicalItemGrantSink : IMedicalItemGrantSink
     private static bool IsInjectorRequest(MedicalGrantRequest request)
         => EtgCItemSystem.IsEtgRequest(request)
            || ZagustinItemSystem.IsZagustinRequest(request)
-           || MorphineItemSystem.IsMorphineRequest(request);
+           || MorphineItemSystem.IsMorphineRequest(request)
+           || SJ12ItemSystem.IsSJ12Request(request)
+           || MuleItemSystem.IsMuleRequest(request);
 
     /// <summary>
     /// 发放一个 medkit，并将所有针剂装入其中（通过原生 Container.LoadItem）。
@@ -288,6 +302,10 @@ public sealed class DefaultMedicalItemGrantSink : IMedicalItemGrantSink
             ZagustinItemSystem.ConfigureSpawnedItem(item, request);
         else if (MorphineItemSystem.IsMorphineRequest(request))
             MorphineItemSystem.ConfigureSpawnedItem(item, request);
+        else if (SJ12ItemSystem.IsSJ12Request(request))
+            SJ12ItemSystem.ConfigureSpawnedItem(item, request);
+        else if (MuleItemSystem.IsMuleRequest(request))
+            MuleItemSystem.ConfigureSpawnedItem(item, request);
     }
 
     public bool TryInjectWorldLoot(object worldGenerationInstance, IReadOnlyList<MedicalGrantRequest> plan, ManualLogSource log)
@@ -347,6 +365,9 @@ public sealed class DefaultMedicalItemGrantSink : IMedicalItemGrantSink
     {
         var item = CreateMedicalItem(request);
         if (item == null) return null;
+
+        // 配置自定义针剂（修改 id/耐久/图标/marker），否则世界掉落物会是原生 syringe
+        ConfigureCustomItem(item, request);
 
         var root = new GameObject($"MedicalWorldPrefab_{request.SpawnItemId}");
         item.transform.SetParent(root.transform, false);
