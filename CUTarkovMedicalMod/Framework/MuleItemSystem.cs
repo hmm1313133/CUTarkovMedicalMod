@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Reflection.Emit;
 using BepInEx;
 using HarmonyLib;
 using UnityEngine;
@@ -311,9 +312,10 @@ public sealed class MuleItemMarker : MonoBehaviour
 /// 增益与减益同时生效，持续 900 秒。
 ///
 /// 增益（+50% 负重上限）：
-/// Body.maxEncumberance 在 HandlePeriodicChecks 中每 0.5 秒被重算覆盖，
-/// 故用 Harmony Postfix 拦截 HandlePeriodicChecks，在重算后追加 50% 加成。
-/// 这会使 overEncumberance 降低，从而减轻 encumbered moodle 和移动惩罚。
+/// Body.maxEncumberance 在 HandlePeriodicChecks 中每 0.5 秒被重算覆盖。
+/// 通过 Harmony Transpiler 直接修改该赋值指令，在写入前乘上 1.5 倍加成，
+/// 确保加成只在重算时应用一次，且 overEncumberance 基于加成后的上限计算，
+/// 从而正确减轻 encumbered moodle 和移动惩罚。
 ///
 /// 减益（生命恢复 -0.1/s）：
 /// 每秒随机选择一个非断肢、非要害部位，扣除 muscleHealth 和 skinHealth 各 0.1。
@@ -489,23 +491,48 @@ public sealed class MuleEffectController : MonoBehaviour
 }
 
 /// <summary>
-/// 拦截 Body.HandlePeriodicChecks（Postfix），在游戏重算 maxEncumberance 后追加 M.U.L.E. 加成。
-/// 这样加成只在每次重算后应用一次，不会每帧累积膨胀。
+/// 用 Harmony Transpiler 直接修改 Body.HandlePeriodicChecks 中 maxEncumberance 的赋值。
+///
+/// 原 Postfix 的问题：
+/// - HandlePeriodicChecks 每帧在 Body.Update 中被调用；
+/// - 但 maxEncumberance 只在 halfSecondCheckTime &gt; 0.5f 的分支里每 0.5 秒重算一次；
+/// - Postfix 每帧都追加 50%，导致非重算帧在已加成值上再次累乘，
+///   maxEncumberance 在 0.5 秒周期内指数级膨胀，表现为负重上限“乱跳”。
+/// - 同时 overEncumberance 在方法内部、Postfix 之前已计算，基于未加成上限，
+///   所以移动惩罚等并未真正降低。
+///
+/// Transpiler 修复：在 stfld Body.maxEncumberance 之前插入 call 到 GetEncumberanceMultiplier()
+/// 并 mul，使写入的值 = 原计算值 × 倍数。这样：
+/// - 加成只在 0.5 秒重算时应用一次；
+/// - overEncumberance 随后基于加成后的上限计算，移动惩罚正确降低；
+/// - 效果结束后下一周期自动恢复原始上限。
 /// </summary>
 [HarmonyPatch(typeof(Body), "HandlePeriodicChecks")]
 public static class MuleEncumberancePatch
 {
-    [HarmonyPostfix]
-    public static void Postfix(Body __instance)
+    /// <summary>
+    /// 返回当前 M.U.L.E. 负重加成倍数：生效时为 1.5，否则为 1。
+    /// </summary>
+    public static float GetEncumberanceMultiplier()
     {
         var controller = MuleEffectController.ActiveInstance;
-        if (controller == null) return;
+        if (controller == null) return 1f;
+        return controller.IsEncumberanceActive ? 1f + MuleEffectController.EncumberanceBonusMult : 1f;
+    }
 
-        // 仅在效果激活且延迟期已过时追加
-        if (!controller.IsEncumberanceActive) return;
+    [HarmonyTranspiler]
+    public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+    {
+        var multiplierMethod = AccessTools.Method(typeof(MuleEncumberancePatch), nameof(GetEncumberanceMultiplier));
+        var maxEncumberanceField = AccessTools.Field(typeof(Body), nameof(Body.maxEncumberance));
 
-        // 在游戏重算的 maxEncumberance 基础上追加 50%
-        __instance.maxEncumberance += __instance.maxEncumberance * MuleEffectController.EncumberanceBonusMult;
+        return new CodeMatcher(instructions)
+            .MatchForward(false, new CodeMatch(OpCodes.Stfld, maxEncumberanceField))
+            .ThrowIfInvalid("Could not find maxEncumberance assignment in Body.HandlePeriodicChecks")
+            .InsertAndAdvance(
+                new CodeInstruction(OpCodes.Call, multiplierMethod),
+                new CodeInstruction(OpCodes.Mul))
+            .InstructionEnumeration();
     }
 }
 
