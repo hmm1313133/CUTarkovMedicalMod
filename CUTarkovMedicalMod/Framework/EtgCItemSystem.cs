@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -21,9 +21,9 @@ public static class EtgCItemSystem
 
     public const string EtgDisplayName = "eTG-change再生兴奋剂注射器【eTG-c】";
     public const string EtgDescription =
-        "强大的再生过程促进剂。用于伤员受伤后或重伤员运输过程中的快速恢复，只允许专业医师和护理人员使用。有强副作用。\n\n" +
-        "<color=#00ff66>效果：每秒恢复每个部位6点生命，持续40秒，快速愈合伤口。</color>\n" +
-        "<color=#ff6666>副作用：持续消耗饱食度与水分，引发轻微再生性颤栗。</color>";
+        "强大的再生过程促进剂。用于伤员受伤后或重伤员运输过程中的快速恢复，只允许专业医师和护理人员使用。写着‘TerraGroup 实验室开发’\n\n" +
+        "<color=#54ff9f>效果：每秒恢复每个部位2点肌肉健康，血容量每秒回升50ml，持续60秒。</color>\n" +
+        "<color=#ff6666>副作用：效果结束后20秒内持续消耗饱食度与水分，并引发胸口剧烈疼痛。</color>";
 
     private static Sprite? _cachedIcon;
 
@@ -45,7 +45,7 @@ public static class EtgCItemSystem
         item.id = EtgItemKey;
 
         // 满耐久
-        item.SetCondition(100f);
+        item.SetCondition(1f);
 
         // 标记组件
         var marker = item.gameObject.GetComponent<EtgStimItemMarker>();
@@ -109,10 +109,12 @@ public static class EtgCItemSystem
             // 覆盖为 ETG-c 配置
             clone.fullName = EtgDisplayName;
             clone.description = EtgDescription;
-            clone.category = "drug";
+            clone.category = "ModStim";
+            clone.weight = 0.1f;
+            clone.value = 17;
             clone.usable = true;
             clone.usableOnLimb = false;
-            clone.usableWithLMB = true;
+            clone.usableWithLMB = false;
             clone.combineable = true;
             clone.destroyAtZeroCondition = true;
             clone.scaleWeightWithCondition = false;
@@ -166,14 +168,15 @@ public static class EtgCItemSystem
         {
             fullName = EtgDisplayName,
             description = EtgDescription,
-            category = "drug",
+            category = "ModStim",
             usable = true,
             usableOnLimb = false,
-            usableWithLMB = true,
+            usableWithLMB = false,
             combineable = true,
             destroyAtZeroCondition = true,
             scaleWeightWithCondition = false,
             weight = 0.1f,
+            value = 17,
             tags = "drug,medicine,medical,stim,combine,craft"
         };
         info.SetTags();
@@ -315,6 +318,16 @@ public static class EtgStimRegistryPatch
         MorphineItemSystem.EnsureRegisteredInItemTable();
         SJ12ItemSystem.EnsureRegisteredInItemTable();
         MuleItemSystem.EnsureRegisteredInItemTable();
+        PropitalItemSystem.EnsureRegisteredInItemTable();
+        PnbItemSystem.EnsureRegisteredInItemTable();
+        Sj1ItemSystem.EnsureRegisteredInItemTable();
+        ObdolbosItemSystem.EnsureRegisteredInItemTable();
+        Sj9ItemSystem.EnsureRegisteredInItemTable();
+        BluebloodItemSystem.EnsureRegisteredInItemTable();
+        Xtg12ItemSystem.EnsureRegisteredInItemTable();
+        MildronateItemSystem.EnsureRegisteredInItemTable();
+        TwoATwoBTGItemSystem.EnsureRegisteredInItemTable();
+        Obdolbos2ItemSystem.EnsureRegisteredInItemTable();
     }
 }
 
@@ -329,20 +342,27 @@ public sealed class EtgStimItemMarker : MonoBehaviour
 }
 
 /// <summary>
-/// ETG-c 效果控制器：每秒每部位恢复 10 HP，持续 60 秒，消耗饱食度。
+/// ETG-c 效果控制器：每秒每部位恢复 2 点肌肉健康度，血容量向 5.00L 移动 50ml，持续 60 秒。
+/// 60 秒后进入 20 秒负面效果：每秒 -1 饱食度与水份，胸口 +15 疼痛。
 /// </summary>
 public sealed class EtgStimEffectController : MonoBehaviour
 {
-    private const float HealPerSecondPerLimb = 6f;
-    private const float DurationSeconds = 40f;
-    private const float HungerDrainPerSecond = 0.5f;
-    private const float ThirstDrainPerSecond = 0.4f;
-    private const float TremorIntensity = 0.08f;
+    private const float HealPerSecondPerLimb = 2f;
+    private const float DurationSeconds = 60f;
+    private const float TargetBloodVolume = 5.0f;
+    private const float BloodAdjustPerSecond = 0.05f;
     private const float MaxLimbHealth = 100f;
+
+    private const float DebuffDurationSeconds = 20f;
+    private const float DebuffHungerDrain = 1f;
+    private const float DebuffThirstDrain = 1f;
+    private const float DebuffChestPain = 40f;
 
     private Body? _body;
     private float _remaining;
     private float _accumulator;
+    private bool _isDebuffPhase;
+    private float _debuffRemaining;
 
     public static EtgStimEffectController Attach(Body body)
     {
@@ -355,8 +375,17 @@ public sealed class EtgStimEffectController : MonoBehaviour
 
     public void ActivateOrRefresh()
     {
+        bool isRefresh = enabled;
+
+        if (isRefresh)
+        {
+            StimBuffIndicator.ShowOneTimeEffect(EtgCItemSystem.EtgItemKey, "二次注射 正面效果不叠加");
+            Plugin.Log.LogInfo("[eTG-c] Refresh: timer reset, negatives re-trigger.");
+        }
+
         _remaining = DurationSeconds;
         _accumulator = 0f;
+        _isDebuffPhase = false;
         enabled = true;
 
         // 显示 buff 图标
@@ -366,47 +395,128 @@ public sealed class EtgStimEffectController : MonoBehaviour
             TryGetEtgIcon(),
             _remaining,
             DurationSeconds,
-            new Color(0.4f, 1f, 0.6f)); // 绿色（再生）
+            new Color(0.4f, 1f, 0.6f), // 绿色（再生）
+            positiveDescs: new[] { "全部肢体再生", "血容量回升至5L" });
     }
 
     private void Awake() => enabled = false;
 
     private void Update()
     {
-        if (_body == null || _remaining <= 0f)
+        if (_body == null)
         {
-            if (_body != null) _body.miscShakeIntensity = 0f;
             StimBuffIndicator.HideBuff(EtgCItemSystem.EtgItemKey);
             enabled = false;
             return;
         }
 
-        _accumulator += Time.deltaTime;
-        while (_accumulator >= 1f && _remaining > 0f)
+        if (!_isDebuffPhase)
         {
-            _accumulator -= 1f;
-            _remaining -= 1f;
-            TickEffect();
+            // === 正面 buff 阶段 ===
+            if (_remaining <= 0f)
+            {
+                StimBuffIndicator.HideBuff(EtgCItemSystem.EtgItemKey);
+                StartDebuffPhase();
+                return;
+            }
+
+            _accumulator += Time.deltaTime;
+            while (_accumulator >= 1f && _remaining > 0f)
+            {
+                _accumulator -= 1f;
+                _remaining -= 1f;
+                TickEffect();
+            }
+
+            StimBuffIndicator.ShowBuff(
+                EtgCItemSystem.EtgItemKey,
+                "eTG-c",
+                TryGetEtgIcon(),
+                _remaining,
+                DurationSeconds,
+                new Color(0.4f, 1f, 0.6f),
+                positiveDescs: new[] { "全部肢体再生", "血容量回升至5L" });
+
+            if (_remaining <= 0f)
+            {
+                StimBuffIndicator.HideBuff(EtgCItemSystem.EtgItemKey);
+                StartDebuffPhase();
+            }
         }
-
-        // 再生性颤栗
-        _body.miscShakeIntensity = TremorIntensity;
-
-        // 更新 buff 剩余时间
-        StimBuffIndicator.ShowBuff(
-            EtgCItemSystem.EtgItemKey,
-            "eTG-c",
-            TryGetEtgIcon(),
-            _remaining,
-            DurationSeconds,
-            new Color(0.4f, 1f, 0.6f));
-
-        if (_remaining <= 0f)
+        else
         {
-            _body.miscShakeIntensity = 0f;
-            StimBuffIndicator.HideBuff(EtgCItemSystem.EtgItemKey);
-            enabled = false;
+            // === 负面 debuff 阶段 ===
+            // 显示负面效果
+            StimBuffIndicator.ShowBuff(
+                EtgCItemSystem.EtgItemKey,
+                "eTG-c(副作用)",
+                TryGetEtgIcon(),
+                _debuffRemaining,
+                DebuffDurationSeconds,
+                new Color(1f, 0.3f, 0.3f), // 红色（副作用警告）
+                positiveDescs: Array.Empty<string>(),
+                negativeDescs: new[] { "每秒-1饱食/水分" });
+
+            if (_debuffRemaining <= 0f)
+            {
+                StimBuffIndicator.HideBuff(EtgCItemSystem.EtgItemKey);
+                enabled = false;
+                return;
+            }
+
+            _accumulator += Time.deltaTime;
+            while (_accumulator >= 1f && _debuffRemaining > 0f)
+            {
+                _accumulator -= 1f;
+                _debuffRemaining -= 1f;
+                DebuffTick();
+            }
+
+            if (_debuffRemaining <= 0f)
+            {
+                enabled = false;
+            }
         }
+    }
+
+    private void StartDebuffPhase()
+    {
+        _isDebuffPhase = true;
+        _debuffRemaining = DebuffDurationSeconds;
+        _accumulator = 0f;
+        ApplyChestPain();
+        Plugin.Log.LogInfo("ETG-c debuff phase started: -1 hunger/thirst per second, +40 chest pain for 20s.");
+    }
+
+    private void ApplyChestPain()
+    {
+        var chestLimb = FindChestLimb();
+        if (chestLimb != null)
+        {
+            chestLimb.pain += DebuffChestPain;
+            StimBuffIndicator.ShowOneTimeEffect(EtgCItemSystem.EtgItemKey, $"胸口疼痛+{DebuffChestPain}", isNegative: true);
+            Plugin.Log.LogInfo($"ETG-c debuff: applied +{DebuffChestPain} pain to chest.");
+        }
+    }
+
+    private Limb? FindChestLimb()
+    {
+        var limbs = _body!.limbs;
+        if (limbs == null) return null;
+
+        foreach (var limb in limbs)
+        {
+            if (limb == null || limb.dismembered) continue;
+            if (limb.isVital && !limb.isHead)
+                return limb;
+        }
+        return null;
+    }
+
+    private void DebuffTick()
+    {
+        _body!.Eat(-DebuffHungerDrain, 0f);
+        _body.Drink(-DebuffThirstDrain);
     }
 
     private static Sprite? TryGetEtgIcon()
@@ -428,23 +538,25 @@ public sealed class EtgStimEffectController : MonoBehaviour
                 HealLimb(limb, HealPerSecondPerLimb);
             }
         }
-        _body.Eat(-HungerDrainPerSecond, 0f);
-        _body.Drink(-ThirstDrainPerSecond);
+        AdjustBloodVolume();
+    }
+
+    private void AdjustBloodVolume()
+    {
+        var currentBlood = _body!.bloodVolume;
+        if (currentBlood >= TargetBloodVolume)
+            return;
+
+        var newBlood = Mathf.Min(currentBlood + BloodAdjustPerSecond, TargetBloodVolume);
+        _body.bloodVolume = newBlood;
     }
 
     private static void HealLimb(Limb limb, float amount)
     {
         if (amount <= 0f) return;
 
-        var skinMissing = Mathf.Max(0f, MaxLimbHealth - limb.skinHealth);
-        var addSkin = Mathf.Min(amount, skinMissing);
-        limb.skinHealth += addSkin;
-
-        var remain = amount - addSkin;
-        if (remain <= 0f) return;
-
         var muscleMissing = Mathf.Max(0f, MaxLimbHealth - limb.muscleHealth);
-        limb.muscleHealth += Mathf.Min(remain, muscleMissing);
+        limb.muscleHealth += Mathf.Min(amount, muscleMissing);
     }
 }
 
@@ -463,6 +575,7 @@ public static class EtgStimHoverPatch
         var marker = item.GetComponent<EtgStimItemMarker>();
         if (marker == null) return;
 
-        __result = (marker.displayName, marker.description);
+        __result.Item1 = marker.displayName;
+        HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);
     }
 }

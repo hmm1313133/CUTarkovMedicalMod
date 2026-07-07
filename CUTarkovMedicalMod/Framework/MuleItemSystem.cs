@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -12,19 +12,18 @@ namespace CUTarkovMedicalMod.Framework;
 
 /// <summary>
 /// M.U.L.E. 兴奋剂注射器系统。
-/// 核心机制：增加负重上限 +50%，代价是持续生命恢复减少。
+/// 核心机制：增加负重上限 +15，代价是持续肌肉损伤和患病。
 ///
 /// 负重系统（反编译确认）：
 /// - Body.maxEncumberance（float, public）— 负重上限，初始值 11
 ///   HandlePeriodicChecks 每 0.5 秒重算：基础11 ± 饥饿/渴惩罚 + 技能加成 × encumbrancecap
-///   ⚠ 直接设置会被重算覆盖 → 必须在 LateUpdate 中持续追加加成
+///   ⚠ 直接设置会被重算覆盖 → 通过 Harmony Transpiler 在重算时追加 +15
 /// - Body.totalEncumberance — 当前总负重（所有物品 totalWeight 之和）
 /// - Body.overEncumberance — 超重比例 = totalEncumberance / maxEncumberance - 1，Clamp01
 /// - encumbered moodle（读 overEncumberance）：>0.85→4, >0.55→3, >0.3→2, >0→1
 /// - overEncumberance 影响移动速度（get_legSpeedMult）、跳跃（Jump）、攻击速度（Attack）、体力恢复
 ///
-/// 生命恢复：Body.HandleBody 中 brainHealth 每帧 += 0.003 * healingrate（当 brainHealth>0）
-/// M.U.L.E. 减益：每秒扣 brainHealth 0.1（抵消并反转自然恢复）
+/// 减益：立即 +10 患病，每秒各肢体肌肉健康 -0.2，持续 25 分钟；效果期间意识清醒度限制在 90 以下。
 /// </summary>
 public static class MuleItemSystem
 {
@@ -33,9 +32,9 @@ public static class MuleItemSystem
 
     public const string DisplayName = "M.U.L.E. 兴奋剂注射器【M.U.L.E】";
     public const string Description =
-        "军用负重增强兴奋剂。通过刺激肌肉纤维和神经系统，临时大幅提升负重能力，适合携大量战利品撤离。\n\n" +
-        "<color=#4fc3f7>效果：1秒后生效，持续900秒。负重上限 +50%。</color>\n" +
-        "<color=#ff6666>副作用：药物持续损伤肌肉组织，每秒随机部位健康 -0.1。</color>";
+        "军用负重增强兴奋剂。通过刺激肌肉纤维和神经系统，显著提升负重能力，适合携大量战利品撤离；标有 M. U. L. E 的记号。大大的黄色叹号后写着许许多多的副作用，TerraGroup 实验室开发。\n\n" +
+        "<color=#54ff9f>效果：1秒后生效，持续40分钟，负重上限 +15U（可与其他针剂叠加）。</color>\n" +
+        "<color=#ff6666>副作用：+10患病；每秒各肢体肌肉健康 -0.2，持续25分钟；效果期间意识清醒度上限锁定在90。</color>";
 
     private static Sprite? _cachedIcon;
 
@@ -52,7 +51,7 @@ public static class MuleItemSystem
         EnsureRegisteredInItemTable();
 
         item.id = ItemKey;
-        item.SetCondition(100f);
+        item.SetCondition(1f);
 
         var marker = item.gameObject.GetComponent<MuleItemMarker>();
         if (marker == null)
@@ -105,10 +104,12 @@ public static class MuleItemSystem
 
             clone.fullName = DisplayName;
             clone.description = Description;
-            clone.category = "drug";
+            clone.category = "ModStim";
+            clone.weight = 0.1f;
+            clone.value = 20;
             clone.usable = true;
             clone.usableOnLimb = false;
-            clone.usableWithLMB = true;
+            clone.usableWithLMB = false;
             clone.combineable = true;
             clone.destroyAtZeroCondition = true;
             clone.scaleWeightWithCondition = false;
@@ -138,7 +139,7 @@ public static class MuleItemSystem
 
     /// <summary>
     /// M.U.L.E. 使用效果 — 由游戏原生 UseItem 系统通过 useAction 委托调用。
-    /// 激活效果控制器，持续 900s 增加负重上限 +50% 并扣除生命恢复。
+    /// 激活效果控制器，负重上限 +15 持续 40 分钟，肌肉损伤 + 患病持续 25 分钟。
     /// </summary>
     private static void MuleUseAction(Body body, Item item)
     {
@@ -150,7 +151,7 @@ public static class MuleItemSystem
         try { body.DropItem(item); } catch { }
         UnityEngine.Object.Destroy(item.gameObject);
 
-        Plugin.Log.LogInfo("Applied M.U.L.E.: encumberance boost +50% for 900s.");
+        Plugin.Log.LogInfo($"Applied M.U.L.E.: encumberance boost +{MuleEffectController.CarryWeightBonus} for {MuleEffectController.BuffDuration}s.");
     }
 
     #region Helper Methods
@@ -161,14 +162,15 @@ public static class MuleItemSystem
         {
             fullName = DisplayName,
             description = Description,
-            category = "drug",
+            category = "ModStim",
             usable = true,
             usableOnLimb = false,
-            usableWithLMB = true,
+            usableWithLMB = false,
             combineable = true,
             destroyAtZeroCondition = true,
             scaleWeightWithCondition = false,
             weight = 0.1f,
+            value = 20,
             tags = "drug,medicine,medical,stim,combine,craft"
         };
         info.SetTags();
@@ -309,32 +311,36 @@ public sealed class MuleItemMarker : MonoBehaviour
 
 /// <summary>
 /// M.U.L.E. 效果控制器：
-/// 增益与减益同时生效，持续 900 秒。
+/// 增益持续 40 分钟，减益持续 25 分钟（同时生效）。
 ///
-/// 增益（+50% 负重上限）：
+/// 增益（负重上限 +15）：
 /// Body.maxEncumberance 在 HandlePeriodicChecks 中每 0.5 秒被重算覆盖。
-/// 通过 Harmony Transpiler 直接修改该赋值指令，在写入前乘上 1.5 倍加成，
+/// 通过 Harmony Transpiler 直接修改该赋值指令，在写入前加上 15，
 /// 确保加成只在重算时应用一次，且 overEncumberance 基于加成后的上限计算，
 /// 从而正确减轻 encumbered moodle 和移动惩罚。
 ///
-/// 减益（生命恢复 -0.1/s）：
-/// 每秒随机选择一个非断肢、非要害部位，扣除 muscleHealth 和 skinHealth 各 0.1。
-/// 这样模拟药物对全身肌肉组织的持续损伤，而非直接扣脑健康。
-/// 900 秒累计扣除约 90 点健康（分散到各部位）。
+/// 减益（立即 +10 患病，每秒 -0.2 肌肉健康/肢体，意识清醒度 < 90）：
+/// 全部非断肢部位每秒同时扣除 muscleHealth 0.2，模拟药物对全身肌肉的损伤。
+/// 效果期间意识清醒度（conscious）被限制在 90 以下。
+/// 25 分钟后减益结束，仅剩负重加成持续到 40 分钟。同时意识上限恢复。
 /// </summary>
 public sealed class MuleEffectController : MonoBehaviour
 {
-    internal const float ActivationDelay = 1f;       // 生效延迟
-    internal const float Duration = 900f;            // 总持续（15分钟）
-    internal const float EncumberanceBonusMult = 0.5f; // 负重上限加成 +50%
-    internal const float HealthDrainPerSecond = 0.1f; // 每秒生命恢复减少 0.1
+    internal const float ActivationDelay = 1f;            // 生效延迟
+    internal const float BuffDuration = 2400f;            // 增益持续 40 分钟
+    internal const float DebuffDuration = 1500f;           // 减益持续 25 分钟
+    internal const float CarryWeightBonus = 15f;          // 负重上限 +15
+    internal const float MuscleDrainPerSecond = 0.2f;      // 每秒每个肢体肌肉健康减少
+    internal const float SicknessOnUse = 10f;              // 立即增加患病
+    internal const float ConsciousLimit = 90f;             // 意识清醒度上限（效果期间）
 
     private Body? _body;
-    private float _remaining;
+    private float _buffRemaining;
+    private float _debuffRemaining;
     private float _delayTimer;
     private float _drainAccumulator;
     private bool _active;
-    private int _lastLimbIndex = -1;
+    private static FieldInfo? _consciousField;
 
     /// <summary>
     /// 当前活跃的 M.U.L.E. 控制器实例（静态），供 Harmony 补丁读取。
@@ -344,7 +350,7 @@ public sealed class MuleEffectController : MonoBehaviour
     /// <summary>
     /// 负重加成是否生效（延迟期已过且效果仍在持续）。
     /// </summary>
-    internal bool IsEncumberanceActive => _active && _delayTimer <= 0f && _remaining > 0f;
+    internal bool IsEncumberanceActive => _active && _delayTimer <= 0f && _buffRemaining > 0f;
 
     public static MuleEffectController Attach(Body body)
     {
@@ -357,21 +363,37 @@ public sealed class MuleEffectController : MonoBehaviour
 
     public void ActivateOrRefresh()
     {
+        bool isRefresh = enabled;
+
+        if (isRefresh)
+        {
+            StimBuffIndicator.ShowOneTimeEffect(MuleItemSystem.ItemKey, "二次注射 正面效果不叠加");
+            Plugin.Log.LogInfo("[MULE] Refresh: timer reset, negatives re-trigger.");
+        }
+
         _delayTimer = ActivationDelay;
-        _remaining = Duration;
+        _buffRemaining = BuffDuration;
+        _debuffRemaining = DebuffDuration;
         _drainAccumulator = 0f;
         _active = true;
-        _lastLimbIndex = -1;
         ActiveInstance = this;
         enabled = true;
+
+        // 立即 +10 患病（每次注射都触发）
+        if (_body != null)
+            _body.sicknessAmount += SicknessOnUse;
+
+        StimBuffIndicator.ShowOneTimeEffect(MuleItemSystem.ItemKey, "患病+10", isNegative: true);
 
         StimBuffIndicator.ShowBuff(
             MuleItemSystem.ItemKey,
             "M.U.L.E.",
             TryGetMuleIcon(),
-            _delayTimer + _remaining,
-            _delayTimer + _remaining,
-            new Color(0.95f, 0.75f, 0.2f)); // 金黄色（负重）
+            _delayTimer + _buffRemaining,
+            _delayTimer + BuffDuration,
+            new Color(0.95f, 0.75f, 0.2f), // 金黄色（负重）
+            positiveDescs: new[] { "最大负重+20kg", "移动速度+10%", "力量+5" },
+            negativeDescs: new[] { "意识清醒≤90%" });
     }
 
     private void Awake() => enabled = false;
@@ -393,34 +415,45 @@ public sealed class MuleEffectController : MonoBehaviour
                 MuleItemSystem.ItemKey,
                 "M.U.L.E.",
                 TryGetMuleIcon(),
-                _delayTimer + _remaining,
-                ActivationDelay + Duration,
-                new Color(0.95f, 0.75f, 0.2f));
+                _delayTimer + _buffRemaining,
+                ActivationDelay + BuffDuration,
+                new Color(0.95f, 0.75f, 0.2f),
+                positiveDescs: new[] { "最大负重+20kg", "移动速度+10%", "力量+5" },
+                negativeDescs: new[] { "意识清醒≤90%" });
             if (_delayTimer <= 0f)
-                Plugin.Log.LogInfo($"[M.U.L.E.] Effect active: +{EncumberanceBonusMult*100}% encumberance, -{HealthDrainPerSecond}/s random limb health for {Duration}s");
+                Plugin.Log.LogInfo($"[M.U.L.E.] Effect active: +{CarryWeightBonus} encumberance for {BuffDuration}s, muscle drain {MuscleDrainPerSecond}/s per limb for {DebuffDuration}s");
             return;
         }
 
         // 效果期
-        _remaining -= Time.deltaTime;
+        _buffRemaining -= Time.deltaTime;
+        _debuffRemaining -= Time.deltaTime;
 
-        // 每秒随机选一个部位扣除健康（生命恢复减少）
-        _drainAccumulator += Time.deltaTime;
-        while (_drainAccumulator >= 1f && _remaining > 0f)
+        // 肌肉健康持续扣除（减益期）
+        if (_debuffRemaining > 0f)
         {
-            _drainAccumulator -= 1f;
-            DrainRandomLimbHealth();
+            _drainAccumulator += Time.deltaTime;
+            while (_drainAccumulator >= 1f)
+            {
+                _drainAccumulator -= 1f;
+                DrainAllLimbsMuscle();
+            }
         }
+
+        // 意识清醒度限制在 90 以下（整个效果期间）
+        ClampConscious();
 
         StimBuffIndicator.ShowBuff(
             MuleItemSystem.ItemKey,
             "M.U.L.E.",
             TryGetMuleIcon(),
-            _remaining,
-            Duration,
-            new Color(0.95f, 0.75f, 0.2f));
+            _buffRemaining,
+            BuffDuration,
+            new Color(0.95f, 0.75f, 0.2f),
+            positiveDescs: new[] { "最大负重+20kg", "移动速度+10%", "力量+5" },
+            negativeDescs: new[] { "意识清醒≤90%" });
 
-        if (_remaining <= 0f)
+        if (_buffRemaining <= 0f)
         {
             _active = false;
             ActiveInstance = null;
@@ -431,43 +464,40 @@ public sealed class MuleEffectController : MonoBehaviour
     }
 
     /// <summary>
-    /// 每秒随机选择一个非断肢、非要害部位，扣除 muscleHealth 和 skinHealth。
-    /// 避免连续选到同一部位，使损伤分散到全身。
+    /// 每秒对所有非断肢部位扣除 muscleHealth。
     /// </summary>
-    private void DrainRandomLimbHealth()
+    private void DrainAllLimbsMuscle()
     {
-        if (_body == null || _body.limbs == null || _body.limbs.Length == 0) return;
+        if (_body == null || _body.limbs == null) return;
 
-        // 筛选可用部位：未断肢、非要害（避免直接致死）
-        var candidates = new List<int>();
-        for (var i = 0; i < _body.limbs.Length; i++)
+        foreach (var limb in _body.limbs)
         {
-            var limb = _body.limbs[i];
             if (limb == null || limb.dismembered) continue;
-            if (limb.isVital || limb.isHead) continue; // 跳过头部和要害
-            candidates.Add(i);
+            limb.muscleHealth = Mathf.Max(0f, limb.muscleHealth - MuscleDrainPerSecond);
         }
+    }
 
-        if (candidates.Count == 0) return;
+    /// <summary>
+    /// 限制意识清醒度（conscious）在 90 以下，模拟药物对神经系统的抑制。
+    /// </summary>
+    private void ClampConscious()
+    {
+        if (_body == null) return;
 
-        // 随机选一个，尽量避免与上次相同（若有多个候选）
-        int chosenIndex;
-        if (candidates.Count > 1 && _lastLimbIndex >= 0)
+        try
         {
-            do
+            if (_consciousField == null)
             {
-                chosenIndex = candidates[UnityEngine.Random.Range(0, candidates.Count)];
-            } while (chosenIndex == _lastLimbIndex);
-        }
-        else
-        {
-            chosenIndex = candidates[UnityEngine.Random.Range(0, candidates.Count)];
-        }
-        _lastLimbIndex = chosenIndex;
+                _consciousField = typeof(Body).GetField("conscious",
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                if (_consciousField == null) return;
+            }
 
-        var target = _body.limbs[chosenIndex];
-        target.muscleHealth = Mathf.Max(0f, target.muscleHealth - HealthDrainPerSecond);
-        target.skinHealth = Mathf.Max(0f, target.skinHealth - HealthDrainPerSecond);
+            var current = (float)(_consciousField.GetValue(_body) ?? 0f);
+            if (current > ConsciousLimit)
+                _consciousField.SetValue(_body, ConsciousLimit);
+        }
+        catch { }
     }
 
     private void OnDisable()
@@ -496,13 +526,13 @@ public sealed class MuleEffectController : MonoBehaviour
 /// 原 Postfix 的问题：
 /// - HandlePeriodicChecks 每帧在 Body.Update 中被调用；
 /// - 但 maxEncumberance 只在 halfSecondCheckTime &gt; 0.5f 的分支里每 0.5 秒重算一次；
-/// - Postfix 每帧都追加 50%，导致非重算帧在已加成值上再次累乘，
-///   maxEncumberance 在 0.5 秒周期内指数级膨胀，表现为负重上限“乱跳”。
+/// - Postfix 每帧都追加加成，导致非重算帧在已加成值上再次累加，
+///   maxEncumberance 在 0.5 秒周期内膨胀，表现为负重上限"乱跳"。
 /// - 同时 overEncumberance 在方法内部、Postfix 之前已计算，基于未加成上限，
 ///   所以移动惩罚等并未真正降低。
 ///
-/// Transpiler 修复：在 stfld Body.maxEncumberance 之前插入 call 到 GetEncumberanceMultiplier()
-/// 并 mul，使写入的值 = 原计算值 × 倍数。这样：
+/// Transpiler 修复：在 stfld Body.maxEncumberance 之前插入 call 到 GetEncumberanceBonus()
+/// 并 add，使写入的值 = 原计算值 + 加成。这样：
 /// - 加成只在 0.5 秒重算时应用一次；
 /// - overEncumberance 随后基于加成后的上限计算，移动惩罚正确降低；
 /// - 效果结束后下一周期自动恢复原始上限。
@@ -511,27 +541,35 @@ public sealed class MuleEffectController : MonoBehaviour
 public static class MuleEncumberancePatch
 {
     /// <summary>
-    /// 返回当前 M.U.L.E. 负重加成倍数：生效时为 1.5，否则为 1。
+    /// 返回当前 M.U.L.E. 负重加成值：生效时为 +15，否则为 0。
     /// </summary>
-    public static float GetEncumberanceMultiplier()
+    public static float GetEncumberanceBonus()
     {
-        var controller = MuleEffectController.ActiveInstance;
-        if (controller == null) return 1f;
-        return controller.IsEncumberanceActive ? 1f + MuleEffectController.EncumberanceBonusMult : 1f;
+        var bonus = 0f;
+        var muleController = MuleEffectController.ActiveInstance;
+        if (muleController != null && muleController.IsEncumberanceActive)
+            bonus += MuleEffectController.CarryWeightBonus;
+        var twoAController = TwoATwoBTGEffectController.ActiveInstance;
+        if (twoAController != null && twoAController.IsCarryWeightActive)
+            bonus += TwoATwoBTGEffectController.CarryWeightBonus;
+        var obd2Controller = Obdolbos2EffectController.ActiveInstance;
+        if (obd2Controller != null && obd2Controller.IsCarryWeightActive)
+            bonus += Obdolbos2EffectController.CarryWeightBonus;
+        return bonus;
     }
 
     [HarmonyTranspiler]
     public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
     {
-        var multiplierMethod = AccessTools.Method(typeof(MuleEncumberancePatch), nameof(GetEncumberanceMultiplier));
+        var bonusMethod = AccessTools.Method(typeof(MuleEncumberancePatch), nameof(GetEncumberanceBonus));
         var maxEncumberanceField = AccessTools.Field(typeof(Body), nameof(Body.maxEncumberance));
 
         return new CodeMatcher(instructions)
             .MatchForward(false, new CodeMatch(OpCodes.Stfld, maxEncumberanceField))
             .ThrowIfInvalid("Could not find maxEncumberance assignment in Body.HandlePeriodicChecks")
             .InsertAndAdvance(
-                new CodeInstruction(OpCodes.Call, multiplierMethod),
-                new CodeInstruction(OpCodes.Mul))
+                new CodeInstruction(OpCodes.Call, bonusMethod),
+                new CodeInstruction(OpCodes.Add))
             .InstructionEnumeration();
     }
 }
@@ -550,6 +588,7 @@ public static class MuleHoverPatch
         var marker = item.GetComponent<MuleItemMarker>();
         if (marker == null) return;
 
-        __result = (marker.displayName, marker.description);
+        __result.Item1 = marker.displayName;
+        HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);
     }
 }

@@ -10,43 +10,38 @@ using UnityEngine;
 namespace CUTarkovMedicalMod.Framework;
 
 /// <summary>
-/// 吗啡注射器系统。
-/// 效果：300秒内强力止疼（压制所有颤栗/震屏），立即扣除饱食度与水分。
-/// 定位：纯功能性药物，不治疗、不防出血，只消除疼痛副作用。
+/// 2A2-(b-TG) 兴奋剂注射器系统。
+/// 效果：负重上限 +7u 持续 20min；心情立即 +5。
+/// 副作用：每秒 -0.1 水分，持续 15min。
 /// </summary>
-public static class MorphineItemSystem
+public static class TwoATwoBTGItemSystem
 {
-    // 使用独立键 "cu_morphine" 避免与游戏原生 "morphine"（LiquidItemInfo 药瓶，usable=false）冲突。
-    // 原生 morphine 已存在于 GlobalItems，若键相同则 EnsureRegisteredInItemTable 会提前返回，
-    // 导致自定义 useAction（Painkillers 注射）永不注册、item.id 指向原生药瓶（左键不可用）。
-    public const string ItemKey = "cu_morphine";
+    public const string ItemKey = "2a2btg";
     public const string BaseGameItemId = "syringe";
 
-    public const string DisplayName = "吗啡注射器【Morphine】";
+    public const string DisplayName = "2A2-(b-TG)兴奋剂注射器【2A2-(b-TG)】";
     public const string Description =
-        "强效阿片类止痛剂。注射后迅速消除疼痛与震颤，但装成这个样子的吗啡你还从未见过，要不还是不用了吧。\n\n" +
-        "<color=#ff6666>效果：极大幅阿片类药物影响，必定致死！。</color>\n";
+        "此产品项目旨在创造一种能在远离物资供应点进行侦查或转移时，依然提供战斗支撑的药物。同时，这款产品需要能够进行手工生产。它可以使中枢神经系统长期保持稳定，帮助战斗人员接触不同环境，并提高负重能力。使用此产品时，脱水速度将会提高。写着'TerraGroup 实验室开发'。\n\n" +
+        "<color=#54ff9f>效果：负重上限+7u（可与其他针剂叠加） 持续20分钟；心情立即+5。</color>\n" +
+        "<color=#ff6666>副作用：每秒-0.1水分 持续15分钟。</color>";
 
     private static Sprite? _cachedIcon;
 
-    public static bool IsMorphineRequest(MedicalGrantRequest request)
+    public static bool IsTwoATwoBTGRequest(MedicalGrantRequest request)
         => request.ItemKey.Equals(ItemKey, StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>
-    /// 配置发放的吗啡物品实例。
-    /// </summary>
     public static void ConfigureSpawnedItem(Item item, MedicalGrantRequest request)
     {
-        if (!IsMorphineRequest(request)) return;
+        if (!IsTwoATwoBTGRequest(request)) return;
 
         EnsureRegisteredInItemTable();
 
         item.id = ItemKey;
         item.SetCondition(1f);
 
-        var marker = item.gameObject.GetComponent<MorphineItemMarker>();
+        var marker = item.gameObject.GetComponent<TwoATwoBTGItemMarker>();
         if (marker == null)
-            marker = item.gameObject.AddComponent<MorphineItemMarker>();
+            marker = item.gameObject.AddComponent<TwoATwoBTGItemMarker>();
 
         var icon = TryLoadIcon();
         if (icon != null)
@@ -57,7 +52,7 @@ public static class MorphineItemSystem
                 var adjusted = CreateSpriteMatchingBaseSize(icon.texture, sr.sprite);
                 if (adjusted != null)
                 {
-                    adjusted.name = "morphine-icon";
+                    adjusted.name = "2a2btg-icon";
                     sr.sprite = adjusted;
                 }
                 else
@@ -68,9 +63,6 @@ public static class MorphineItemSystem
         }
     }
 
-    /// <summary>
-    /// 在 Item.GlobalItems 注册 morphine 的 ItemInfo。
-    /// </summary>
     public static bool EnsureRegisteredInItemTable()
     {
         try
@@ -97,18 +89,18 @@ public static class MorphineItemSystem
             clone.description = Description;
             clone.category = "ModStim";
             clone.weight = 0.1f;
-            clone.value = 12;
+            clone.value = 14;
             clone.usable = true;
             clone.usableOnLimb = false;
             clone.usableWithLMB = false;
             clone.combineable = true;
             clone.destroyAtZeroCondition = true;
             clone.scaleWeightWithCondition = false;
-            clone.tags = MergeTags(clone.tags, "drug,medicine,medical,painkiller,narcotic,stim,combine,craft");
+            clone.tags = MergeTags(clone.tags, "drug,medicine,medical,stim,combine,craft");
             clone.SetTags();
 
-            var useMethod = typeof(MorphineItemSystem).GetMethod(
-                nameof(MorphineUseAction),
+            var useMethod = typeof(TwoATwoBTGItemSystem).GetMethod(
+                nameof(TwoATwoBTGUseAction),
                 BindingFlags.Static | BindingFlags.NonPublic);
             if (useMethod != null)
             {
@@ -118,38 +110,26 @@ public static class MorphineItemSystem
             clone.useLimbAction = null;
 
             map[ItemKey] = clone;
-            Plugin.Log.LogInfo("Registered Morphine ItemInfo with custom useAction delegate.");
+            Plugin.Log.LogInfo("Registered 2A2-(b-TG) ItemInfo with custom useAction delegate.");
             return true;
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning($"Failed to register Morphine: {ex.Message}");
+            Plugin.Log.LogWarning($"Failed to register 2A2-(b-TG): {ex.Message}");
             return false;
         }
     }
 
-    /// <summary>
-    /// 吗啡使用效果 — 由游戏原生 UseItem 系统通过 useAction 委托调用。
-    /// 通过原生 Painkillers 组件实现止疼：设置 opiateAmount 后，原生系统每帧
-    /// 降低 limb.pain（actualOpiateReception * 0.3 * deltaTime），从而消除
-    /// pain1-4 moodle 和 _Pain 屏幕着色器效果。
-    /// </summary>
-    private static void MorphineUseAction(Body body, Item item)
+    private static void TwoATwoBTGUseAction(Body body, Item item)
     {
-        Plugin.Log.LogInfo("Morphine useAction invoked by game native system.");
+        Plugin.Log.LogInfo("2A2-(b-TG) useAction invoked by game native system.");
 
-        // 激活效果控制器（管理 buff 图标显示）
-        MorphineEffectController.Attach(body).ActivateOrRefresh();
+        TwoATwoBTGEffectController.Attach(body).ActivateOrRefresh();
 
-        // 立即扣除饱食度 10、水分 15（一次性副作用，塔科夫原版数值）
-        body.Eat(-MorphineEffectController.HungerCostInstant, 0f);
-        body.Drink(-MorphineEffectController.ThirstCostInstant);
-
-        // 消耗物品
         try { body.DropItem(item); } catch { }
         UnityEngine.Object.Destroy(item.gameObject);
 
-        Plugin.Log.LogInfo("Applied Morphine: opiateAmount injected, native Painkillers system will handle pain suppression.");
+        Plugin.Log.LogInfo("Applied 2A2-(b-TG): carry weight +7, mood +5, water drain -0.1/s activated.");
     }
 
     #region Helper Methods
@@ -168,13 +148,13 @@ public static class MorphineItemSystem
             destroyAtZeroCondition = true,
             scaleWeightWithCondition = false,
             weight = 0.1f,
-            value = 12,
-            tags = "drug,medicine,medical,painkiller,narcotic,stim,combine,craft"
+            value = 14,
+            tags = "drug,medicine,medical,stim,combine,craft"
         };
         info.SetTags();
 
-        var useMethod = typeof(MorphineItemSystem).GetMethod(
-            nameof(MorphineUseAction), BindingFlags.Static | BindingFlags.NonPublic);
+        var useMethod = typeof(TwoATwoBTGItemSystem).GetMethod(
+            nameof(TwoATwoBTGUseAction), BindingFlags.Static | BindingFlags.NonPublic);
         if (useMethod != null)
         {
             info.useAction = (ItemInfo.Use)Delegate.CreateDelegate(
@@ -240,7 +220,7 @@ public static class MorphineItemSystem
         return merged;
     }
 
-    private static Sprite? TryLoadIcon()
+    internal static Sprite? TryLoadIcon()
     {
         if (_cachedIcon != null) return _cachedIcon;
 
@@ -248,10 +228,10 @@ public static class MorphineItemSystem
         {
             var assemblyDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? Paths.PluginPath;
             var assetDir = Path.Combine(assemblyDir, "Framework", "Assets");
-            var iconPath = Path.Combine(assetDir, "morphine.png");
+            var iconPath = Path.Combine(assetDir, "2a2btg.png");
             if (!File.Exists(iconPath))
             {
-                iconPath = Path.Combine(assetDir, "morphine.webp");
+                iconPath = Path.Combine(assetDir, "2a2btg.webp");
                 if (!File.Exists(iconPath)) return null;
             }
 
@@ -259,18 +239,18 @@ public static class MorphineItemSystem
             var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
             if (!ImageConversion.LoadImage(texture, bytes, false)) return null;
 
-            texture.filterMode = FilterMode.Bilinear;
+            texture.filterMode = FilterMode.Point;
             texture.wrapMode = TextureWrapMode.Clamp;
 
             _cachedIcon = Sprite.Create(texture,
                 new Rect(0, 0, texture.width, texture.height),
                 new Vector2(0.5f, 0.5f), 32f);
-            _cachedIcon.name = "morphine-icon";
+            _cachedIcon.name = "2a2btg-icon";
             return _cachedIcon;
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning($"Failed to load Morphine icon: {ex.Message}");
+            Plugin.Log.LogWarning($"Failed to load 2A2-(b-TG) icon: {ex.Message}");
             return null;
         }
     }
@@ -298,44 +278,52 @@ public static class MorphineItemSystem
 }
 
 /// <summary>
-/// 吗啡物品标记组件。
+/// 2A2-(b-TG) 物品标记组件。
 /// </summary>
-public sealed class MorphineItemMarker : MonoBehaviour
+public sealed class TwoATwoBTGItemMarker : MonoBehaviour
 {
-    public string itemKey = MorphineItemSystem.ItemKey;
-    public string displayName = MorphineItemSystem.DisplayName;
-    public string description = MorphineItemSystem.Description;
+    public string itemKey = TwoATwoBTGItemSystem.ItemKey;
+    public string displayName = TwoATwoBTGItemSystem.DisplayName;
+    public string description = TwoATwoBTGItemSystem.Description;
 }
 
 /// <summary>
-/// 吗啡效果控制器：
-/// 通过原生 Painkillers 组件实现止疼 — 向 opiateAmount 注入剂量，
-/// 原生系统每帧执行 limb.pain -= actualOpiateReception * 0.3 * deltaTime，
-/// 从而消除 pain1-4 moodle 和 _Pain 屏幕着色器红化效果。
-/// 
-/// 数值设计（基于原生 Painkillers 代谢分析）：
-/// - opiateAmount 注入 35，基础衰减率 0.059/s → 约 593s 自然代谢到 0
-/// - 耐受度 opiateTolerance 以 0.08/s 追赶 → 约 437s 追平
-/// - 考虑耐受追赶后实际止疼持续约 300s（与塔科夫原版一致）
-/// - 原生系统自动处理 opiateHappiness（快感）、energy 消耗（副作用）
-/// 
-/// 饱食度/水分的一次性扣除在 MorphineUseAction 中完成。
+/// 2A2-(b-TG) 效果控制器：
+/// 增益期（1200s / 20min）：负重上限 +7u
+/// 副作用（900s / 15min）：每秒 -0.1 水分（前 15 分钟与增益并存）
+/// 立即：心情 +5
 /// </summary>
-public sealed class MorphineEffectController : MonoBehaviour
+public sealed class TwoATwoBTGEffectController : MonoBehaviour
 {
-    internal const float DurationSeconds = 300f;
-    internal const float HungerCostInstant = 10f;   // 一次性饱食度扣除
-    internal const float ThirstCostInstant = 15f;   // 一次性水分扣除
-    private const float OpiateDose = 100f;           // 注入到 Painkillers.opiateAmount 的剂量
+    private enum Phase
+    {
+        Idle,
+        Delay,       // 1s 生效延迟
+        Buff,        // 1200s 负重增益 + 前 900s 水分消耗
+    }
+
+    internal const float ActivationDelay = 1f;
+    internal const float BuffDuration = 1200f;              // 20 分钟
+    internal const float DrainDuration = 900f;              // 15 分钟水分消耗
+    internal const float CarryWeightBonus = 7f;             // 负重上限 +7u
+    internal const float MoodBoost = 5f;                    // 心情 +5
+    internal const float WaterDrainPerSec = 0.1f;           // 每秒消耗水分
 
     private Body? _body;
-    private float _remaining;
+    private Phase _phase = Phase.Idle;
+    private float _phaseTimer;
+    private float _drainTimer;
+    private float _drainAccumulator;
+    private bool _drainActive;
 
-    public static MorphineEffectController Attach(Body body)
+    internal static TwoATwoBTGEffectController? ActiveInstance;
+    internal bool IsCarryWeightActive => _phase == Phase.Buff;
+
+    public static TwoATwoBTGEffectController Attach(Body body)
     {
-        var controller = body.gameObject.GetComponent<MorphineEffectController>();
+        var controller = body.gameObject.GetComponent<TwoATwoBTGEffectController>();
         if (controller == null)
-            controller = body.gameObject.AddComponent<MorphineEffectController>();
+            controller = body.gameObject.AddComponent<TwoATwoBTGEffectController>();
         controller._body = body;
         return controller;
     }
@@ -344,12 +332,16 @@ public sealed class MorphineEffectController : MonoBehaviour
     {
         bool isRefresh = enabled;
         if (isRefresh)
-            StimBuffIndicator.ShowOneTimeEffect(MorphineItemSystem.ItemKey, "二次注射 阿片剂量叠加");
+            StimBuffIndicator.ShowOneTimeEffect(TwoATwoBTGItemSystem.ItemKey, "二次注射 计时器已刷新");
 
-        // 注入阿片剂量到原生 Painkillers 系统（可叠加）
-        InjectOpiate(_body, OpiateDose);
+        // 心情 +5（可叠加）
+        BoostMood();
 
-        _remaining = 10f;
+        _phase = Phase.Delay;
+        _phaseTimer = ActivationDelay;
+        _drainTimer = 0f;
+        _drainAccumulator = 0f;
+        _drainActive = false;
         enabled = true;
     }
 
@@ -357,78 +349,164 @@ public sealed class MorphineEffectController : MonoBehaviour
 
     private void Update()
     {
-        if (_body == null)
+        if (_body == null || _phase == Phase.Idle)
         {
-            StimBuffIndicator.HideBuff(MorphineItemSystem.ItemKey);
+            StimBuffIndicator.HideBuff(TwoATwoBTGItemSystem.ItemKey);
             enabled = false;
             return;
         }
 
-        _remaining -= Time.deltaTime;
-        if (_remaining <= 0f)
+        switch (_phase)
         {
-            StimBuffIndicator.HideBuff(MorphineItemSystem.ItemKey);
-            enabled = false;
-            return;
+            case Phase.Delay:
+                UpdateDelay();
+                break;
+            case Phase.Buff:
+                UpdateBuff();
+                break;
         }
+    }
+
+    private void UpdateDelay()
+    {
+        _phaseTimer -= Time.deltaTime;
 
         StimBuffIndicator.ShowBuff(
-            MorphineItemSystem.ItemKey,
-            "Morphine",
-            TryGetMorphineIcon(),
-            _remaining,
-            10f,
-            new Color(0.31f, 0.76f, 0.97f),
-            negativeDescs: new[] { "极大幅阿片类药物影响！立即自救！" });
+            TwoATwoBTGItemSystem.ItemKey,
+            "2A2-(b-TG)",
+            TryGetIcon(),
+            _phaseTimer + BuffDuration,
+            BuffDuration + ActivationDelay,
+            new Color(0.2f, 0.6f, 0.5f), // 青绿色（负重+适应）
+            positiveDescs: new[] { "负重上限+7u" },
+            negativeDescs: Array.Empty<string>());
+
+        if (_phaseTimer <= 0f)
+        {
+            _phase = Phase.Buff;
+            _phaseTimer = BuffDuration;
+            _drainTimer = DrainDuration;
+            _drainAccumulator = 0f;
+            _drainActive = true;
+            ActiveInstance = this;
+
+            Plugin.Log.LogInfo($"[2A2-(b-TG)] Buff phase: carry weight +{CarryWeightBonus}u for {BuffDuration}s, " 
+                + $"water drain {WaterDrainPerSec}/s for {DrainDuration}s");
+        }
+    }
+
+    private void UpdateBuff()
+    {
+        var dt = Time.deltaTime;
+        _phaseTimer -= dt;
+
+        // 负重上限 +7u 由 Harmony Postfix 在 HandlePeriodicChecks 中处理
+
+        // ===== 前 15 分钟：水分消耗 =====
+        if (_drainActive)
+        {
+            _drainTimer -= dt;
+            _drainAccumulator += dt;
+            while (_drainAccumulator >= 1f)
+            {
+                _drainAccumulator -= 1f;
+                DrainWater();
+            }
+
+            if (_drainTimer <= 0f)
+            {
+                _drainActive = false;
+                Plugin.Log.LogInfo("[2A2-(b-TG)] Water drain ended (15 min elapsed).");
+            }
+        }
+
+        // 更新 buff 显示（消耗期间橙色，之后绿色）
+        var tintColor = _drainActive
+            ? new Color(0.9f, 0.4f, 0.1f)   // 橙色（副作用进行中）
+            : new Color(0.2f, 0.6f, 0.5f);   // 青绿色（纯增益）
+
+        StimBuffIndicator.ShowBuff(
+            TwoATwoBTGItemSystem.ItemKey,
+            "2A2-(b-TG)",
+            TryGetIcon(),
+            _phaseTimer,
+            BuffDuration,
+            tintColor,
+            positiveDescs: new[] { "负重上限+7u" },
+            negativeDescs: _drainActive ? new[] { "每秒-0.1水分" } : Array.Empty<string>());
+
+        if (_phaseTimer <= 0f)
+        {
+            _phase = Phase.Idle;
+            ActiveInstance = null;
+            StimBuffIndicator.HideBuff(TwoATwoBTGItemSystem.ItemKey);
+            enabled = false;
+            Plugin.Log.LogInfo("[2A2-(b-TG)] Effect ended.");
+        }
     }
 
     /// <summary>
-    /// 向原生 Painkillers 组件注入阿片剂量。
-    /// 如果已有 Painkillers 组件（之前用过止痛药），累加剂量；
-    /// 否则添加 Painkillers 组件并设置初始剂量。
-    /// 原生系统的 Update 会自动处理止疼、代谢、耐受度、opiateHappiness。
+    /// 立即提升心情 +5。
     /// </summary>
-    private static void InjectOpiate(Body? body, float dose)
+    private void BoostMood()
     {
-        if (body == null) return;
+        if (_body == null) return;
 
-        var pk = body.GetComponent<Painkillers>();
-        if (pk == null)
+        try
         {
-            pk = body.gameObject.AddComponent<Painkillers>();
-            pk.opiateAmount = dose;
-            Plugin.Log.LogInfo($"[Morphine] Created Painkillers component, opiateAmount={dose}");
+            _body.happiness = Mathf.Min(100f, _body.happiness + MoodBoost);
+            Plugin.Log.LogInfo($"[2A2-(b-TG)] Mood boosted by +{MoodBoost} (now {_body.happiness:F1}).");
         }
-        else
+        catch (Exception ex)
         {
-            pk.opiateAmount += dose;
-            Plugin.Log.LogInfo($"[Morphine] Existing Painkillers found, opiateAmount += {dose} (now {pk.opiateAmount})");
+            Plugin.Log.LogWarning($"[2A2-(b-TG)] Mood boost failed: {ex.Message}");
+        }
+
+        StimBuffIndicator.ShowOneTimeEffect(TwoATwoBTGItemSystem.ItemKey, $"心情+{MoodBoost}");
+    }
+
+    /// <summary>
+    /// 每秒扣除水分。
+    /// </summary>
+    private void DrainWater()
+    {
+        if (_body == null) return;
+
+        try
+        {
+            _body.thirst = Mathf.Max(0f, _body.thirst - WaterDrainPerSec);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.LogWarning($"[2A2-(b-TG)] DrainWater failed: {ex.Message}");
         }
     }
 
-    private static Sprite? TryGetMorphineIcon()
+    private static Sprite? TryGetIcon()
     {
-        var method = typeof(MorphineItemSystem).GetMethod("TryLoadIcon",
+        var method = typeof(TwoATwoBTGItemSystem).GetMethod("TryLoadIcon",
             BindingFlags.Static | BindingFlags.NonPublic);
         return method?.Invoke(null, null) as Sprite;
     }
 }
 
 /// <summary>
-/// 修改吗啡物品悬浮提示。
+/// 修改 2A2-(b-TG) 物品悬浮提示。
 /// </summary>
 [HarmonyPatch(typeof(PlayerCamera), nameof(PlayerCamera.ItemHoverDescription))]
-public static class MorphineHoverPatch
+public static class TwoATwoBTGHoverPatch
 {
     [HarmonyPostfix]
     public static void Postfix(Item item, ref ValueTuple<string, string> __result)
     {
         if (item == null) return;
 
-        var marker = item.GetComponent<MorphineItemMarker>();
+        var marker = item.GetComponent<TwoATwoBTGItemMarker>();
         if (marker == null) return;
 
         __result.Item1 = marker.displayName;
         HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);
     }
 }
+
+// 负重加成已合并到 MuleItemSystem.MuleEncumberancePatch.GetEncumberanceBonus() 中

@@ -10,52 +10,41 @@ using UnityEngine;
 namespace CUTarkovMedicalMod.Framework;
 
 /// <summary>
-/// SJ12 TGLabs 战斗兴奋剂注射器系统。
-/// 效果：体温 -4°C，饱食度和水分每秒 +0.2（最高105），+2 韧性等级，持续 10 分钟。
-/// 副作用：立即 +4 患病、体重 -2kg；10 分钟后体温 +4°C 持续 2 分钟。
-///
-/// 体温系统（反编译确认）：
-/// - Body.temperature（float, public）— 核心体温，正常 37°C
-/// - Body.HandleBodyTemperature(Painkillers) — 原生体温管理，lerp 向 ambientTemperature
-/// - MoodleManager.AddAllMoodles 读取 Body.temperature：
-///     热 >41.5→hot4, >40.25→hot3, >39→hot2, >38→hot1
-///     冷 <28→cold4, <32.5→cold3, <34→cold2, <35.5→cold1
-/// - PlayerCamera.HandleScreenShaders: _FrostAmount / _OverheatAmount ← body.temperature
-/// - Body.Eat(amount, weightGain) / Body.Drink(amount) — 原生能量/水分恢复
-///
-/// 设计：直接设置 Body.temperature 字段，原生 moodle 和着色器自动响应。
+/// SJ1 兴奋剂注射器系统。
+/// 效果：临时力量等级 +5、韧性等级 +3（耐力恢复 +30%），持续 5 分钟；一次性阿片药物作用 +5。
+/// 副作用：立即 +10 患病；每秒 -0.1 饱食/水分。
 /// </summary>
-public static class SJ12ItemSystem
+public static class Sj1ItemSystem
 {
-    public const string ItemKey = "sj12";
+    public const string ItemKey = "sj1";
     public const string BaseGameItemId = "syringe";
 
-    public const string DisplayName = "SJ12 TGLabs战斗兴奋剂注射器【SJ12】";
+    public const string DisplayName = "SJ1兴奋剂注射器【SJ1】";
     public const string Description =
-        "TGLabs 战斗兴奋剂。通过特殊配方降低体温以提升感知与韧性，同时持续补充能量与水分。\n\n" +
-        "<color=#54ff9f>效果：饱食度和水分每秒 +0.2，韧性等级 +2，持续10分钟。</color>\n" +
-        "<color=#ff6666>副作用：立即体温 -4°C体重 -2kg；10分钟后体温 +4°C，持续2分钟。</color>";
+        "战斗兴奋剂。在战斗前注射能够获得力量和耐力。可以降低疼痛敏感度。兴奋剂被允许供特种作战单位使用。上面有SJ1的标记。有副作用。写着'TerraGroup 实验室开发'。\n\n" +
+        "<color=#54ff9f>效果：力量等级+5、韧性等级+3、耐力恢复+30%，持续5分钟；轻微阿片类药物影响。</color>\n" +
+        "<color=#ff6666>副作用：立即 +10患病；效果期间每秒消耗0.1饱食度与0.1水分。</color>";
 
     private static Sprite? _cachedIcon;
 
-    public static bool IsSJ12Request(MedicalGrantRequest request)
+    public static bool IsSj1Request(MedicalGrantRequest request)
         => request.ItemKey.Equals(ItemKey, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// 配置发放的 SJ12 物品实例。
+    /// 配置发放的 SJ1 物品实例。
     /// </summary>
     public static void ConfigureSpawnedItem(Item item, MedicalGrantRequest request)
     {
-        if (!IsSJ12Request(request)) return;
+        if (!IsSj1Request(request)) return;
 
         EnsureRegisteredInItemTable();
 
         item.id = ItemKey;
         item.SetCondition(1f);
 
-        var marker = item.gameObject.GetComponent<SJ12ItemMarker>();
+        var marker = item.gameObject.GetComponent<Sj1ItemMarker>();
         if (marker == null)
-            marker = item.gameObject.AddComponent<SJ12ItemMarker>();
+            marker = item.gameObject.AddComponent<Sj1ItemMarker>();
 
         var icon = TryLoadIcon();
         if (icon != null)
@@ -66,7 +55,7 @@ public static class SJ12ItemSystem
                 var adjusted = CreateSpriteMatchingBaseSize(icon.texture, sr.sprite);
                 if (adjusted != null)
                 {
-                    adjusted.name = "sj12-icon";
+                    adjusted.name = "sj1-icon";
                     sr.sprite = adjusted;
                 }
                 else
@@ -78,7 +67,7 @@ public static class SJ12ItemSystem
     }
 
     /// <summary>
-    /// 在 Item.GlobalItems 注册 SJ12 的 ItemInfo。
+    /// 在 Item.GlobalItems 注册 SJ1 的 ItemInfo。
     /// </summary>
     public static bool EnsureRegisteredInItemTable()
     {
@@ -116,8 +105,8 @@ public static class SJ12ItemSystem
             clone.tags = MergeTags(clone.tags, "drug,medicine,medical,stim,combine,craft");
             clone.SetTags();
 
-            var useMethod = typeof(SJ12ItemSystem).GetMethod(
-                nameof(SJ12UseAction),
+            var useMethod = typeof(Sj1ItemSystem).GetMethod(
+                nameof(Sj1UseAction),
                 BindingFlags.Static | BindingFlags.NonPublic);
             if (useMethod != null)
             {
@@ -127,31 +116,29 @@ public static class SJ12ItemSystem
             clone.useLimbAction = null;
 
             map[ItemKey] = clone;
-            Plugin.Log.LogInfo("Registered SJ12 ItemInfo with custom useAction delegate.");
+            Plugin.Log.LogInfo("Registered SJ1 ItemInfo with custom useAction delegate.");
             return true;
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning($"Failed to register SJ12: {ex.Message}");
+            Plugin.Log.LogWarning($"Failed to register SJ1: {ex.Message}");
             return false;
         }
     }
 
     /// <summary>
-    /// SJ12 使用效果 — 由游戏原生 UseItem 系统通过 useAction 委托调用。
-    /// 激活效果控制器，管理降温→恢复→过热减益的完整生命周期。
+    /// SJ1 使用效果 — 由游戏原生 UseItem 系统通过 useAction 委托调用。
     /// </summary>
-    private static void SJ12UseAction(Body body, Item item)
+    private static void Sj1UseAction(Body body, Item item)
     {
-        Plugin.Log.LogInfo("SJ12 useAction invoked by game native system.");
+        Plugin.Log.LogInfo("SJ1 useAction invoked by game native system.");
 
-        SJ12EffectController.Attach(body).ActivateOrRefresh();
+        Sj1EffectController.Attach(body).ActivateOrRefresh();
 
-        // 消耗物品
         try { body.DropItem(item); } catch { }
         UnityEngine.Object.Destroy(item.gameObject);
 
-        Plugin.Log.LogInfo("Applied SJ12: temperature regulation effect activated.");
+        Plugin.Log.LogInfo("Applied SJ1: light combat stimulant + opioid effect activated.");
     }
 
     #region Helper Methods
@@ -175,8 +162,8 @@ public static class SJ12ItemSystem
         };
         info.SetTags();
 
-        var useMethod = typeof(SJ12ItemSystem).GetMethod(
-            nameof(SJ12UseAction), BindingFlags.Static | BindingFlags.NonPublic);
+        var useMethod = typeof(Sj1ItemSystem).GetMethod(
+            nameof(Sj1UseAction), BindingFlags.Static | BindingFlags.NonPublic);
         if (useMethod != null)
         {
             info.useAction = (ItemInfo.Use)Delegate.CreateDelegate(
@@ -242,7 +229,7 @@ public static class SJ12ItemSystem
         return merged;
     }
 
-    private static Sprite? TryLoadIcon()
+    internal static Sprite? TryLoadIcon()
     {
         if (_cachedIcon != null) return _cachedIcon;
 
@@ -250,10 +237,10 @@ public static class SJ12ItemSystem
         {
             var assemblyDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? Paths.PluginPath;
             var assetDir = Path.Combine(assemblyDir, "Framework", "Assets");
-            var iconPath = Path.Combine(assetDir, "sj12.png");
+            var iconPath = Path.Combine(assetDir, "sj1.png");
             if (!File.Exists(iconPath))
             {
-                iconPath = Path.Combine(assetDir, "sj12.webp");
+                iconPath = Path.Combine(assetDir, "sj1.webp");
                 if (!File.Exists(iconPath)) return null;
             }
 
@@ -267,12 +254,12 @@ public static class SJ12ItemSystem
             _cachedIcon = Sprite.Create(texture,
                 new Rect(0, 0, texture.width, texture.height),
                 new Vector2(0.5f, 0.5f), 32f);
-            _cachedIcon.name = "sj12-icon";
+            _cachedIcon.name = "sj1-icon";
             return _cachedIcon;
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning($"Failed to load SJ12 icon: {ex.Message}");
+            Plugin.Log.LogWarning($"Failed to load SJ1 icon: {ex.Message}");
             return null;
         }
     }
@@ -300,60 +287,48 @@ public static class SJ12ItemSystem
 }
 
 /// <summary>
-/// SJ12 物品标记组件。
+/// SJ1 物品标记组件。
 /// </summary>
-public sealed class SJ12ItemMarker : MonoBehaviour
+public sealed class Sj1ItemMarker : MonoBehaviour
 {
-    public string itemKey = SJ12ItemSystem.ItemKey;
-    public string displayName = SJ12ItemSystem.DisplayName;
-    public string description = SJ12ItemSystem.Description;
+    public string itemKey = Sj1ItemSystem.ItemKey;
+    public string displayName = Sj1ItemSystem.DisplayName;
+    public string description = Sj1ItemSystem.Description;
 }
 
 /// <summary>
-/// SJ12 效果控制器：
-/// 增益期（600s）：体温 lerp 向 33°C，每秒恢复能量0.2和水分0.2（最高105），+2 韧性。
-/// 减益期（120s）：体温 lerp 向 41°C，结束后韧性恢复。
-/// 使用瞬间 +4 患病、体重 -2kg。
-///
-/// 体温 lerp 在 LateUpdate 中执行（原生 HandleBody 在 Update 中运行后），
-/// 以 Lerp 向目标温度的方式施加药物影响，同时不完全覆盖环境温度的自然变化。
+/// SJ1 效果控制器：
+/// 增益期（300s / 5min）：STR +5、RES +3（耐力恢复 +30%）；每秒 -0.1 饱食/水分。
+/// 使用瞬间：患病 +10；阿片镇痛 dose +5。
 /// </summary>
-public sealed class SJ12EffectController : MonoBehaviour
+public sealed class Sj1EffectController : MonoBehaviour
 {
     private enum Phase
     {
         Idle,
         Delay,       // 1s 生效延迟
-        Buff,        // 600s 降温 + 能量/水分恢复 + 韧性提升
-        Debuff       // 120s 反向升温
+        Buff,        // 300s 属性增益
     }
 
     internal const float ActivationDelay = 1f;
-    internal const float BuffDuration = 600f;        // 10 分钟
-    internal const float DebuffDuration = 120f;      // 2 分钟
-    internal const float BuffTempOffset = 4f;        // 降温幅度
-    internal const float DebuffTempOffset = 4f;      // 升温幅度
-    internal const float TempLerpStrength = 1.5f;
-    internal const float EnergyRestorePerSecond = 0.2f;
-    internal const float WaterRestorePerSecond = 0.2f;
-    internal const float MaxEnergyWater = 105f;
-    internal const float ToughnessBoost = 2f;           // 韧性等级 +2
-    internal const float SicknessOnUse = 4f;
-
-    internal const float WeightLossOnUse = 6f;           // weightOffset 3:1 比例，6f = 实际 -2kg
+    internal const float BuffDuration = 300f;                // 5 分钟
+    internal const int StrengthLevelBoost = 5;               // 力量等级临时 +5
+    internal const int ResilienceLevelBoost = 3;             // 韧性等级临时 +3（≈ 耐力恢复 +30%）
+    internal const float SicknessOnUse = 10f;                // 立即患病 +10
+    internal const float OpiateDose = 5f;                    // 一次性阿片药物作用
+    internal const float FoodWaterDrainPerSec = 0.1f;        // 每秒消耗饱食/水分
 
     private Body? _body;
     private Phase _phase = Phase.Idle;
     private float _phaseTimer;
-    private float _tickAccumulator;
-    private bool _toughnessApplied;
-    private float _initialTemp;        // 注射时的体温，Buff/Debuff 都相对此值偏移
+    private float _drainAccumulator;           // 吃喝消耗累积器
+    private bool _statsApplied;                // 属性增益是否已应用
 
-    public static SJ12EffectController Attach(Body body)
+    public static Sj1EffectController Attach(Body body)
     {
-        var controller = body.gameObject.GetComponent<SJ12EffectController>();
+        var controller = body.gameObject.GetComponent<Sj1EffectController>();
         if (controller == null)
-            controller = body.gameObject.AddComponent<SJ12EffectController>();
+            controller = body.gameObject.AddComponent<Sj1EffectController>();
         controller._body = body;
         return controller;
     }
@@ -361,36 +336,34 @@ public sealed class SJ12EffectController : MonoBehaviour
     public void ActivateOrRefresh()
     {
         bool isRefresh = enabled;
-
         if (isRefresh)
-        {
-            StimBuffIndicator.ShowOneTimeEffect(SJ12ItemSystem.ItemKey, "二次注射 正面效果不叠加");
-            Plugin.Log.LogInfo("[SJ12] Refresh: positive effects skipped, timer reset.");
-        }
+            StimBuffIndicator.ShowOneTimeEffect(Sj1ItemSystem.ItemKey, "二次注射 计时器已刷新");
 
-        // 立即副作用：+4 患病，体重 -2kg（一次性）
+        // 立即副作用：患病 +10（每次注射都触发）
         _body!.sicknessAmount += SicknessOnUse;
-        _body.weightOffset -= WeightLossOnUse;
-        Plugin.Log.LogInfo($"[SJ12] Applied +{SicknessOnUse} sicknessAmount, -2kg weight (now weightOffset: {_body.weightOffset}).");
-        StimBuffIndicator.ShowOneTimeEffect(SJ12ItemSystem.ItemKey, "体重-2kg");
-        StimBuffIndicator.ShowOneTimeEffect(SJ12ItemSystem.ItemKey, "患病+4", isNegative: true);
+        Plugin.Log.LogInfo($"[SJ1] Immediate sicknessAmount +{SicknessOnUse} (now {_body.sicknessAmount}).");
+        StimBuffIndicator.ShowOneTimeEffect(Sj1ItemSystem.ItemKey, "患病+10", isNegative: true);
 
-        _initialTemp = _body!.temperature;
+        // 阿片镇痛（可叠加）
+        InjectOpiate(_body, OpiateDose);
+        StimBuffIndicator.ShowOneTimeEffect(Sj1ItemSystem.ItemKey, "阿片镇痛+5");
 
         _phase = Phase.Delay;
         _phaseTimer = ActivationDelay;
-        _tickAccumulator = 0f;
+        _drainAccumulator = 0f;
         if (!isRefresh)
-            _toughnessApplied = false;  // 正面韧性提升不重复应用
+            _statsApplied = false;
         enabled = true;
 
         StimBuffIndicator.ShowBuff(
-            SJ12ItemSystem.ItemKey,
-            "SJ12",
-            TryGetSJ12Icon(),
+            Sj1ItemSystem.ItemKey,
+            "SJ1",
+            TryGetSj1Icon(),
             BuffDuration + ActivationDelay,
             BuffDuration + ActivationDelay,
-            new Color(0.4f, 0.85f, 1f)); // 冰蓝色（降温）
+            new Color(0.3f, 0.7f, 0.9f), // 蓝青色（轻型战斗兴奋剂）
+            positiveDescs: new[] { "力量+5", "韧性+3", "阿片镇痛+5" },
+            negativeDescs: new[] { "每秒-0.1饱食/水分" });
     }
 
     private void Awake() => enabled = false;
@@ -399,13 +372,11 @@ public sealed class SJ12EffectController : MonoBehaviour
     {
         if (_body == null || _phase == Phase.Idle)
         {
-            StimBuffIndicator.HideBuff(SJ12ItemSystem.ItemKey);
-            RestoreToughness();
+            StimBuffIndicator.HideBuff(Sj1ItemSystem.ItemKey);
+            RestoreStats();
             enabled = false;
             return;
         }
-
-        _phaseTimer -= Time.deltaTime;
 
         switch (_phase)
         {
@@ -415,149 +386,162 @@ public sealed class SJ12EffectController : MonoBehaviour
             case Phase.Buff:
                 UpdateBuff();
                 break;
-            case Phase.Debuff:
-                UpdateDebuff();
-                break;
-        }
-    }
-
-    private void LateUpdate()
-    {
-        if (_body == null || _phase == Phase.Idle || _phase == Phase.Delay) return;
-
-        var dt = Time.deltaTime;
-
-        if (_phase == Phase.Buff)
-        {
-            // 降低体温，最多降 BuffTempOffset（4°C），相对于注射时体温
-            var target = _initialTemp - BuffTempOffset;
-            if (_body.temperature > target)
-                _body.temperature -= Mathf.Min(_body.temperature - target, dt * TempLerpStrength);
-        }
-        else // Debuff
-        {
-            // 升高体温，最多升 DebuffTempOffset（4°C），相对于注射时体温
-            var target = _initialTemp + DebuffTempOffset;
-            if (_body.temperature < target)
-                _body.temperature += Mathf.Min(target - _body.temperature, dt * TempLerpStrength);
         }
     }
 
     private void UpdateDelay()
     {
+        _phaseTimer -= Time.deltaTime;
+
         StimBuffIndicator.ShowBuff(
-            SJ12ItemSystem.ItemKey,
-            "SJ12",
-            TryGetSJ12Icon(),
+            Sj1ItemSystem.ItemKey,
+            "SJ1",
+            TryGetSj1Icon(),
             _phaseTimer + BuffDuration,
             BuffDuration + ActivationDelay,
-            new Color(0.4f, 0.85f, 1f),
-            positiveDescs: new[] { "韧性+2", "每秒+0.2饱食/水分", "体重-2kg" },
-            negativeDescs: new[] { "体温-4℃" });
+            new Color(0.3f, 0.7f, 0.9f));
 
         if (_phaseTimer <= 0f)
         {
             _phase = Phase.Buff;
             _phaseTimer = BuffDuration;
-            _tickAccumulator = 0f;
+            _drainAccumulator = 0f;
 
-            // 增益期开始时 +2 韧性等级（Skills.RES）
-            SkillEffectHelper.AdjustLevel(_body!, SkillEffectHelper.StatRES, (int)ToughnessBoost);
-            _toughnessApplied = true;
-            Plugin.Log.LogInfo($"[SJ12] Buff phase: cooling by {BuffTempOffset}°C from {_initialTemp:F1}, RES +{ToughnessBoost} for {BuffDuration}s");
+            // 应用属性增益
+            ApplyStatBoosts();
+            _statsApplied = true;
+
+            Plugin.Log.LogInfo($"[SJ1] Buff phase: STR +{StrengthLevelBoost}, RES +{ResilienceLevelBoost} for {BuffDuration}s, "
+                + $"food/water drain {FoodWaterDrainPerSec}/s");
         }
     }
 
     private void UpdateBuff()
     {
-        _tickAccumulator += Time.deltaTime;
-        while (_tickAccumulator >= 1f)
+        var dt = Time.deltaTime;
+        _phaseTimer -= dt;
+
+        // 每秒消耗饱食/水分
+        _drainAccumulator += dt;
+        while (_drainAccumulator >= 1f)
         {
-            _tickAccumulator -= 1f;
-
-            // 饱食度每 tick +0.2，最高105
-            _body!.hunger = Mathf.Min(MaxEnergyWater, _body.hunger + EnergyRestorePerSecond);
-
-            // 水分每 tick +0.2，最高105
-            _body.thirst = Mathf.Min(MaxEnergyWater, _body.thirst + WaterRestorePerSecond);
+            _drainAccumulator -= 1f;
+            DrainFoodWater();
         }
 
+        // 更新 buff 显示
         StimBuffIndicator.ShowBuff(
-            SJ12ItemSystem.ItemKey,
-            "SJ12",
-            TryGetSJ12Icon(),
+            Sj1ItemSystem.ItemKey,
+            "SJ1",
+            TryGetSj1Icon(),
             _phaseTimer,
             BuffDuration,
-            new Color(0.4f, 0.85f, 1f),
-            positiveDescs: new[] { "韧性+2", "每秒+0.2饱食/水分", "体重-2kg" },
-            negativeDescs: new[] { "体温-4℃" });
-
-        if (_phaseTimer <= 0f)
-        {
-            _phase = Phase.Debuff;
-            _phaseTimer = DebuffDuration;
-            Plugin.Log.LogInfo($"[SJ12] Debuff phase: overheating by {DebuffTempOffset}°C from {_initialTemp:F1} for {DebuffDuration}s");
-        }
-    }
-
-    private void UpdateDebuff()
-    {
-        StimBuffIndicator.ShowBuff(
-            SJ12ItemSystem.ItemKey,
-            "SJ12(过热)",
-            TryGetSJ12Icon(),
-            _phaseTimer,
-            DebuffDuration,
-            new Color(1f, 0.45f, 0.2f), // 橙红色（过热警告）
-            positiveDescs: Array.Empty<string>(),
-            negativeDescs: new[] { "体温+4℃" });
+            new Color(0.3f, 0.7f, 0.9f));
 
         if (_phaseTimer <= 0f)
         {
             _phase = Phase.Idle;
-            RestoreToughness();
-            StimBuffIndicator.HideBuff(SJ12ItemSystem.ItemKey);
+            RestoreStats();
+            StimBuffIndicator.HideBuff(Sj1ItemSystem.ItemKey);
             enabled = false;
-            Plugin.Log.LogInfo("[SJ12] Effect ended. Toughness restored, temperature returning to normal.");
+            Plugin.Log.LogInfo("[SJ1] Effect ended. Stats restored.");
         }
     }
 
     /// <summary>
-    /// 恢复韧性等级（debuff 结束时调用，或效果被中断时调用）。
+    /// 应用临时属性增益：STR +5、RES +3。
     /// </summary>
-    private void RestoreToughness()
+    private void ApplyStatBoosts()
     {
-        if (!_toughnessApplied || _body == null) return;
-        SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatRES, -(int)ToughnessBoost);
-        _toughnessApplied = false;
-        Plugin.Log.LogInfo($"[SJ12] RES -{ToughnessBoost} restored.");
+        if (_body == null) return;
+
+        SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatSTR, StrengthLevelBoost);
+        SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatRES, ResilienceLevelBoost);
+
+        Plugin.Log.LogInfo($"[SJ1] Stat boosts: STR +{StrengthLevelBoost} (now {SkillEffectHelper.GetLevel(_body, SkillEffectHelper.StatSTR)}), "
+            + $"RES +{ResilienceLevelBoost} (now {SkillEffectHelper.GetLevel(_body, SkillEffectHelper.StatRES)}).");
+    }
+
+    /// <summary>
+    /// 恢复属性增益。
+    /// </summary>
+    private void RestoreStats()
+    {
+        if (!_statsApplied || _body == null) return;
+
+        SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatSTR, -StrengthLevelBoost);
+        SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatRES, -ResilienceLevelBoost);
+
+        _statsApplied = false;
+        Plugin.Log.LogInfo($"[SJ1] Stats restored: STR -{StrengthLevelBoost}, RES -{ResilienceLevelBoost}.");
+    }
+
+    /// <summary>
+    /// 每秒扣除饱食度和水分。
+    /// </summary>
+    private void DrainFoodWater()
+    {
+        if (_body == null) return;
+
+        try
+        {
+            _body.hunger = Mathf.Max(0f, _body.hunger - FoodWaterDrainPerSec);
+            _body.thirst = Mathf.Max(0f, _body.thirst - FoodWaterDrainPerSec);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.LogWarning($"[SJ1] DrainFoodWater failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 向原生 Painkillers 组件注入阿片剂量（一次性镇痛作用）。
+    /// 复用于 MorphineItemSystem 的 Painkillers 机制：opiateAmount 决定止疼强度，
+    /// 原生系统每帧自动代谢并降低 limb.pain。
+    /// </summary>
+    private static void InjectOpiate(Body? body, float dose)
+    {
+        if (body == null) return;
+
+        var pk = body.GetComponent<Painkillers>();
+        if (pk == null)
+        {
+            pk = body.gameObject.AddComponent<Painkillers>();
+            pk.opiateAmount = dose;
+            Plugin.Log.LogInfo($"[SJ1] Created Painkillers component, opiateAmount={dose}");
+        }
+        else
+        {
+            pk.opiateAmount += dose;
+            Plugin.Log.LogInfo($"[SJ1] Existing Painkillers, opiateAmount += {dose} (now {pk.opiateAmount}).");
+        }
     }
 
     private void OnDisable()
     {
-        RestoreToughness();
+        RestoreStats();
     }
 
-    private static Sprite? TryGetSJ12Icon()
+    private static Sprite? TryGetSj1Icon()
     {
-        var method = typeof(SJ12ItemSystem).GetMethod("TryLoadIcon",
+        var method = typeof(Sj1ItemSystem).GetMethod("TryLoadIcon",
             BindingFlags.Static | BindingFlags.NonPublic);
         return method?.Invoke(null, null) as Sprite;
     }
 }
 
 /// <summary>
-/// 修改 SJ12 物品悬浮提示。
+/// 修改 SJ1 物品悬浮提示。
 /// </summary>
 [HarmonyPatch(typeof(PlayerCamera), nameof(PlayerCamera.ItemHoverDescription))]
-public static class SJ12HoverPatch
+public static class Sj1HoverPatch
 {
     [HarmonyPostfix]
     public static void Postfix(Item item, ref ValueTuple<string, string> __result)
     {
         if (item == null) return;
 
-        var marker = item.GetComponent<SJ12ItemMarker>();
+        var marker = item.GetComponent<Sj1ItemMarker>();
         if (marker == null) return;
 
         __result.Item1 = marker.displayName;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -11,7 +11,7 @@ namespace CUTarkovMedicalMod.Framework;
 
 /// <summary>
 /// Zagustin 止血剂（紫针）系统。
-/// 效果：立即止住所有出血，180秒内防止新出血，降低代谢（饱食度消耗加快），引发轻微颤栗。
+/// 效果：立即止住所有出血，180秒内防止新出血。副作用：+50血液粘稠度，每秒-0.3水分持续2分钟。
 /// </summary>
 public static class ZagustinItemSystem
 {
@@ -21,8 +21,8 @@ public static class ZagustinItemSystem
     public const string DisplayName = "Zagustin止血剂【Zagustin】";
     public const string Description =
         "共济止血药物，以凝血酶为基础的止血剂。用于制止各种内外出血，包括大出血。\n\n" +
-        "<color=#00ffff>效果：立即止住所有出血，150秒内防止新出血，活力提升。</color>\n" +
-        "<color=#ff6666>副作用：代谢降低（饱食度消耗加快），轻微颤栗，水分流失加速。</color>";
+        "<color=#54ff9f>效果：180秒内立即止住所有出血、防止新出血。</color>\n" +
+        "<color=#ff6666>副作用：大幅增加血液黏度，2分钟内每秒-0.3口渴。</color>";
 
     private static Sprite? _cachedIcon;
 
@@ -39,7 +39,7 @@ public static class ZagustinItemSystem
         EnsureRegisteredInItemTable();
 
         item.id = ItemKey;
-        item.SetCondition(100f);
+        item.SetCondition(1f);
 
         var marker = item.gameObject.GetComponent<ZagustinItemMarker>();
         if (marker == null)
@@ -92,10 +92,12 @@ public static class ZagustinItemSystem
 
             clone.fullName = DisplayName;
             clone.description = Description;
-            clone.category = "drug";
+            clone.category = "ModStim";
+            clone.weight = 0.1f;
+            clone.value = 16;
             clone.usable = true;
             clone.usableOnLimb = false;
-            clone.usableWithLMB = true;
+            clone.usableWithLMB = false;
             clone.combineable = true;
             clone.destroyAtZeroCondition = true;
             clone.scaleWeightWithCondition = false;
@@ -174,14 +176,15 @@ public static class ZagustinItemSystem
         {
             fullName = DisplayName,
             description = Description,
-            category = "drug",
+            category = "ModStim",
             usable = true,
             usableOnLimb = false,
-            usableWithLMB = true,
+            usableWithLMB = false,
             combineable = true,
             destroyAtZeroCondition = true,
             scaleWeightWithCondition = false,
             weight = 0.1f,
+            value = 16,
             tags = "drug,medicine,medical,hemostatic,stim,combine,craft"
         };
         info.SetTags();
@@ -321,23 +324,21 @@ public sealed class ZagustinItemMarker : MonoBehaviour
 /// <summary>
 /// Zagustin 效果控制器：
 /// - 180秒内所有肢体 blockedBleeding = true（防止新出血）
-/// - 持续扣除饱食度（代谢降低的副作用）
-/// - 持续扣除水分（水分流失副作用）
-/// - 轻微颤栗（通过 miscShakeIntensity）
-/// - 活力提升（通过 hungerLimbHealCurrent 加速愈合）
+/// - 效果开始时血液粘稠度 +50（一次性）
+/// - 前120秒持续扣除水分（每秒 -0.3）
 /// </summary>
 public sealed class ZagustinEffectController : MonoBehaviour
 {
-    private const float DurationSeconds = 150f;
-    private const float HungerDrainPerSecond = 0.2f;   // 代谢降低：饱食度消耗加快
-    private const float ThirstDrainPerSecond = 0.25f;   // 水分流失
-    private const float ShakeIntensity = 0.12f;          // 轻微颤栗
-    private const float HealBoostPerSecond = 0.3f;      // 活力提升：加速肢体愈合
+    private const float DurationSeconds = 180f;
+    private const float SideEffectDurationSeconds = 120f; // 副作用持续 2 分钟
+    private const float ThirstDrainPerSecond = 0.3f;
+    private const float BloodViscosityIncrease = 50f;
     private const float TickInterval = 1f;
 
     private Body? _body;
     private float _remaining;
     private float _accumulator;
+    private float _sideEffectRemaining;
 
     public static ZagustinEffectController Attach(Body body)
     {
@@ -350,18 +351,35 @@ public sealed class ZagustinEffectController : MonoBehaviour
 
     public void ActivateOrRefresh()
     {
+        bool isRefresh = enabled;
+
+        if (isRefresh)
+        {
+            StimBuffIndicator.ShowOneTimeEffect(ZagustinItemSystem.ItemKey, "二次注射 正面效果不叠加");
+            Plugin.Log.LogInfo("[Zagustin] Refresh: timer reset, negatives re-trigger.");
+        }
+
         _remaining = DurationSeconds;
+        _sideEffectRemaining = SideEffectDurationSeconds;
         _accumulator = 0f;
         enabled = true;
 
+        // 一次性增加血液粘稠度（每次注射都触发）
+        _body!.bloodViscosity += BloodViscosityIncrease;
+        Plugin.Log.LogInfo($"Zagustin: bloodViscosity +{BloodViscosityIncrease} (now {_body.bloodViscosity}).");
+
         // 显示 buff 图标
+        StimBuffIndicator.ShowOneTimeEffect(ZagustinItemSystem.ItemKey, "立即止血");
+        StimBuffIndicator.ShowOneTimeEffect(ZagustinItemSystem.ItemKey, "血液粘稠度+50");
         StimBuffIndicator.ShowBuff(
             ZagustinItemSystem.ItemKey,
             "Zagustin",
             TryGetZagustinIcon(),
             _remaining,
             DurationSeconds,
-            new Color(0.7f, 0.3f, 0.9f)); // 紫色（止血）
+            new Color(0.7f, 0.3f, 0.9f), // 紫色（止血）
+            positiveDescs: new[] { "预防出血" },
+            negativeDescs: new[] { "每秒 -0.3 水分" });
     }
 
     private void Awake() => enabled = false;
@@ -370,7 +388,6 @@ public sealed class ZagustinEffectController : MonoBehaviour
     {
         if (_body == null || _remaining <= 0f)
         {
-            if (_body != null) _body.miscShakeIntensity = 0f;
             StimBuffIndicator.HideBuff(ZagustinItemSystem.ItemKey);
             enabled = false;
             return;
@@ -387,14 +404,12 @@ public sealed class ZagustinEffectController : MonoBehaviour
             }
         }
 
-        // 颤栗效果
-        _body.miscShakeIntensity = ShakeIntensity;
-
         _accumulator += Time.deltaTime;
         while (_accumulator >= TickInterval && _remaining > 0f)
         {
             _accumulator -= TickInterval;
             _remaining -= TickInterval;
+            _sideEffectRemaining -= TickInterval;
             TickEffect();
         }
 
@@ -405,11 +420,12 @@ public sealed class ZagustinEffectController : MonoBehaviour
             TryGetZagustinIcon(),
             _remaining,
             DurationSeconds,
-            new Color(0.7f, 0.3f, 0.9f));
+            new Color(0.7f, 0.3f, 0.9f),
+            positiveDescs: new[] { "预防出血" },
+            negativeDescs: new[] { "每秒 -0.3 水分" });
 
         if (_remaining <= 0f)
         {
-            _body.miscShakeIntensity = 0f;
             StimBuffIndicator.HideBuff(ZagustinItemSystem.ItemKey);
             enabled = false;
         }
@@ -424,14 +440,11 @@ public sealed class ZagustinEffectController : MonoBehaviour
 
     private void TickEffect()
     {
-        // 代谢降低：饱食度消耗加快
-        _body!.Eat(-HungerDrainPerSecond, 0f);
-
-        // 水分流失
-        _body.Drink(-ThirstDrainPerSecond);
-
-        // 活力提升：加速肢体愈合
-        _body.hungerLimbHealCurrent = Mathf.Max(_body.hungerLimbHealCurrent, HealBoostPerSecond);
+        // 副作用：前 120 秒每秒扣除水分
+        if (_sideEffectRemaining > 0f)
+        {
+            _body!.Drink(-ThirstDrainPerSecond);
+        }
     }
 }
 
@@ -449,6 +462,7 @@ public static class ZagustinHoverPatch
         var marker = item.GetComponent<ZagustinItemMarker>();
         if (marker == null) return;
 
-        __result = (marker.displayName, marker.description);
+        __result.Item1 = marker.displayName;
+        HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);
     }
 }

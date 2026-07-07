@@ -10,43 +10,40 @@ using UnityEngine;
 namespace CUTarkovMedicalMod.Framework;
 
 /// <summary>
-/// 吗啡注射器系统。
-/// 效果：300秒内强力止疼（压制所有颤栗/震屏），立即扣除饱食度与水分。
-/// 定位：纯功能性药物，不治疗、不防出血，只消除疼痛副作用。
+/// SJ9 定制体温抑制剂注射器系统。
+/// 效果：体温锁定在31°C持续20min。
+/// 副作用：立即+15患病、韧性永久-2；延迟10min后胸口持续疼痛15、胸口肌肉每秒-0.2持续10min。
+/// 用于夜间行动，降低热成像可见度。
 /// </summary>
-public static class MorphineItemSystem
+public static class Sj9ItemSystem
 {
-    // 使用独立键 "cu_morphine" 避免与游戏原生 "morphine"（LiquidItemInfo 药瓶，usable=false）冲突。
-    // 原生 morphine 已存在于 GlobalItems，若键相同则 EnsureRegisteredInItemTable 会提前返回，
-    // 导致自定义 useAction（Painkillers 注射）永不注册、item.id 指向原生药瓶（左键不可用）。
-    public const string ItemKey = "cu_morphine";
+    public const string ItemKey = "sj9";
     public const string BaseGameItemId = "syringe";
 
-    public const string DisplayName = "吗啡注射器【Morphine】";
+    public const string DisplayName = "SJ9 TGLabs体温抑制剂注射器【SJ9】";
     public const string Description =
-        "强效阿片类止痛剂。注射后迅速消除疼痛与震颤，但装成这个样子的吗啡你还从未见过，要不还是不用了吧。\n\n" +
-        "<color=#ff6666>效果：极大幅阿片类药物影响，必定致死！。</color>\n";
+        "专为特种部队人员定制。它能够在短时间内降低体温，显著减缓代谢。" +
+        "使用SJ9可以显著减少向周围环境散发的热量，同时保持在体内新陈代谢的安全水平上。它被用于夜间行动，让人体在热成像仪器下几乎不可见。\n\n" +
+        "<color=#54ff9f>效果：体温持续锁定在31°C，持续20分钟（1200秒）。</color>\n" +
+        "<color=#ff6666>副作用：立即+15患病；韧性等级永久-2；延迟10分钟后胸口持续疼痛、胸口肌肉每秒-0.2 持续10分钟。</color>";
 
     private static Sprite? _cachedIcon;
 
-    public static bool IsMorphineRequest(MedicalGrantRequest request)
+    public static bool IsSj9Request(MedicalGrantRequest request)
         => request.ItemKey.Equals(ItemKey, StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>
-    /// 配置发放的吗啡物品实例。
-    /// </summary>
     public static void ConfigureSpawnedItem(Item item, MedicalGrantRequest request)
     {
-        if (!IsMorphineRequest(request)) return;
+        if (!IsSj9Request(request)) return;
 
         EnsureRegisteredInItemTable();
 
         item.id = ItemKey;
         item.SetCondition(1f);
 
-        var marker = item.gameObject.GetComponent<MorphineItemMarker>();
+        var marker = item.gameObject.GetComponent<Sj9ItemMarker>();
         if (marker == null)
-            marker = item.gameObject.AddComponent<MorphineItemMarker>();
+            marker = item.gameObject.AddComponent<Sj9ItemMarker>();
 
         var icon = TryLoadIcon();
         if (icon != null)
@@ -57,7 +54,7 @@ public static class MorphineItemSystem
                 var adjusted = CreateSpriteMatchingBaseSize(icon.texture, sr.sprite);
                 if (adjusted != null)
                 {
-                    adjusted.name = "morphine-icon";
+                    adjusted.name = "sj9-icon";
                     sr.sprite = adjusted;
                 }
                 else
@@ -68,9 +65,6 @@ public static class MorphineItemSystem
         }
     }
 
-    /// <summary>
-    /// 在 Item.GlobalItems 注册 morphine 的 ItemInfo。
-    /// </summary>
     public static bool EnsureRegisteredInItemTable()
     {
         try
@@ -97,18 +91,18 @@ public static class MorphineItemSystem
             clone.description = Description;
             clone.category = "ModStim";
             clone.weight = 0.1f;
-            clone.value = 12;
+            clone.value = 16;
             clone.usable = true;
             clone.usableOnLimb = false;
             clone.usableWithLMB = false;
             clone.combineable = true;
             clone.destroyAtZeroCondition = true;
             clone.scaleWeightWithCondition = false;
-            clone.tags = MergeTags(clone.tags, "drug,medicine,medical,painkiller,narcotic,stim,combine,craft");
+            clone.tags = MergeTags(clone.tags, "drug,medicine,stim,combine,craft");
             clone.SetTags();
 
-            var useMethod = typeof(MorphineItemSystem).GetMethod(
-                nameof(MorphineUseAction),
+            var useMethod = typeof(Sj9ItemSystem).GetMethod(
+                nameof(Sj9UseAction),
                 BindingFlags.Static | BindingFlags.NonPublic);
             if (useMethod != null)
             {
@@ -118,38 +112,26 @@ public static class MorphineItemSystem
             clone.useLimbAction = null;
 
             map[ItemKey] = clone;
-            Plugin.Log.LogInfo("Registered Morphine ItemInfo with custom useAction delegate.");
+            Plugin.Log.LogInfo("Registered SJ9 ItemInfo with custom useAction delegate.");
             return true;
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning($"Failed to register Morphine: {ex.Message}");
+            Plugin.Log.LogWarning($"Failed to register SJ9: {ex.Message}");
             return false;
         }
     }
 
-    /// <summary>
-    /// 吗啡使用效果 — 由游戏原生 UseItem 系统通过 useAction 委托调用。
-    /// 通过原生 Painkillers 组件实现止疼：设置 opiateAmount 后，原生系统每帧
-    /// 降低 limb.pain（actualOpiateReception * 0.3 * deltaTime），从而消除
-    /// pain1-4 moodle 和 _Pain 屏幕着色器效果。
-    /// </summary>
-    private static void MorphineUseAction(Body body, Item item)
+    private static void Sj9UseAction(Body body, Item item)
     {
-        Plugin.Log.LogInfo("Morphine useAction invoked by game native system.");
+        Plugin.Log.LogInfo("SJ9 useAction invoked.");
 
-        // 激活效果控制器（管理 buff 图标显示）
-        MorphineEffectController.Attach(body).ActivateOrRefresh();
+        Sj9EffectController.Attach(body).Activate();
 
-        // 立即扣除饱食度 10、水分 15（一次性副作用，塔科夫原版数值）
-        body.Eat(-MorphineEffectController.HungerCostInstant, 0f);
-        body.Drink(-MorphineEffectController.ThirstCostInstant);
-
-        // 消耗物品
         try { body.DropItem(item); } catch { }
         UnityEngine.Object.Destroy(item.gameObject);
 
-        Plugin.Log.LogInfo("Applied Morphine: opiateAmount injected, native Painkillers system will handle pain suppression.");
+        Plugin.Log.LogInfo("SJ9 injected — temperature lock + stealth mode active (20min).");
     }
 
     #region Helper Methods
@@ -168,13 +150,13 @@ public static class MorphineItemSystem
             destroyAtZeroCondition = true,
             scaleWeightWithCondition = false,
             weight = 0.1f,
-            value = 12,
-            tags = "drug,medicine,medical,painkiller,narcotic,stim,combine,craft"
+            value = 16,
+            tags = "drug,medicine,stim,combine,craft"
         };
         info.SetTags();
 
-        var useMethod = typeof(MorphineItemSystem).GetMethod(
-            nameof(MorphineUseAction), BindingFlags.Static | BindingFlags.NonPublic);
+        var useMethod = typeof(Sj9ItemSystem).GetMethod(
+            nameof(Sj9UseAction), BindingFlags.Static | BindingFlags.NonPublic);
         if (useMethod != null)
         {
             info.useAction = (ItemInfo.Use)Delegate.CreateDelegate(
@@ -240,7 +222,7 @@ public static class MorphineItemSystem
         return merged;
     }
 
-    private static Sprite? TryLoadIcon()
+    internal static Sprite? TryLoadIcon()
     {
         if (_cachedIcon != null) return _cachedIcon;
 
@@ -248,10 +230,10 @@ public static class MorphineItemSystem
         {
             var assemblyDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? Paths.PluginPath;
             var assetDir = Path.Combine(assemblyDir, "Framework", "Assets");
-            var iconPath = Path.Combine(assetDir, "morphine.png");
+            var iconPath = Path.Combine(assetDir, "sj9.png");
             if (!File.Exists(iconPath))
             {
-                iconPath = Path.Combine(assetDir, "morphine.webp");
+                iconPath = Path.Combine(assetDir, "sj9.webp");
                 if (!File.Exists(iconPath)) return null;
             }
 
@@ -265,12 +247,12 @@ public static class MorphineItemSystem
             _cachedIcon = Sprite.Create(texture,
                 new Rect(0, 0, texture.width, texture.height),
                 new Vector2(0.5f, 0.5f), 32f);
-            _cachedIcon.name = "morphine-icon";
+            _cachedIcon.name = "sj9-icon";
             return _cachedIcon;
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning($"Failed to load Morphine icon: {ex.Message}");
+            Plugin.Log.LogWarning($"Failed to load SJ9 icon: {ex.Message}");
             return null;
         }
     }
@@ -298,59 +280,83 @@ public static class MorphineItemSystem
 }
 
 /// <summary>
-/// 吗啡物品标记组件。
+/// SJ9 物品标记组件。
 /// </summary>
-public sealed class MorphineItemMarker : MonoBehaviour
+public sealed class Sj9ItemMarker : MonoBehaviour
 {
-    public string itemKey = MorphineItemSystem.ItemKey;
-    public string displayName = MorphineItemSystem.DisplayName;
-    public string description = MorphineItemSystem.Description;
+    public string itemKey = Sj9ItemSystem.ItemKey;
+    public string displayName = Sj9ItemSystem.DisplayName;
+    public string description = Sj9ItemSystem.Description;
 }
 
 /// <summary>
-/// 吗啡效果控制器：
-/// 通过原生 Painkillers 组件实现止疼 — 向 opiateAmount 注入剂量，
-/// 原生系统每帧执行 limb.pain -= actualOpiateReception * 0.3 * deltaTime，
-/// 从而消除 pain1-4 moodle 和 _Pain 屏幕着色器红化效果。
-/// 
-/// 数值设计（基于原生 Painkillers 代谢分析）：
-/// - opiateAmount 注入 35，基础衰减率 0.059/s → 约 593s 自然代谢到 0
-/// - 耐受度 opiateTolerance 以 0.08/s 追赶 → 约 437s 追平
-/// - 考虑耐受追赶后实际止疼持续约 300s（与塔科夫原版一致）
-/// - 原生系统自动处理 opiateHappiness（快感）、energy 消耗（副作用）
-/// 
-/// 饱食度/水分的一次性扣除在 MorphineUseAction 中完成。
+/// SJ9 效果控制器：
+/// 体温锁定 31°C 持续 20min（1200s）。
+/// 延迟 10min 后：胸口持续疼痛 15、胸口肌肉每秒 -0.2 持续 10min。
 /// </summary>
-public sealed class MorphineEffectController : MonoBehaviour
+public sealed class Sj9EffectController : MonoBehaviour
 {
-    internal const float DurationSeconds = 300f;
-    internal const float HungerCostInstant = 10f;   // 一次性饱食度扣除
-    internal const float ThirstCostInstant = 15f;   // 一次性水分扣除
-    private const float OpiateDose = 100f;           // 注入到 Painkillers.opiateAmount 的剂量
+    internal const float TotalDuration = 1200f;              // 20 分钟
+    internal const float SideEffectDelay = 600f;             // 10 分钟延迟
+    internal const float SideEffectDuration = 600f;          // 10 分钟
+    internal const float TargetTemperature = 31f;
+    internal const float SicknessOnUse = 15f;                // 立即患病+15
+    internal const int ResLevelPenalty = -2;                 // 韧性永久-2
+    internal const float ChestPainOnDelay = 15f;             // 胸口疼痛+15
+    internal const float ChestMuscleDrainPerSec = 0.2f;      // 胸口肌肉每秒-0.2
 
     private Body? _body;
-    private float _remaining;
+    private float _timer;
+    private float _sideEffectTimer;
+    private float _tickAccumulator;
+    private bool _sideEffectStarted;
+    private Limb? _chestLimb;
 
-    public static MorphineEffectController Attach(Body body)
+    public static Sj9EffectController Attach(Body body)
     {
-        var controller = body.gameObject.GetComponent<MorphineEffectController>();
+        var controller = body.gameObject.GetComponent<Sj9EffectController>();
         if (controller == null)
-            controller = body.gameObject.AddComponent<MorphineEffectController>();
+            controller = body.gameObject.AddComponent<Sj9EffectController>();
         controller._body = body;
         return controller;
     }
 
-    public void ActivateOrRefresh()
+    public void Activate()
     {
         bool isRefresh = enabled;
+
         if (isRefresh)
-            StimBuffIndicator.ShowOneTimeEffect(MorphineItemSystem.ItemKey, "二次注射 阿片剂量叠加");
+        {
+            StimBuffIndicator.ShowOneTimeEffect(Sj9ItemSystem.ItemKey, "二次注射 正面效果不叠加");
+            Plugin.Log.LogInfo("[SJ9] Refresh: timer reset, negatives re-trigger.");
+        }
 
-        // 注入阿片剂量到原生 Painkillers 系统（可叠加）
-        InjectOpiate(_body, OpiateDose);
+        // 立即副作用（每次注射都触发）
+        _body!.sicknessAmount += SicknessOnUse;
+        SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatRES, ResLevelPenalty);
+        StimBuffIndicator.ShowOneTimeEffect(Sj9ItemSystem.ItemKey, "患病+15", isNegative: true);
+        StimBuffIndicator.ShowOneTimeEffect(Sj9ItemSystem.ItemKey, "韧性-2", isNegative: true);
+        Plugin.Log.LogInfo($"[SJ9] Immediate: sickness +{SicknessOnUse} (now {_body.sicknessAmount}), RES {ResLevelPenalty} permanent.");
 
-        _remaining = 10f;
+        _timer = TotalDuration;
+        _sideEffectTimer = SideEffectDelay;
+        _sideEffectStarted = false;
+        _tickAccumulator = 0f;
+
+        // 查找胸口肢体
+        _chestLimb = FindChestLimb(_body);
+
         enabled = true;
+
+        StimBuffIndicator.ShowBuff(
+            Sj9ItemSystem.ItemKey,
+            "SJ9",
+            TryGetSj9Icon(),
+            _timer,
+            TotalDuration,
+            new Color(0.2f, 0.6f, 0.9f), // 冰蓝色
+            positiveDescs: new[] { "体温锁定31℃" },
+            negativeDescs: Array.Empty<string>());
     }
 
     private void Awake() => enabled = false;
@@ -359,73 +365,143 @@ public sealed class MorphineEffectController : MonoBehaviour
     {
         if (_body == null)
         {
-            StimBuffIndicator.HideBuff(MorphineItemSystem.ItemKey);
-            enabled = false;
+            Cleanup();
             return;
         }
 
-        _remaining -= Time.deltaTime;
-        if (_remaining <= 0f)
+        _timer -= Time.deltaTime;
+
+        if (_timer <= 0f)
         {
-            StimBuffIndicator.HideBuff(MorphineItemSystem.ItemKey);
-            enabled = false;
+            Cleanup();
             return;
         }
 
-        StimBuffIndicator.ShowBuff(
-            MorphineItemSystem.ItemKey,
-            "Morphine",
-            TryGetMorphineIcon(),
-            _remaining,
-            10f,
-            new Color(0.31f, 0.76f, 0.97f),
-            negativeDescs: new[] { "极大幅阿片类药物影响！立即自救！" });
-    }
+        // 锁定体温
+        _body.temperature = TargetTemperature;
 
-    /// <summary>
-    /// 向原生 Painkillers 组件注入阿片剂量。
-    /// 如果已有 Painkillers 组件（之前用过止痛药），累加剂量；
-    /// 否则添加 Painkillers 组件并设置初始剂量。
-    /// 原生系统的 Update 会自动处理止疼、代谢、耐受度、opiateHappiness。
-    /// </summary>
-    private static void InjectOpiate(Body? body, float dose)
-    {
-        if (body == null) return;
-
-        var pk = body.GetComponent<Painkillers>();
-        if (pk == null)
+        // 检查是否进入副作用阶段
+        if (!_sideEffectStarted)
         {
-            pk = body.gameObject.AddComponent<Painkillers>();
-            pk.opiateAmount = dose;
-            Plugin.Log.LogInfo($"[Morphine] Created Painkillers component, opiateAmount={dose}");
+            UpdateBuffOnly();
         }
         else
         {
-            pk.opiateAmount += dose;
-            Plugin.Log.LogInfo($"[Morphine] Existing Painkillers found, opiateAmount += {dose} (now {pk.opiateAmount})");
+            UpdateSideEffect();
         }
     }
 
-    private static Sprite? TryGetMorphineIcon()
+    private void UpdateBuffOnly()
     {
-        var method = typeof(MorphineItemSystem).GetMethod("TryLoadIcon",
+        _sideEffectTimer -= Time.deltaTime;
+
+        StimBuffIndicator.ShowBuff(
+            Sj9ItemSystem.ItemKey,
+            "SJ9",
+            TryGetSj9Icon(),
+            _timer,
+            TotalDuration,
+            new Color(0.2f, 0.6f, 0.9f),
+            positiveDescs: new[] { "体温锁定31℃" },
+            negativeDescs: Array.Empty<string>());
+
+        if (_sideEffectTimer <= 0f)
+        {
+            _sideEffectStarted = true;
+            _sideEffectTimer = SideEffectDuration;
+            _tickAccumulator = 0f;
+            Plugin.Log.LogInfo($"[SJ9] Side effect phase: chest persistent pain {ChestPainOnDelay}, muscle -{ChestMuscleDrainPerSec}/s for {SideEffectDuration}s.");
+        }
+    }
+
+    private void UpdateSideEffect()
+    {
+        _sideEffectTimer -= Time.deltaTime;
+
+        StimBuffIndicator.ShowBuff(
+            Sj9ItemSystem.ItemKey,
+            "SJ9",
+            TryGetSj9Icon(),
+            _timer,
+            TotalDuration,
+            new Color(0.9f, 0.4f, 0.2f), // 橙红色（副作用阶段）
+            positiveDescs: Array.Empty<string>(),
+            negativeDescs: new[] { "胸口疼痛+15", "胸口肌肉-0.2/秒" });
+
+        // 每秒胸口肌肉 -0.2 + 持续疼痛维持在 15
+        _tickAccumulator += Time.deltaTime;
+        while (_tickAccumulator >= 1f)
+        {
+            _tickAccumulator -= 1f;
+
+            if (_chestLimb != null && !_chestLimb.dismembered)
+            {
+                _chestLimb.muscleHealth = Mathf.Max(0f, _chestLimb.muscleHealth - ChestMuscleDrainPerSec);
+                _chestLimb.pain = Mathf.Max(ChestPainOnDelay, _chestLimb.pain);
+            }
+        }
+
+        if (_sideEffectTimer <= 0f)
+        {
+            Plugin.Log.LogInfo("[SJ9] Side effect phase ended.");
+        }
+    }
+
+    private void Cleanup()
+    {
+        StimBuffIndicator.HideBuff(Sj9ItemSystem.ItemKey);
+        enabled = false;
+        Plugin.Log.LogInfo("[SJ9] Effect ended.");
+    }
+
+    /// <summary>
+    /// 查找胸口肢体：优先使用 Body.LimbByName("chest")，回退到 limbs[1]。
+    /// </summary>
+    private static Limb? FindChestLimb(Body body)
+    {
+        try
+        {
+            var method = typeof(Body).GetMethod("LimbByName",
+                BindingFlags.Public | BindingFlags.Instance);
+            if (method != null)
+            {
+                var result = method.Invoke(body, new object[] { "chest" }) as Limb;
+                if (result != null) return result;
+
+                result = method.Invoke(body, new object[] { "torso" }) as Limb;
+                if (result != null) return result;
+            }
+        }
+        catch { }
+
+        // 回退：limbs[1] 经反编译分析为胸部
+        var limbs = body.limbs;
+        if (limbs != null && limbs.Length > 1)
+            return limbs[1];
+
+        return null;
+    }
+
+    private static Sprite? TryGetSj9Icon()
+    {
+        var method = typeof(Sj9ItemSystem).GetMethod("TryLoadIcon",
             BindingFlags.Static | BindingFlags.NonPublic);
         return method?.Invoke(null, null) as Sprite;
     }
 }
 
 /// <summary>
-/// 修改吗啡物品悬浮提示。
+/// 修改 SJ9 物品悬浮提示。
 /// </summary>
 [HarmonyPatch(typeof(PlayerCamera), nameof(PlayerCamera.ItemHoverDescription))]
-public static class MorphineHoverPatch
+public static class Sj9HoverPatch
 {
     [HarmonyPostfix]
     public static void Postfix(Item item, ref ValueTuple<string, string> __result)
     {
         if (item == null) return;
 
-        var marker = item.GetComponent<MorphineItemMarker>();
+        var marker = item.GetComponent<Sj9ItemMarker>();
         if (marker == null) return;
 
         __result.Item1 = marker.displayName;

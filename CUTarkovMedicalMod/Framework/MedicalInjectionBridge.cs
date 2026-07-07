@@ -50,37 +50,56 @@ public sealed class DefaultMedicalItemGrantSink : IMedicalItemGrantSink
         var firstEmptySlot = AccessTools.Method(bodyType, "FirstEmptySlot", Type.EmptyTypes);
         var pickUpItemCandidates = ResolvePickUpItemCandidates(bodyType);
 
-        // 三根针剂（ETG-c / Zagustin / Morphine）每局必发
+        // 全部 14 根针剂每局必发，一根不差
         var mutablePlan = new List<MedicalGrantRequest>(plan);
-        if (!mutablePlan.Any(EtgCItemSystem.IsEtgRequest))
+
+        // 定义全部针剂（按序保证索引一致）
+        var allGuaranteed = new (string source, MedicalGrantRequest request)[]
         {
-            mutablePlan.Insert(0, new MedicalGrantRequest(
-                EtgCItemSystem.EtgItemKey, EtgCItemSystem.EtgDisplayName,
-                1, "GuaranteedEtg", EtgCItemSystem.EtgBaseGameItemId));
-        }
-        if (!mutablePlan.Any(ZagustinItemSystem.IsZagustinRequest))
+            ("GuaranteedEtg",       new MedicalGrantRequest(EtgCItemSystem.EtgItemKey,           EtgCItemSystem.EtgDisplayName,           1, "GuaranteedEtg",       EtgCItemSystem.EtgBaseGameItemId)),
+            ("GuaranteedZagustin",  new MedicalGrantRequest(ZagustinItemSystem.ItemKey,           ZagustinItemSystem.DisplayName,           1, "GuaranteedZagustin",  ZagustinItemSystem.BaseGameItemId)),
+            ("GuaranteedMorphine",  new MedicalGrantRequest(MorphineItemSystem.ItemKey,           MorphineItemSystem.DisplayName,           1, "GuaranteedMorphine",  MorphineItemSystem.BaseGameItemId)),
+            ("GuaranteedSJ12",      new MedicalGrantRequest(SJ12ItemSystem.ItemKey,               SJ12ItemSystem.DisplayName,               1, "GuaranteedSJ12",      SJ12ItemSystem.BaseGameItemId)),
+            ("GuaranteedMule",      new MedicalGrantRequest(MuleItemSystem.ItemKey,               MuleItemSystem.DisplayName,               1, "GuaranteedMule",      MuleItemSystem.BaseGameItemId)),
+            ("GuaranteedPropital",  new MedicalGrantRequest(PropitalItemSystem.ItemKey,           PropitalItemSystem.DisplayName,           1, "GuaranteedPropital",  PropitalItemSystem.BaseGameItemId)),
+            ("GuaranteedSJ6",       new MedicalGrantRequest(SJ6ItemSystem.ItemKey,                SJ6ItemSystem.DisplayName,                1, "GuaranteedSJ6",       SJ6ItemSystem.BaseGameItemId)),
+            ("GuaranteedSJ1",       new MedicalGrantRequest(Sj1ItemSystem.ItemKey,                Sj1ItemSystem.DisplayName,                1, "GuaranteedSJ1",       Sj1ItemSystem.BaseGameItemId)),
+            ("GuaranteedPNB",       new MedicalGrantRequest(PnbItemSystem.ItemKey,                PnbItemSystem.DisplayName,                1, "GuaranteedPNB",       PnbItemSystem.BaseGameItemId)),
+            ("GuaranteedObdolbos",  new MedicalGrantRequest(ObdolbosItemSystem.ItemKey,           ObdolbosItemSystem.DisplayName,           1, "GuaranteedObdolbos",  ObdolbosItemSystem.BaseGameItemId)),
+            ("GuaranteedSJ9",       new MedicalGrantRequest(Sj9ItemSystem.ItemKey,                Sj9ItemSystem.DisplayName,                1, "GuaranteedSJ9",       Sj9ItemSystem.BaseGameItemId)),
+            ("GuaranteedBlueblood", new MedicalGrantRequest(BluebloodItemSystem.ItemKey,          BluebloodItemSystem.DisplayName,          1, "GuaranteedBlueblood", BluebloodItemSystem.BaseGameItemId)),
+            ("GuaranteedXTG12",     new MedicalGrantRequest(Xtg12ItemSystem.ItemKey,              Xtg12ItemSystem.DisplayName,              1, "GuaranteedXTG12",     Xtg12ItemSystem.BaseGameItemId)),
+        ("GuaranteedMildronate",new MedicalGrantRequest(MildronateItemSystem.ItemKey,         MildronateItemSystem.DisplayName,         1, "GuaranteedMildronate",MildronateItemSystem.BaseGameItemId)),
+        ("Guaranteed2A2BTG",    new MedicalGrantRequest(TwoATwoBTGItemSystem.ItemKey,        TwoATwoBTGItemSystem.DisplayName,        1, "Guaranteed2A2BTG",    TwoATwoBTGItemSystem.BaseGameItemId)),
+        ("GuaranteedObdolbos2",  new MedicalGrantRequest(Obdolbos2ItemSystem.ItemKey,       Obdolbos2ItemSystem.DisplayName,         1, "GuaranteedObdolbos2", Obdolbos2ItemSystem.BaseGameItemId)),
+    };
+
+        var checkingPredicates = new Func<MedicalGrantRequest, bool>[]
         {
-            mutablePlan.Insert(1, new MedicalGrantRequest(
-                ZagustinItemSystem.ItemKey, ZagustinItemSystem.DisplayName,
-                1, "GuaranteedZagustin", ZagustinItemSystem.BaseGameItemId));
-        }
-        if (!mutablePlan.Any(MorphineItemSystem.IsMorphineRequest))
+            EtgCItemSystem.IsEtgRequest,
+            ZagustinItemSystem.IsZagustinRequest,
+            MorphineItemSystem.IsMorphineRequest,
+            SJ12ItemSystem.IsSJ12Request,
+            MuleItemSystem.IsMuleRequest,
+            PropitalItemSystem.IsPropitalRequest,
+            SJ6ItemSystem.IsSJ6Request,
+            Sj1ItemSystem.IsSj1Request,
+            PnbItemSystem.IsPnbRequest,
+            ObdolbosItemSystem.IsObdolbosRequest,
+            Sj9ItemSystem.IsSj9Request,
+            BluebloodItemSystem.IsBluebloodRequest,
+            Xtg12ItemSystem.IsXtg12Request,
+            MildronateItemSystem.IsMildronateRequest,
+            TwoATwoBTGItemSystem.IsTwoATwoBTGRequest,
+            Obdolbos2ItemSystem.IsObdolbos2Request,
+        };
+
+        for (var i = 0; i < allGuaranteed.Length; i++)
         {
-            mutablePlan.Insert(2, new MedicalGrantRequest(
-                MorphineItemSystem.ItemKey, MorphineItemSystem.DisplayName,
-                1, "GuaranteedMorphine", MorphineItemSystem.BaseGameItemId));
-        }
-        if (!mutablePlan.Any(SJ12ItemSystem.IsSJ12Request))
-        {
-            mutablePlan.Insert(3, new MedicalGrantRequest(
-                SJ12ItemSystem.ItemKey, SJ12ItemSystem.DisplayName,
-                1, "GuaranteedSJ12", SJ12ItemSystem.BaseGameItemId));
-        }
-        if (!mutablePlan.Any(MuleItemSystem.IsMuleRequest))
-        {
-            mutablePlan.Insert(4, new MedicalGrantRequest(
-                MuleItemSystem.ItemKey, MuleItemSystem.DisplayName,
-                1, "GuaranteedMule", MuleItemSystem.BaseGameItemId));
+            var (_, request) = allGuaranteed[i];
+            var predicate = checkingPredicates[i];
+            if (!mutablePlan.Any(predicate))
+                mutablePlan.Insert(i, request);
         }
 
         // 针剂装入 medkit 发放，其它物品直接发放，避免开局库存被针剂挤占
@@ -118,7 +137,18 @@ public sealed class DefaultMedicalItemGrantSink : IMedicalItemGrantSink
            || ZagustinItemSystem.IsZagustinRequest(request)
            || MorphineItemSystem.IsMorphineRequest(request)
            || SJ12ItemSystem.IsSJ12Request(request)
-           || MuleItemSystem.IsMuleRequest(request);
+           || MuleItemSystem.IsMuleRequest(request)
+           || PropitalItemSystem.IsPropitalRequest(request)
+           || SJ6ItemSystem.IsSJ6Request(request)
+           || PnbItemSystem.IsPnbRequest(request)
+           || Sj1ItemSystem.IsSj1Request(request)
+           || ObdolbosItemSystem.IsObdolbosRequest(request)
+           || Sj9ItemSystem.IsSj9Request(request)
+           || BluebloodItemSystem.IsBluebloodRequest(request)
+           || Xtg12ItemSystem.IsXtg12Request(request)
+           || MildronateItemSystem.IsMildronateRequest(request)
+           || TwoATwoBTGItemSystem.IsTwoATwoBTGRequest(request)
+           || Obdolbos2ItemSystem.IsObdolbos2Request(request);
 
     /// <summary>
     /// 发放一个 medkit，并将所有针剂装入其中（通过原生 Container.LoadItem）。
@@ -306,6 +336,28 @@ public sealed class DefaultMedicalItemGrantSink : IMedicalItemGrantSink
             SJ12ItemSystem.ConfigureSpawnedItem(item, request);
         else if (MuleItemSystem.IsMuleRequest(request))
             MuleItemSystem.ConfigureSpawnedItem(item, request);
+        else if (PropitalItemSystem.IsPropitalRequest(request))
+            PropitalItemSystem.ConfigureSpawnedItem(item, request);
+        else if (SJ6ItemSystem.IsSJ6Request(request))
+            SJ6ItemSystem.ConfigureSpawnedItem(item, request);
+        else if (PnbItemSystem.IsPnbRequest(request))
+            PnbItemSystem.ConfigureSpawnedItem(item, request);
+        else if (Sj1ItemSystem.IsSj1Request(request))
+            Sj1ItemSystem.ConfigureSpawnedItem(item, request);
+        else if (ObdolbosItemSystem.IsObdolbosRequest(request))
+            ObdolbosItemSystem.ConfigureSpawnedItem(item, request);
+        else if (Sj9ItemSystem.IsSj9Request(request))
+            Sj9ItemSystem.ConfigureSpawnedItem(item, request);
+        else if (BluebloodItemSystem.IsBluebloodRequest(request))
+            BluebloodItemSystem.ConfigureSpawnedItem(item, request);
+        else if (Xtg12ItemSystem.IsXtg12Request(request))
+            Xtg12ItemSystem.ConfigureSpawnedItem(item, request);
+        else if (MildronateItemSystem.IsMildronateRequest(request))
+            MildronateItemSystem.ConfigureSpawnedItem(item, request);
+        else if (TwoATwoBTGItemSystem.IsTwoATwoBTGRequest(request))
+            TwoATwoBTGItemSystem.ConfigureSpawnedItem(item, request);
+        else if (Obdolbos2ItemSystem.IsObdolbos2Request(request))
+            Obdolbos2ItemSystem.ConfigureSpawnedItem(item, request);
     }
 
     public bool TryInjectWorldLoot(object worldGenerationInstance, IReadOnlyList<MedicalGrantRequest> plan, ManualLogSource log)

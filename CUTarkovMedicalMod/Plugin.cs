@@ -23,6 +23,9 @@ public sealed class Plugin : BaseUnityPlugin
     {
         Log = Logger;
 
+        // 初始化管视遮罩系统（全屏黑色径向渐变叠加层）
+        SkillEffectHelper.InitializeTunnelVision();
+
         _framework = new MedicalFramework(Config, Logger);
         _framework.Initialize();
         _debugHotkeys = new MedicalDebugHotkeys(Logger);
@@ -56,6 +59,13 @@ public sealed class Plugin : BaseUnityPlugin
 
         EtgCItemSystem.EnsureRegisteredInItemTable();
         ZagustinItemSystem.EnsureRegisteredInItemTable();
+        PropitalItemSystem.EnsureRegisteredInItemTable();
+        SJ6ItemSystem.EnsureRegisteredInItemTable();
+        Sj1ItemSystem.EnsureRegisteredInItemTable();
+        PnbItemSystem.EnsureRegisteredInItemTable();
+        ObdolbosItemSystem.EnsureRegisteredInItemTable();
+        Sj9ItemSystem.EnsureRegisteredInItemTable();
+        BluebloodItemSystem.EnsureRegisteredInItemTable();
         MedicalSpawnHooks.TickGlobalGrantFallback();
     }
 }
