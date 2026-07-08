@@ -1,8 +1,10 @@
 # Casualties: Unknown - Tarkov-Style Medical Mod
 
 > `未知伤亡（Casualties: Unknown）：塔科夫医疗模组`
+>
+> **v0.1.1**
 
-一个为 **Casualties: Unknown Demo** 开发的 BepInEx 模组，将《逃离塔科夫》中的 16 种战斗兴奋剂注射器、11 种医疗物品及其完整医疗系统引入游戏。每根针剂拥有独立的增益/副作用机制，通过反射注册到游戏原生物品表，利用原生 `Body.UseItem` -> `useAction` 委托链触发自定义效果；医疗包通过 `useLimbAction` 接入原生 BandageMinigame / SyringeMinigame / ShrapnelMinigame 等小游戏系统。
+一个为 **Casualties: Unknown Demo** 开发的 BepInEx 模组，将《逃离塔科夫》中的 16 种战斗兴奋剂注射器、12 种医疗物品及其完整医疗系统引入游戏。每根针剂拥有独立的增益/副作用机制，通过反射注册到游戏原生物品表，利用原生 `Body.UseItem` -> `useAction` 委托链触发自定义效果；医疗包通过 `useLimbAction` 接入原生 BandageMinigame / SyringeMinigame / ShrapnelMinigame 等小游戏系统。所有物品支持原生智力识别系统（Recognition），智力不足时物品名称和效果将隐藏显示。
 
 ## 目录
 
@@ -26,6 +28,8 @@
 | 开局发放 | 固定发放 5 件医疗物品（Grizzly/AFAK/IFAK/Salewa/AI-2）+ 随机医疗物品 |
 | 世界战利品 | 随机医疗物品（含针剂和药品）在世界中刷新 |
 | 容器掉落 | 医疗箱/物资箱/尸体破坏时按概率掉落针剂或药品 |
+| 智力识别系统 | 所有物品支持原生 Recognition 系统，智力不足时隐藏名称和效果 |
+| 多语言支持 | 中/英双语 I18n 系统，通过 Lang 文件夹下的 JSON 加载 |
 | Buff 指示器 | 通过原生 MoodleManager 显示针剂效果图标和倒计时 |
 | 管视效果 | URP Vignette 后处理实现暗角遮罩，部分针剂副作用触发 |
 | 注射器音效 | 自定义 `med_stimulator_use.wav` 音效，使用时播放 |
@@ -241,6 +245,7 @@ BuildingEntity.Update (Prefix)
 | **负重** | `Body.maxEncumberance`、`HandlePeriodicChecks()` | M.U.L.E. 用 Harmony Postfix 在重算后追加 50%，2A2-(b-TG) 追加 +7u |
 | **耐力** | `Body.stamina`、`staminaStrength` 曲线 | SJ6/Mildronate 每帧操作 stamina 字段 |
 | **技能** | `Skills.STR/RES/INT`、`AddExp()`、`UpdateExpBoundaries()` | SJ1/Propital/PNB/Obdolbos2 临时或永久调整等级 |
+| **智力识别** | `Recognition.min`、`Recognition.recognizable`、`ItemInfo.rec` | 所有物品设置 `rec.min` 智力要求；Hover Patch 和 StimBuffIndicator 检查 `recognizable`，智力不足时隐藏名称和效果 |
 | **出血** | `Limb.bleedAmount`、`Limb.bandageSlowAmount` | Zagustin/Blue Blood/AFAK/IFAK/Salewa/Grizzly 控制 |
 | **骨折/脱臼** | `Limb.boneHealTimer`、`Limb.dislocationTimer` | AFAK/IFAK/Salewa/Grizzly 加速恢复；CMS/Surv12 手术治疗 |
 | **弹片** | `Limb.shrapnel`、`ShrapnelMinigame` | CMS/Surv12 自动检测并启动镊子 minigame |
@@ -267,14 +272,14 @@ BuildingEntity.Update (Prefix)
 编辑 `vars.targets`，将 `BaseGamePath` 指向你的游戏安装目录：
 
 ```xml
-<BaseGamePath>O:/SteamLibrary/steamapps/common/Casualties Unknown Demo</BaseGamePath>
+<BaseGamePath>F:/SteamLibrary/steamapps/common/Casualties Unknown Demo</BaseGamePath>
 ```
 
 ### 构建
 
 ```powershell
-Set-Location "I:\CasualtiesUnknownTarkovMedicalMod"
-dotnet build .\CUTarkovMedicalMod\CUTarkovMedicalMod.csproj -c Debug
+Set-Location "g:\modmake\CUTarkovMedicalMod-test1"
+dotnet build .\CUTarkovMedicalMod\CUTarkovMedicalMod.csproj -c Release
 ```
 
 构建成功后，MSBuild 自动将以下文件复制到：
@@ -374,6 +379,32 @@ AI-2、力百汀、布洛芬、金星药膏、凡士林使用原生 `LiquidItemI
 ### 控制台 Spawn 支持
 
 原生控制台 `spawn` 命令通过 `Resources.Load(itemId)` 加载预制体，自定义物品没有 Resources 预制体。`ConsoleSpawnPatch` 拦截 spawn 命令，用模组逻辑（克隆基础预制体 + ConfigureSpawnedItem）生成自定义物品。
+
+### 智力识别系统（Recognition）
+
+游戏原生 `Recognition` 结构体通过 `ItemInfo.rec.min` 设置物品的最低智力（INT）要求。当 `Skills.INT < rec.min` 时：
+
+- **物品悬浮提示**：名称显示为"Unknown Object"（原生日志 `unknownobject`）
+- **手持物品图标**：显示"Unknown Object"
+- **状态栏 Buff**：显示"某种药剂"和"药效正在发作"，隐藏真实效果
+
+| 物品类别 | rec.min | 说明 |
+|----------|---------|------|
+| 手术包（Surv12/CMS） | 6 | 基础外科手术，低智力要求 |
+| 药品/急救包 | 8 | 常见医疗知识 |
+| 吗啡 | 9 | 简单止痛剂 |
+| 其他注射器/兴奋剂 | 13 | 高级医疗化合物 |
+
+角色初始 INT=10，因此开局时大部分注射器（INT 13）无法识别，需升级智力后才能查看名称和效果。
+
+**实现要点**：
+- `CloneItemInfo` / `CreateFallbackItemInfo` 中设置 `rec = new Recognition(minInt)`
+- 所有 `PlayerCamera.ItemHoverDescription` Postfix 补丁中检查 `item.Stats.rec.recognizable`，不可识别时不覆盖名称
+- `StimBuffIndicator.AddBuffs()` 中检查 `Item.GlobalItems[key].rec.recognizable`，不可识别时只显示通用名称
+
+### 多语言支持（I18n）
+
+模组内置中/英双语系统，通过 `Lang/zh_CN.json` 和 `Lang/EN.json` 加载翻译。自动检测游戏 `Locale.currentLangName` 切换语言，无外部依赖（内置简易 JSON 解析器，兼容 .NET Framework 4.8）。
 
 ## 依赖
 
