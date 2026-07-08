@@ -20,12 +20,8 @@ public static class Sj9ItemSystem
     public const string ItemKey = "sj9";
     public const string BaseGameItemId = "syringe";
 
-    public const string DisplayName = "SJ9 TGLabs体温抑制剂注射器【SJ9】";
-    public const string Description =
-        "专为特种部队人员定制。它能够在短时间内降低体温，显著减缓代谢。" +
-        "使用SJ9可以显著减少向周围环境散发的热量，同时保持在体内新陈代谢的安全水平上。它被用于夜间行动，让人体在热成像仪器下几乎不可见。\n\n" +
-        "<color=#54ff9f>效果：体温持续锁定在31°C，持续20分钟（可在失温时使用以保持下限体温）。</color>\n" +
-        "<color=#ff6666>副作用：立即+15患病；韧性等级永久-2；延迟10分钟后胸口持续疼痛、胸口肌肉每秒-0.2 持续10分钟。</color>";
+    public static string DisplayName => I18n.Tr("sj9.name");
+    public static string Description => I18n.Tr("sj9.desc");
 
     private static Sprite? _cachedIcon;
 
@@ -328,15 +324,15 @@ public sealed class Sj9EffectController : MonoBehaviour
 
         if (isRefresh)
         {
-            StimBuffIndicator.ShowOneTimeEffect(Sj9ItemSystem.ItemKey, "二次注射 正面效果不叠加");
+            StimBuffIndicator.ShowOneTimeEffect(Sj9ItemSystem.ItemKey, I18n.Tr("sj9.ot.0"));
             Plugin.Log.LogInfo("[SJ9] Refresh: timer reset, negatives re-trigger.");
         }
 
         // 立即副作用（每次注射都触发）
         _body!.sicknessAmount += SicknessOnUse;
         SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatRES, ResLevelPenalty);
-        StimBuffIndicator.ShowOneTimeEffect(Sj9ItemSystem.ItemKey, "患病+15", isNegative: true);
-        StimBuffIndicator.ShowOneTimeEffect(Sj9ItemSystem.ItemKey, "韧性-2", isNegative: true);
+        StimBuffIndicator.ShowOneTimeEffect(Sj9ItemSystem.ItemKey, I18n.Tr("sj9.ot.1"), isNegative: true);
+        StimBuffIndicator.ShowOneTimeEffect(Sj9ItemSystem.ItemKey, I18n.Tr("sj9.ot.2"), isNegative: true);
         Plugin.Log.LogInfo($"[SJ9] Immediate: sickness +{SicknessOnUse} (now {_body.sicknessAmount}), RES {ResLevelPenalty} permanent.");
 
         _timer = TotalDuration;
@@ -351,12 +347,12 @@ public sealed class Sj9EffectController : MonoBehaviour
 
         StimBuffIndicator.ShowBuff(
             Sj9ItemSystem.ItemKey,
-            "SJ9",
+            I18n.Tr("sj9.buff"),
             TryGetSj9Icon(),
             _timer,
             TotalDuration,
             new Color(0.2f, 0.6f, 0.9f), // 冰蓝色
-            positiveDescs: new[] { "体温锁定31℃" },
+            positiveDescs: I18n.TrAll("sj9.pos.0"),
             negativeDescs: Array.Empty<string>());
     }
 
@@ -398,12 +394,12 @@ public sealed class Sj9EffectController : MonoBehaviour
 
         StimBuffIndicator.ShowBuff(
             Sj9ItemSystem.ItemKey,
-            "SJ9",
+            I18n.Tr("sj9.buff"),
             TryGetSj9Icon(),
             _timer,
             TotalDuration,
             new Color(0.2f, 0.6f, 0.9f),
-            positiveDescs: new[] { "体温锁定31℃" },
+            positiveDescs: I18n.TrAll("sj9.pos.0"),
             negativeDescs: Array.Empty<string>());
 
         if (_sideEffectTimer <= 0f)
@@ -421,13 +417,13 @@ public sealed class Sj9EffectController : MonoBehaviour
 
         StimBuffIndicator.ShowBuff(
             Sj9ItemSystem.ItemKey,
-            "SJ9",
+            I18n.Tr("sj9.buff"),
             TryGetSj9Icon(),
             _timer,
             TotalDuration,
             new Color(0.9f, 0.4f, 0.2f), // 橙红色（副作用阶段）
             positiveDescs: Array.Empty<string>(),
-            negativeDescs: new[] { "胸口疼痛+15", "胸口肌肉-0.2/秒" });
+            negativeDescs: I18n.TrAll("sj9.neg.0", "sj9.neg.1"));
 
         // 每秒胸口肌肉 -0.2 + 持续疼痛维持在 15
         _tickAccumulator += Time.deltaTime;

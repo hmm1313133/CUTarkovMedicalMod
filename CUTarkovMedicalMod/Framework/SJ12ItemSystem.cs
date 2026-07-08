@@ -30,11 +30,8 @@ public static class SJ12ItemSystem
     public const string ItemKey = "sj12";
     public const string BaseGameItemId = "syringe";
 
-    public const string DisplayName = "SJ12 TGLabs战斗兴奋剂注射器【SJ12】";
-    public const string Description =
-        "TGLabs 战斗兴奋剂。通过特殊配方降低体温以提升感知与韧性，同时持续补充能量与水分。\n\n" +
-        "<color=#54ff9f>效果：饱食度和水分每秒 +0.2，韧性等级 +2，持续10分钟。</color>\n" +
-        "<color=#ff6666>副作用：立即体温 -4°C体重 -2kg；10分钟后体温 +4°C，持续2分钟。</color>";
+    public static string DisplayName => I18n.Tr("sj12.name");
+    public static string Description => I18n.Tr("sj12.desc");
 
     private static Sprite? _cachedIcon;
 
@@ -365,7 +362,7 @@ public sealed class SJ12EffectController : MonoBehaviour
 
         if (isRefresh)
         {
-            StimBuffIndicator.ShowOneTimeEffect(SJ12ItemSystem.ItemKey, "二次注射 正面效果不叠加");
+            StimBuffIndicator.ShowOneTimeEffect(SJ12ItemSystem.ItemKey, I18n.Tr("sj12.ot.0"));
             Plugin.Log.LogInfo("[SJ12] Refresh: positive effects skipped, timer reset.");
         }
 
@@ -373,8 +370,8 @@ public sealed class SJ12EffectController : MonoBehaviour
         _body!.sicknessAmount += SicknessOnUse;
         _body.weightOffset -= WeightLossOnUse;
         Plugin.Log.LogInfo($"[SJ12] Applied +{SicknessOnUse} sicknessAmount, -2kg weight (now weightOffset: {_body.weightOffset}).");
-        StimBuffIndicator.ShowOneTimeEffect(SJ12ItemSystem.ItemKey, "体重-2kg");
-        StimBuffIndicator.ShowOneTimeEffect(SJ12ItemSystem.ItemKey, "患病+4", isNegative: true);
+        StimBuffIndicator.ShowOneTimeEffect(SJ12ItemSystem.ItemKey, I18n.Tr("sj12.ot.1"));
+        StimBuffIndicator.ShowOneTimeEffect(SJ12ItemSystem.ItemKey, I18n.Tr("sj12.ot.2"), isNegative: true);
 
         _initialTemp = _body!.temperature;
 
@@ -387,7 +384,7 @@ public sealed class SJ12EffectController : MonoBehaviour
 
         StimBuffIndicator.ShowBuff(
             SJ12ItemSystem.ItemKey,
-            "SJ12",
+            I18n.Tr("sj12.buff"),
             TryGetSJ12Icon(),
             BuffDuration + ActivationDelay,
             BuffDuration + ActivationDelay,
@@ -448,13 +445,13 @@ public sealed class SJ12EffectController : MonoBehaviour
     {
         StimBuffIndicator.ShowBuff(
             SJ12ItemSystem.ItemKey,
-            "SJ12",
+            I18n.Tr("sj12.buff"),
             TryGetSJ12Icon(),
             _phaseTimer + BuffDuration,
             BuffDuration + ActivationDelay,
             new Color(0.4f, 0.85f, 1f),
-            positiveDescs: new[] { "韧性+2", "每秒+0.2饱食/水分", "体重-2kg" },
-            negativeDescs: new[] { "体温-4℃" });
+            positiveDescs: I18n.TrAll("sj12.pos.0", "sj12.pos.1", "sj12.pos.2"),
+            negativeDescs: I18n.TrAll("sj12.neg.0"));
 
         if (_phaseTimer <= 0f)
         {
@@ -485,13 +482,13 @@ public sealed class SJ12EffectController : MonoBehaviour
 
         StimBuffIndicator.ShowBuff(
             SJ12ItemSystem.ItemKey,
-            "SJ12",
+            I18n.Tr("sj12.buff"),
             TryGetSJ12Icon(),
             _phaseTimer,
             BuffDuration,
             new Color(0.4f, 0.85f, 1f),
-            positiveDescs: new[] { "韧性+2", "每秒+0.2饱食/水分", "体重-2kg" },
-            negativeDescs: new[] { "体温-4℃" });
+            positiveDescs: I18n.TrAll("sj12.pos.0", "sj12.pos.1", "sj12.pos.2"),
+            negativeDescs: I18n.TrAll("sj12.neg.0"));
 
         if (_phaseTimer <= 0f)
         {
@@ -505,13 +502,13 @@ public sealed class SJ12EffectController : MonoBehaviour
     {
         StimBuffIndicator.ShowBuff(
             SJ12ItemSystem.ItemKey,
-            "SJ12(过热)",
+            I18n.Tr("sj12.buff_side"),
             TryGetSJ12Icon(),
             _phaseTimer,
             DebuffDuration,
             new Color(1f, 0.45f, 0.2f), // 橙红色（过热警告）
             positiveDescs: Array.Empty<string>(),
-            negativeDescs: new[] { "体温+4℃" });
+            negativeDescs: I18n.TrAll("sj12.neg.1"));
 
         if (_phaseTimer <= 0f)
         {

@@ -30,11 +30,8 @@ public static class MuleItemSystem
     public const string ItemKey = "mule";
     public const string BaseGameItemId = "syringe";
 
-    public const string DisplayName = "M.U.L.E. 兴奋剂注射器【M.U.L.E】";
-    public const string Description =
-        "军用负重增强兴奋剂。通过刺激肌肉纤维和神经系统，显著提升负重能力，适合携大量战利品撤离；标有 M. U. L. E 的记号。大大的黄色叹号后写着许许多多的副作用，TerraGroup 实验室开发。\n\n" +
-        "<color=#54ff9f>效果：1秒后生效，持续40分钟，负重上限 +15U（可与其他针剂叠加）。</color>\n" +
-        "<color=#ff6666>副作用：+10患病；每秒各肢体肌肉健康 -0.2，持续25分钟；效果期间意识清醒度上限锁定在90。</color>";
+    public static string DisplayName => I18n.Tr("mule.name");
+    public static string Description => I18n.Tr("mule.desc");
 
     private static Sprite? _cachedIcon;
 
@@ -368,7 +365,7 @@ public sealed class MuleEffectController : MonoBehaviour
 
         if (isRefresh)
         {
-            StimBuffIndicator.ShowOneTimeEffect(MuleItemSystem.ItemKey, "二次注射 正面效果不叠加");
+            StimBuffIndicator.ShowOneTimeEffect(MuleItemSystem.ItemKey, I18n.Tr("mule.ot.0"));
             Plugin.Log.LogInfo("[MULE] Refresh: timer reset, negatives re-trigger.");
         }
 
@@ -384,17 +381,17 @@ public sealed class MuleEffectController : MonoBehaviour
         if (_body != null)
             _body.sicknessAmount += SicknessOnUse;
 
-        StimBuffIndicator.ShowOneTimeEffect(MuleItemSystem.ItemKey, "患病+10", isNegative: true);
+        StimBuffIndicator.ShowOneTimeEffect(MuleItemSystem.ItemKey, I18n.Tr("mule.ot.1"), isNegative: true);
 
         StimBuffIndicator.ShowBuff(
             MuleItemSystem.ItemKey,
-            "M.U.L.E.",
+            I18n.Tr("mule.buff"),
             TryGetMuleIcon(),
             _delayTimer + _buffRemaining,
             _delayTimer + BuffDuration,
             new Color(0.95f, 0.75f, 0.2f), // 金黄色（负重）
-            positiveDescs: new[] { "最大负重+20kg", "移动速度+10%", "力量+5" },
-            negativeDescs: new[] { "每秒肌肉-0.2", "意识清醒≤90%" });
+            positiveDescs: I18n.TrAll("mule.pos.0", "mule.pos.1", "mule.pos.2"),
+            negativeDescs: I18n.TrAll("mule.neg.0", "mule.neg.1"));
     }
 
     private void Awake() => enabled = false;
@@ -414,13 +411,13 @@ public sealed class MuleEffectController : MonoBehaviour
             _delayTimer -= Time.deltaTime;
             StimBuffIndicator.ShowBuff(
                 MuleItemSystem.ItemKey,
-                "M.U.L.E.",
+                I18n.Tr("mule.buff"),
                 TryGetMuleIcon(),
                 _delayTimer + _buffRemaining,
                 ActivationDelay + BuffDuration,
                 new Color(0.95f, 0.75f, 0.2f),
-                positiveDescs: new[] { "最大负重+20kg", "移动速度+10%", "力量+5" },
-                negativeDescs: new[] { "每秒肌肉-0.2", "意识清醒≤90%" });
+                positiveDescs: I18n.TrAll("mule.pos.0", "mule.pos.1", "mule.pos.2"),
+                negativeDescs: I18n.TrAll("mule.neg.0", "mule.neg.1"));
             if (_delayTimer <= 0f)
                 Plugin.Log.LogInfo($"[M.U.L.E.] Effect active: +{CarryWeightBonus} encumberance for {BuffDuration}s, muscle drain {MuscleDrainPerSecond}/s per limb for {DebuffDuration}s");
             return;
@@ -446,15 +443,15 @@ public sealed class MuleEffectController : MonoBehaviour
 
         StimBuffIndicator.ShowBuff(
             MuleItemSystem.ItemKey,
-            "M.U.L.E.",
+            I18n.Tr("mule.buff"),
             TryGetMuleIcon(),
             _buffRemaining,
             BuffDuration,
             new Color(0.95f, 0.75f, 0.2f),
-            positiveDescs: new[] { "最大负重+20kg", "移动速度+10%", "力量+5" },
+            positiveDescs: I18n.TrAll("mule.pos.0", "mule.pos.1", "mule.pos.2"),
             negativeDescs: _debuffRemaining > 0f
-                ? new[] { "每秒肌肉-0.2", "意识清醒≤90%" }
-                : new[] { "意识清醒≤90%" });
+                ? I18n.TrAll("mule.neg.0", "mule.neg.1")
+                : I18n.TrAll("mule.neg.1"));
 
         if (_buffRemaining <= 0f)
         {

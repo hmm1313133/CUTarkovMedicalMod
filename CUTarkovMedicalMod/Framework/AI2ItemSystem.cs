@@ -21,13 +21,8 @@ public static class AI2ItemSystem
     public const string BaseGameItemId = "syringe";
     public const string LiquidId = "ai2_liquid";
 
-    public const string DisplayName = "AI-2急救组合注射器【AI-2】";
-    public const string Description =
-        "AI-2 急救组合是苏联为各类防卫组织、执法部门与民防机构研发的标准制式急救装备。" +
-        "AI-2 的产量相当大，以保证爆发大规模杀伤性武器的全面冲突或危化事故时，受影响地区及其周边地区的居民能够及时获得个人防护所需的药品" +
-        "对于消除辐射确实效果不俗，但副作用也很大。看不懂里面都是什么，索性混一块用吧。\n\n" +
-        "<color=#54ff9f>效果（每10ml）：辐射-1Gy，阿片类药物作用+0.2，内出血-8%。</color>\n" +
-        "<color=#ff6666>副作用（每10ml）：+3患病，-10%免疫力，-1水分和饱食度。</color>";
+    public static string DisplayName => I18n.Tr("ai2.name");
+    public static string Description => I18n.Tr("ai2.desc");
 
     private const float MlPerUse = 10f;
     private const float TotalMl = 100f;

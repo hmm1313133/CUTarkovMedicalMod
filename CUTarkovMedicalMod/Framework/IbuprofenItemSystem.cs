@@ -23,13 +23,8 @@ public static class IbuprofenItemSystem
     public const string BaseGameItemId = "bruisekit";
     public const string LiquidId = "ibuprofen_liquid";
 
-    public const string DisplayName = "布洛芬止痛药【Ibuprofen】";
-    public const string Description =
-        "是一种非甾体抗炎药（NSAID）类药物，用于治疗疼痛、发烧和炎症。\n\n" +
-        "但是...这玩意对你来说好像有些毒性。非必要不使用吧。\n\n" +
-        "<color=#54ff9f>效果：抵抗力+50%，略微增加活力 持续7分钟；1分钟内极大幅抑制并减退全身的感染，中幅止痛效果；体温降低2°C。</color>\n" +
-        "<color=#ff6666>副作用：心情-3；服用过后概率呕吐。</color>\n" +
-        "<color=#cc0000>注意：10分钟内服用第二次将触发过量反应，第二次过量后接连过量必定致死！</color>";
+    public static string DisplayName => I18n.Tr("ibuprofen.name");
+    public static string Description => I18n.Tr("ibuprofen.desc");
 
     private const float TotalMl = 10f;
     private const float MlPerUse = 2f;
@@ -555,22 +550,22 @@ public sealed class IbuprofenEffectController : MonoBehaviour
 
         if (tripleOverdose)
         {
-            StimBuffIndicator.ShowOneTimeEffect(IbuprofenItemSystem.ItemKey, "三重过量！致死性中毒！", isNegative: true);
+            StimBuffIndicator.ShowOneTimeEffect(IbuprofenItemSystem.ItemKey, I18n.Tr("ibuprofen.ot.0"), isNegative: true);
             StimBuffIndicator.ShowBuff(
                 IbuprofenItemSystem.ItemKey,
-                "三重过量",
+                I18n.Tr("ibuprofen.buff"),
                 IbuprofenItemSystem.TryGetIbuprofenIcon(),
                 TripleOverdoseDuration,
                 TripleOverdoseDuration,
                 new Color(0.6f, 0f, 0f),
                 positiveDescs: null,
-                negativeDescs: new[] { "致死性中毒！", "疼痛+100", "肌肉-50", "大脑完整度持续减少" });
+                negativeDescs: I18n.TrAll("ibuprofen.neg.0", "ibuprofen.neg.1", "ibuprofen.neg.2", "ibuprofen.neg.3"));
             Plugin.Log.LogWarning("[Ibuprofen] TRIPLE OVERDOSE TRIGGERED! Third dose within overdose window.");
         }
         else if (overdose)
         {
             // 显示过量警告
-            StimBuffIndicator.ShowOneTimeEffect(IbuprofenItemSystem.ItemKey, "触发过量！注意药品用量！", isNegative: true);
+            StimBuffIndicator.ShowOneTimeEffect(IbuprofenItemSystem.ItemKey, I18n.Tr("ibuprofen.ot.1"), isNegative: true);
             Plugin.Log.LogWarning("[Ibuprofen] OVERDOSE TRIGGERED! Second dose within 10 minutes.");
         }
 
@@ -706,7 +701,7 @@ public sealed class IbuprofenEffectController : MonoBehaviour
         if (!_overdoseWarningShown)
         {
             _overdoseWarningShown = true;
-            StimBuffIndicator.ShowOneTimeEffect(IbuprofenItemSystem.ItemKey, "触发过量！注意药品用量！", isNegative: true);
+            StimBuffIndicator.ShowOneTimeEffect(IbuprofenItemSystem.ItemKey, I18n.Tr("ibuprofen.ot.1"), isNegative: true);
         }
 
         // 阶段1: t=60-120s 疼痛+70、肌肉-20（线性）

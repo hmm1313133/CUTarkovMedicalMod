@@ -22,12 +22,8 @@ public static class VaselineItemSystem
     public const string BaseGameItemId = "bruisekit";
     public const string LiquidId = "vaseline_liquid";
 
-    public const string DisplayName = "凡士林【Vaseline】";
-    public const string Description =
-        "凡士林，这种多用途的软膏常因为其防水和润滑特性，在多种情况下发挥功效。例如处理小划伤和烧伤、作为易腐蚀品的防腐处理品以及为需耍非酸性润滑的齿轮充当润滑剂。" +
-        "你好像看见过管理你们的白大褂用过这个，只不过壳子不一样。\n\n" +
-        "<color=#54ff9f>效果：身体脏污度-2，表皮健康度+5。</color>\n" +
-        "<color=#54ff9f>特殊效果：在左/右手使用时，爪子健康值+10。</color>";
+    public static string DisplayName => I18n.Tr("vaseline.name");
+    public static string Description => I18n.Tr("vaseline.desc");
 
     private const float TotalMl = 10f;       // 容器容量
     private const float MlPerUse = 2f;       // 每次使用量

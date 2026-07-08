@@ -48,103 +48,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Framework\Assets\etg.webp">
+    <Content Include="Framework\Assets\*.png" Exclude="Framework\Assets\*_preview.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Framework\Assets\etg.png">
+    <Content Include="Framework\Assets\*.webp">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Framework\Assets\zagustin.png">
+    <Content Include="Framework\Assets\*.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Framework\Assets\Zagustin.webp">
+    <Content Include="Lang\*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Framework\Assets\morphine.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\Morphine.webp">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\sj12.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\sj12.webp">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\mule.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\M.U.L.E.webp">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\propital.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\propital.webp">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\sj6.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\sj6.webp">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\pnb.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\pnb.webp">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\sj1.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\sj1.webp">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\obdolbos.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\obd1.webp">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\sj9.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\sj9.webp">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\blueblood.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\blueblood.webp">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\xtg12.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\xtg12.webp">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\Mildronate.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\Mildronate.webp">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\2a2btg.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\2a2btg.webp">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\obd2.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\obd2.webp">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Folder Include="Framework\Assets\" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -154,41 +69,16 @@
   <Target Name="CopyOutputDllsToPluginsFolder" AfterTargets="AfterBuild">
     <MakeDir Directories="$(BepInExDir)/plugins/$(PluginDirName)" />
     <MakeDir Directories="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" />
+    <MakeDir Directories="$(BepInExDir)/plugins/$(PluginDirName)/Lang" />
     <CombinePath BasePath="$(OutDir)" Paths="$(RequiredFilesToCopy)">
       <Output TaskParameter="CombinedPaths" ItemName="RequiredFilesToCopy_Combined" />
     </CombinePath>
     <Copy SourceFiles="@(RequiredFilesToCopy_Combined)" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\etg.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\etg.webp')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\etg.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\etg.png')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\zagustin.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\zagustin.png')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\Zagustin.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\Zagustin.webp')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\morphine.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\morphine.png')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\Morphine.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\Morphine.webp')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\sj12.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\sj12.png')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\sj12.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\sj12.webp')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\mule.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\mule.png')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\M.U.L.E.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\M.U.L.E.webp')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\propital.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\propital.png')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\propital.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\propital.webp')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\sj6.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\sj6.png')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\sj6.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\sj6.webp')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\pnb.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\pnb.png')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\pnb.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\pnb.webp')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\sj1.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\sj1.png')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\sj1.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\sj1.webp')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\obdolbos.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\obdolbos.png')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\obd1.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\obd1.webp')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\sj9.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\sj9.png')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\sj9.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\sj9.webp')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\blueblood.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\blueblood.png')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\blueblood.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\blueblood.webp')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\xtg12.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\xtg12.png')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\xtg12.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\xtg12.webp')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\Mildronate.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\Mildronate.png')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\Mildronate.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\Mildronate.webp')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\2a2btg.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\2a2btg.png')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\2a2btg.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\2a2btg.webp')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\obd2.png" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\obd2.png')" />
-    <Copy SourceFiles="$(OutDir)Framework\Assets\obd2.webp" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('$(OutDir)Framework\Assets\obd2.webp')" />
+    <ItemGroup>
+      <PluginAssets Include="$(OutDir)Framework\Assets\*.*" />
+      <PluginLang Include="$(OutDir)Lang\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(PluginAssets)" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('%(Identity)')" />
+    <Copy SourceFiles="@(PluginLang)" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Lang" Condition="Exists('%(Identity)')" />
   </Target>
 </Project>

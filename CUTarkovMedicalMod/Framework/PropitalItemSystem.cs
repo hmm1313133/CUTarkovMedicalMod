@@ -19,11 +19,8 @@ public static class PropitalItemSystem
     public const string ItemKey = "propital";
     public const string BaseGameItemId = "syringe";
 
-    public const string DisplayName = "Propital再生兴奋剂注射器【Propital】";
-    public const string Description =
-        "军用药物。通过增加嘌呤和嘧啶碱基、RNA、功能性酶促细胞元素的生物合成来刺激再生过程。但是它有长期的副作用，只允许专业医师和护理人员使用。写着'TerraGroup 实验室开发'。\n\n" +
-        "<color=#54ff9f>效果：每秒恢复所有肢体 0.1 表皮与肌肉健康，持续15分钟；中幅阿片类药物影响。</color>\n" +
-        "<color=#ff6666>副作用：患病 +10；延迟3分钟后韧性/力量等级永久 -2；延迟10分钟后出现严重管视效应与颤栗，持续5分钟。</color>";
+    public static string DisplayName => I18n.Tr("propital.name");
+    public static string Description => I18n.Tr("propital.desc");
 
     private static Sprite? _cachedIcon;
 
@@ -350,15 +347,15 @@ public sealed class PropitalEffectController : MonoBehaviour
     {
         bool isRefresh = enabled;
         if (isRefresh)
-            StimBuffIndicator.ShowOneTimeEffect(PropitalItemSystem.ItemKey, "二次注射 计时器已刷新");
+            StimBuffIndicator.ShowOneTimeEffect(PropitalItemSystem.ItemKey, I18n.Tr("propital.ot.0"));
 
         // 注入阿片剂量（可叠加）
         InjectOpiate(_body, OpiateDose);
-        StimBuffIndicator.ShowOneTimeEffect(PropitalItemSystem.ItemKey, "中幅阿片影响");
+        StimBuffIndicator.ShowOneTimeEffect(PropitalItemSystem.ItemKey, I18n.Tr("propital.ot.1"));
 
         // 立即副作用：患病 +10（每次注射都触发）
         _body!.sicknessAmount += SicknessPenalty;
-        StimBuffIndicator.ShowOneTimeEffect(PropitalItemSystem.ItemKey, $"患病+{SicknessPenalty}", isNegative: true);
+        StimBuffIndicator.ShowOneTimeEffect(PropitalItemSystem.ItemKey, I18n.TrFmt("propital.ot.2", SicknessPenalty), isNegative: true);
         Plugin.Log.LogInfo($"[Propital] Immediate sicknessAmount +{SicknessPenalty} (now {_body.sicknessAmount}).");
 
         _phase = Phase.Delay;
@@ -372,12 +369,12 @@ public sealed class PropitalEffectController : MonoBehaviour
 
         StimBuffIndicator.ShowBuff(
             PropitalItemSystem.ItemKey,
-            "Propital",
+            I18n.Tr("propital.buff"),
             TryGetPropitalIcon(),
             BuffDuration + ActivationDelay,
             BuffDuration + ActivationDelay,
             new Color(0.2f, 0.9f, 0.4f), // 翠绿色（再生）
-            positiveDescs: new[] { "全部肢体再生" },
+            positiveDescs: I18n.TrAll("propital.pos.0"),
             negativeDescs: Array.Empty<string>());
     }
 
@@ -469,7 +466,7 @@ public sealed class PropitalEffectController : MonoBehaviour
         }
 
         // 更新 buff 显示
-        var label = _tunnelTremorActive ? "Propital(副作用)" : "Propital";
+        var label = _tunnelTremorActive ? I18n.Tr("propital.buff_side") : I18n.Tr("propital.buff");
         var color = _tunnelTremorActive
             ? new Color(1f, 0.3f, 0.3f)   // 红色（副作用警告）
             : new Color(0.2f, 0.9f, 0.4f); // 翠绿色（再生）
@@ -481,8 +478,8 @@ public sealed class PropitalEffectController : MonoBehaviour
             _phaseTimer,
             BuffDuration,
             color,
-            positiveDescs: _tunnelTremorActive ? null : new[] { "全部肢体再生" },
-            negativeDescs: _tunnelTremorActive ? new[] { "管视效应" } : null);
+            positiveDescs: _tunnelTremorActive ? null : I18n.TrAll("propital.pos.0"),
+            negativeDescs: _tunnelTremorActive ? I18n.TrAll("propital.neg.0") : null);
 
         if (_phaseTimer <= 0f)
         {
@@ -520,7 +517,7 @@ public sealed class PropitalEffectController : MonoBehaviour
 
         SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatRES, -ResiliencePenalty);
         SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatSTR, -StrengthPenalty);
-        StimBuffIndicator.ShowOneTimeEffect(PropitalItemSystem.ItemKey, $"韧性-{ResiliencePenalty} 力量-{StrengthPenalty} 永久", isNegative: true);
+        StimBuffIndicator.ShowOneTimeEffect(PropitalItemSystem.ItemKey, I18n.TrFmt("propital.ot.3", ResiliencePenalty, StrengthPenalty), isNegative: true);
 
         Plugin.Log.LogInfo($"[Propital] Stat penalty applied: RES -{ResiliencePenalty} (now {SkillEffectHelper.GetLevel(_body, SkillEffectHelper.StatRES)}), " +
             $"STR -{StrengthPenalty} (now {SkillEffectHelper.GetLevel(_body, SkillEffectHelper.StatSTR)}).");

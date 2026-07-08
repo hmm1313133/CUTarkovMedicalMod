@@ -19,11 +19,8 @@ public static class EtgCItemSystem
     public const string EtgItemKey = "etg_c";
     public const string EtgBaseGameItemId = "syringe";
 
-    public const string EtgDisplayName = "eTG-change再生兴奋剂注射器【eTG-c】";
-    public const string EtgDescription =
-        "强大的再生过程促进剂。用于伤员受伤后或重伤员运输过程中的快速恢复，只允许专业医师和护理人员使用。写着‘TerraGroup 实验室开发’\n\n" +
-        "<color=#54ff9f>效果：每秒恢复每个部位2点肌肉健康，血容量每秒回升50ml，持续60秒。</color>\n" +
-        "<color=#ff6666>副作用：效果结束后20秒内持续消耗饱食度与水分，并引发胸口剧烈疼痛。</color>";
+    public static string EtgDisplayName => I18n.Tr("etg_c.name");
+    public static string EtgDescription => I18n.Tr("etg_c.desc");
 
     private static Sprite? _cachedIcon;
 
@@ -391,7 +388,7 @@ public sealed class EtgStimEffectController : MonoBehaviour
 
         if (isRefresh)
         {
-            StimBuffIndicator.ShowOneTimeEffect(EtgCItemSystem.EtgItemKey, "二次注射 正面效果不叠加");
+            StimBuffIndicator.ShowOneTimeEffect(EtgCItemSystem.EtgItemKey, I18n.Tr("etg_c.ot.0"));
             Plugin.Log.LogInfo("[eTG-c] Refresh: timer reset, negatives re-trigger.");
         }
 
@@ -403,12 +400,12 @@ public sealed class EtgStimEffectController : MonoBehaviour
         // 显示 buff 图标
         StimBuffIndicator.ShowBuff(
             EtgCItemSystem.EtgItemKey,
-            "eTG-c",
+            I18n.Tr("etg_c.buff"),
             TryGetEtgIcon(),
             _remaining,
             DurationSeconds,
             new Color(0.4f, 1f, 0.6f), // 绿色（再生）
-            positiveDescs: new[] { "全部肢体再生", "血容量回升至5L" });
+            positiveDescs: I18n.TrAll("etg_c.pos.0", "etg_c.pos.1"));
     }
 
     private void Awake() => enabled = false;
@@ -442,12 +439,12 @@ public sealed class EtgStimEffectController : MonoBehaviour
 
             StimBuffIndicator.ShowBuff(
                 EtgCItemSystem.EtgItemKey,
-                "eTG-c",
+                I18n.Tr("etg_c.buff"),
                 TryGetEtgIcon(),
                 _remaining,
                 DurationSeconds,
                 new Color(0.4f, 1f, 0.6f),
-                positiveDescs: new[] { "全部肢体再生", "血容量回升至5L" });
+                positiveDescs: I18n.TrAll("etg_c.pos.0", "etg_c.pos.1"));
 
             if (_remaining <= 0f)
             {
@@ -461,13 +458,13 @@ public sealed class EtgStimEffectController : MonoBehaviour
             // 显示负面效果
             StimBuffIndicator.ShowBuff(
                 EtgCItemSystem.EtgItemKey,
-                "eTG-c(副作用)",
+                I18n.Tr("etg_c.buff_side"),
                 TryGetEtgIcon(),
                 _debuffRemaining,
                 DebuffDurationSeconds,
                 new Color(1f, 0.3f, 0.3f), // 红色（副作用警告）
                 positiveDescs: Array.Empty<string>(),
-                negativeDescs: new[] { "每秒-1饱食/水分" });
+                negativeDescs: I18n.TrAll("etg_c.neg.0"));
 
             if (_debuffRemaining <= 0f)
             {
@@ -506,7 +503,7 @@ public sealed class EtgStimEffectController : MonoBehaviour
         if (chestLimb != null)
         {
             chestLimb.pain += DebuffChestPain;
-            StimBuffIndicator.ShowOneTimeEffect(EtgCItemSystem.EtgItemKey, $"胸口疼痛+{DebuffChestPain}", isNegative: true);
+            StimBuffIndicator.ShowOneTimeEffect(EtgCItemSystem.EtgItemKey, I18n.TrFmt("etg_c.ot.1", DebuffChestPain), isNegative: true);
             Plugin.Log.LogInfo($"ETG-c debuff: applied +{DebuffChestPain} pain to chest.");
         }
     }

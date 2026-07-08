@@ -19,11 +19,8 @@ public static class Sj1ItemSystem
     public const string ItemKey = "sj1";
     public const string BaseGameItemId = "syringe";
 
-    public const string DisplayName = "SJ1兴奋剂注射器【SJ1】";
-    public const string Description =
-        "战斗兴奋剂。在战斗前注射能够获得力量和耐力。可以降低疼痛敏感度。兴奋剂被允许供特种作战单位使用。上面有SJ1的标记。有副作用。写着'TerraGroup 实验室开发'。\n\n" +
-        "<color=#54ff9f>效果：力量等级+5、韧性等级+3、耐力恢复+30%，持续5分钟；轻微阿片类药物影响。</color>\n" +
-        "<color=#ff6666>副作用：立即 +10患病；效果期间每秒消耗0.1饱食度与0.1水分。</color>";
+    public static string DisplayName => I18n.Tr("sj1.name");
+    public static string Description => I18n.Tr("sj1.desc");
 
     private static Sprite? _cachedIcon;
 
@@ -338,16 +335,16 @@ public sealed class Sj1EffectController : MonoBehaviour
     {
         bool isRefresh = enabled;
         if (isRefresh)
-            StimBuffIndicator.ShowOneTimeEffect(Sj1ItemSystem.ItemKey, "二次注射 计时器已刷新");
+            StimBuffIndicator.ShowOneTimeEffect(Sj1ItemSystem.ItemKey, I18n.Tr("sj1.ot.0"));
 
         // 立即副作用：患病 +10（每次注射都触发）
         _body!.sicknessAmount += SicknessOnUse;
         Plugin.Log.LogInfo($"[SJ1] Immediate sicknessAmount +{SicknessOnUse} (now {_body.sicknessAmount}).");
-        StimBuffIndicator.ShowOneTimeEffect(Sj1ItemSystem.ItemKey, "患病+10", isNegative: true);
+        StimBuffIndicator.ShowOneTimeEffect(Sj1ItemSystem.ItemKey, I18n.Tr("sj1.ot.1"), isNegative: true);
 
         // 阿片镇痛（可叠加）
         InjectOpiate(_body, OpiateDose);
-        StimBuffIndicator.ShowOneTimeEffect(Sj1ItemSystem.ItemKey, "阿片镇痛+5");
+        StimBuffIndicator.ShowOneTimeEffect(Sj1ItemSystem.ItemKey, I18n.Tr("sj1.ot.2"));
 
         _phase = Phase.Delay;
         _phaseTimer = ActivationDelay;
@@ -358,13 +355,13 @@ public sealed class Sj1EffectController : MonoBehaviour
 
         StimBuffIndicator.ShowBuff(
             Sj1ItemSystem.ItemKey,
-            "SJ1",
+            I18n.Tr("sj1.buff"),
             TryGetSj1Icon(),
             BuffDuration + ActivationDelay,
             BuffDuration + ActivationDelay,
             new Color(0.3f, 0.7f, 0.9f), // 蓝青色（轻型战斗兴奋剂）
-            positiveDescs: new[] { "力量+5", "韧性+3", "耐力恢复+30%" },
-            negativeDescs: new[] { "每秒-0.1饱食/水分" });
+            positiveDescs: I18n.TrAll("sj1.pos.0", "sj1.pos.1", "sj1.pos.2"),
+            negativeDescs: I18n.TrAll("sj1.neg.0"));
     }
 
     private void Awake() => enabled = false;
@@ -396,13 +393,13 @@ public sealed class Sj1EffectController : MonoBehaviour
 
         StimBuffIndicator.ShowBuff(
             Sj1ItemSystem.ItemKey,
-            "SJ1",
+            I18n.Tr("sj1.buff"),
             TryGetSj1Icon(),
             _phaseTimer + BuffDuration,
             BuffDuration + ActivationDelay,
             new Color(0.3f, 0.7f, 0.9f),
-            positiveDescs: new[] { "力量+5", "韧性+3", "耐力恢复+30%" },
-            negativeDescs: new[] { "每秒-0.1饱食/水分" });
+            positiveDescs: I18n.TrAll("sj1.pos.0", "sj1.pos.1", "sj1.pos.2"),
+            negativeDescs: I18n.TrAll("sj1.neg.0"));
 
         if (_phaseTimer <= 0f)
         {
@@ -435,13 +432,13 @@ public sealed class Sj1EffectController : MonoBehaviour
         // 更新 buff 显示
         StimBuffIndicator.ShowBuff(
             Sj1ItemSystem.ItemKey,
-            "SJ1",
+            I18n.Tr("sj1.buff"),
             TryGetSj1Icon(),
             _phaseTimer,
             BuffDuration,
             new Color(0.3f, 0.7f, 0.9f),
-            positiveDescs: new[] { "力量+5", "韧性+3", "耐力恢复+30%" },
-            negativeDescs: new[] { "每秒-0.1饱食/水分" });
+            positiveDescs: I18n.TrAll("sj1.pos.0", "sj1.pos.1", "sj1.pos.2"),
+            negativeDescs: I18n.TrAll("sj1.neg.0"));
 
         if (_phaseTimer <= 0f)
         {

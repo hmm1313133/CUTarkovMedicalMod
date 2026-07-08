@@ -22,13 +22,8 @@ public static class GoldenStarItemSystem
     public const string BaseGameItemId = "bruisekit";
     public const string LiquidId = "goldenstar_liquid";
 
-    public const string DisplayName = "金星药膏【Golden Star】";
-    public const string Description =
-        "越南金星药膏，由樟脑、薄荷醇、薄荷、白千层等植物提炼而成。" +
-        "一般感冒时涂抹至人中；流行性感冒时涂抹至胸部或背部；如遇蚊虫叮咬涂抹在被叮咬处即可。" +
-        "看上去像是抹的，但是怎么闻起来这么刺鼻难受？。\n\n" +
-        "<color=#54ff9f>效果：使用部位消毒30秒，延迟稍许后止痛15秒。</color>\n" +
-        "<color=#ff6666>副作用：表皮健康度-5；心情-5；延迟稍许后意识清醒度中幅降低10秒。</color>";
+    public static string DisplayName => I18n.Tr("goldenstar.name");
+    public static string Description => I18n.Tr("goldenstar.desc");
 
     private const float TotalMl = 10f;       // 容器容量
     private const float MlPerUse = 2f;       // 每次使用量

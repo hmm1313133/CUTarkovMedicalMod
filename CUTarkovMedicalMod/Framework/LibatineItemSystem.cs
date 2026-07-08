@@ -22,12 +22,8 @@ public static class LibatineItemSystem
     public const string BaseGameItemId = "bruisekit";
     public const string LiquidId = "libatine_liquid";
 
-    public const string DisplayName = "力百汀抗生素药片【Augmentin】";
-    public const string Description =
-        "力百汀是一种复合型的广谱抗生素，用于治疗细菌感染。\n\n" +
-        "但是这里面怎么就一颗药？。\n\n" +
-        "<color=#54ff9f>效果：抵抗力+80%持续5分钟；1分钟内抑制并减退全身的感染。</color>\n" +
-        "<color=#ff6666>副作用：心情-3；服用6分钟左右过后概率呕吐。</color>";
+    public static string DisplayName => I18n.Tr("libatine.name");
+    public static string Description => I18n.Tr("libatine.desc");
 
     private const float TotalMl = 2f;        // 容器容量
     private const float MlPerUse = 2f;       // 每次使用量

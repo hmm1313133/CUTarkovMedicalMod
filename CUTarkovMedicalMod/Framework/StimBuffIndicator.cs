@@ -72,7 +72,7 @@ public static class StimBuffIndicator
         }
         entry.OneTimeEffects.Add(new OneTimeEffectEntry
         {
-            Text = $"○一次性{(isNegative ? " ⚠" : "")} {effect}",
+            Text = $"{I18n.Tr("fw.onetime_prefix")}{(isNegative ? I18n.Tr("fw.onetime_warn") : "")} {effect}",
             IsNegative = isNegative,
             ExpireTime = Time.time + 10f
         });
@@ -311,7 +311,7 @@ public static class StimBuffIndicator
                     descParts.Add($"<color=#aaaaaa>{ot.Text}</color>");
                 var desc = descParts.Count > 0
                     ? string.Join("\n", descParts)
-                    : $"针剂效果持续中，剩余 {Mathf.CeilToInt(buff.Remaining)} 秒";
+                    : I18n.TrFmt("fw.buff_default", Mathf.CeilToInt(buff.Remaining));
 
                 // 使用统一的 intensity，通过 NormalizeMoodleIcon 覆盖背景颜色
                 const int sharedIntensity = 1;

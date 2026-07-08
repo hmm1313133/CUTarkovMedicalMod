@@ -18,14 +18,8 @@ public static class MildronateItemSystem
     public const string ItemKey = "mildronate";
     public const string BaseGameItemId = "syringe";
 
-    public const string DisplayName = "米屈肼注射器";
-    public const string Description =
-        "为运动员研制的药物，让使用者即使在强度更大的训练下也能更快恢复精力。" +
-        "能够在短时间内增加力量、耐力，同时加快恢复速度。" +
-        "但与此同时，米屈肼还有一项未被公布的特性：它能够提升肌肉的内部张力，" +
-        "提升人体组织对物理冲击的抗性。这一性质使得军方将其用作战斗兴奋剂。存在副作用。\n\n" +
-        "<color=#54ff9f>效果：立即心脏纤颤进度 -20%；耐力上限 +10%、耐力恢复 +50%，持续25分钟。</color>\n" +
-        "<color=#ff6666>副作用：每秒消耗0.1饱食度与0.1水分，持续15分钟。</color>";
+    public static string DisplayName => I18n.Tr("mildronate.name");
+    public static string Description => I18n.Tr("mildronate.desc");
 
     private static Sprite? _cachedIcon;
 
@@ -343,11 +337,11 @@ public sealed class MildronateEffectController : MonoBehaviour
     {
         bool isRefresh = enabled;
         if (isRefresh)
-            StimBuffIndicator.ShowOneTimeEffect(MildronateItemSystem.ItemKey, "二次注射 计时器已刷新");
+            StimBuffIndicator.ShowOneTimeEffect(MildronateItemSystem.ItemKey, I18n.Tr("mildronate.ot.0"));
 
         // 心脏纤颤进度 -20%（可叠加）
         ReduceFibrillation();
-        StimBuffIndicator.ShowOneTimeEffect(MildronateItemSystem.ItemKey, "心脏纤颤-20%");
+        StimBuffIndicator.ShowOneTimeEffect(MildronateItemSystem.ItemKey, I18n.Tr("mildronate.ot.1"));
 
         _phase = Phase.Delay;
         _phaseTimer = ActivationDelay;
@@ -385,7 +379,7 @@ public sealed class MildronateEffectController : MonoBehaviour
 
         StimBuffIndicator.ShowBuff(
             MildronateItemSystem.ItemKey,
-            "米屈肼",
+            I18n.Tr("mildronate.buff"),
             TryGetMildronateIcon(),
             _phaseTimer + BuffDuration,
             BuffDuration + ActivationDelay,
@@ -486,13 +480,13 @@ public sealed class MildronateEffectController : MonoBehaviour
 
         StimBuffIndicator.ShowBuff(
             MildronateItemSystem.ItemKey,
-            "米屈肼",
+            I18n.Tr("mildronate.buff"),
             TryGetMildronateIcon(),
             _phaseTimer,
             BuffDuration,
             tintColor,
-            positiveDescs: new[] { "耐力上限+10%", "耐力恢复+50%" },
-            negativeDescs: _drainActive ? new[] { "每秒-0.1饱食/水分" } : Array.Empty<string>());
+            positiveDescs: I18n.TrAll("mildronate.pos.0", "mildronate.pos.1"),
+            negativeDescs: _drainActive ? I18n.TrAll("mildronate.neg.0") : Array.Empty<string>());
 
         if (_phaseTimer <= 0f)
         {

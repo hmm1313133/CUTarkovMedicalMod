@@ -19,11 +19,8 @@ public static class TwoATwoBTGItemSystem
     public const string ItemKey = "2a2btg";
     public const string BaseGameItemId = "syringe";
 
-    public const string DisplayName = "2A2-(b-TG)兴奋剂注射器【2A2-(b-TG)】";
-    public const string Description =
-        "此产品项目旨在创造一种能在远离物资供应点进行侦查或转移时，依然提供战斗支撑的药物。同时，这款产品需要能够进行手工生产。它可以使中枢神经系统长期保持稳定，帮助战斗人员接触不同环境，并提高负重能力。使用此产品时，脱水速度将会提高。写着'TerraGroup 实验室开发'。\n\n" +
-        "<color=#54ff9f>效果：负重上限+7u（可与其他针剂叠加） 持续20分钟；心情立即+5。</color>\n" +
-        "<color=#ff6666>副作用：每秒-0.1水分 持续15分钟。</color>";
+    public static string DisplayName => I18n.Tr("2a2btg.name");
+    public static string Description => I18n.Tr("2a2btg.desc");
 
     private static Sprite? _cachedIcon;
 
@@ -333,7 +330,7 @@ public sealed class TwoATwoBTGEffectController : MonoBehaviour
     {
         bool isRefresh = enabled;
         if (isRefresh)
-            StimBuffIndicator.ShowOneTimeEffect(TwoATwoBTGItemSystem.ItemKey, "二次注射 计时器已刷新");
+            StimBuffIndicator.ShowOneTimeEffect(TwoATwoBTGItemSystem.ItemKey, I18n.Tr("2a2btg.ot.0"));
 
         // 心情 +5（可叠加）
         BoostMood();
@@ -374,12 +371,12 @@ public sealed class TwoATwoBTGEffectController : MonoBehaviour
 
         StimBuffIndicator.ShowBuff(
             TwoATwoBTGItemSystem.ItemKey,
-            "2A2-(b-TG)",
+            I18n.Tr("2a2btg.buff"),
             TryGetIcon(),
             _phaseTimer + BuffDuration,
             BuffDuration + ActivationDelay,
             new Color(0.2f, 0.6f, 0.5f), // 青绿色（负重+适应）
-            positiveDescs: new[] { "负重上限+7u" },
+            positiveDescs: I18n.TrAll("2a2btg.pos.0"),
             negativeDescs: Array.Empty<string>());
 
         if (_phaseTimer <= 0f)
@@ -428,13 +425,13 @@ public sealed class TwoATwoBTGEffectController : MonoBehaviour
 
         StimBuffIndicator.ShowBuff(
             TwoATwoBTGItemSystem.ItemKey,
-            "2A2-(b-TG)",
+            I18n.Tr("2a2btg.buff"),
             TryGetIcon(),
             _phaseTimer,
             BuffDuration,
             tintColor,
-            positiveDescs: new[] { "负重上限+7u" },
-            negativeDescs: _drainActive ? new[] { "每秒-0.1水分" } : Array.Empty<string>());
+            positiveDescs: I18n.TrAll("2a2btg.pos.0"),
+            negativeDescs: _drainActive ? I18n.TrAll("2a2btg.neg.0") : Array.Empty<string>());
 
         if (_phaseTimer <= 0f)
         {
@@ -463,7 +460,7 @@ public sealed class TwoATwoBTGEffectController : MonoBehaviour
             Plugin.Log.LogWarning($"[2A2-(b-TG)] Mood boost failed: {ex.Message}");
         }
 
-        StimBuffIndicator.ShowOneTimeEffect(TwoATwoBTGItemSystem.ItemKey, $"心情+{MoodBoost}");
+        StimBuffIndicator.ShowOneTimeEffect(TwoATwoBTGItemSystem.ItemKey, I18n.TrFmt("2a2btg.ot.1", MoodBoost));
     }
 
     /// <summary>

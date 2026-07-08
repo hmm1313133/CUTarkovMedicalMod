@@ -22,10 +22,8 @@ public static class MorphineItemSystem
     public const string ItemKey = "cu_morphine";
     public const string BaseGameItemId = "syringe";
 
-    public const string DisplayName = "吗啡注射器【Morphine】";
-    public const string Description =
-        "强效阿片类止痛剂。注射后迅速消除疼痛与震颤，但装成这个样子的吗啡你还从未见过，要不还是不用了吧。\n\n" +
-        "<color=#ff6666>效果：极大幅阿片类药物影响，必定致死！。</color>\n";
+    public static string DisplayName => I18n.Tr("cu_morphine.name");
+    public static string Description => I18n.Tr("cu_morphine.desc");
 
     private static Sprite? _cachedIcon;
 
@@ -345,7 +343,7 @@ public sealed class MorphineEffectController : MonoBehaviour
     {
         bool isRefresh = enabled;
         if (isRefresh)
-            StimBuffIndicator.ShowOneTimeEffect(MorphineItemSystem.ItemKey, "二次注射 阿片剂量叠加");
+            StimBuffIndicator.ShowOneTimeEffect(MorphineItemSystem.ItemKey, I18n.Tr("cu_morphine.ot.0"));
 
         // 注入阿片剂量到原生 Painkillers 系统（可叠加）
         InjectOpiate(_body, OpiateDose);
@@ -375,12 +373,12 @@ public sealed class MorphineEffectController : MonoBehaviour
 
         StimBuffIndicator.ShowBuff(
             MorphineItemSystem.ItemKey,
-            "Morphine",
+            I18n.Tr("cu_morphine.buff"),
             TryGetMorphineIcon(),
             _remaining,
             10f,
             new Color(0.31f, 0.76f, 0.97f),
-            negativeDescs: new[] { "极大幅阿片类药物影响！立即自救！" });
+            negativeDescs: I18n.TrAll("cu_morphine.neg.0"));
     }
 
     /// <summary>

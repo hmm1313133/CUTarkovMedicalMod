@@ -18,11 +18,8 @@ public static class GrizzlyKitItemSystem
     public const string ItemKey = "grizzlykit";
     public const string BaseGameItemId = "bruisekit";
 
-    public const string DisplayName = "Grizzly急救包";
-    public const string Description =
-        "旅行用Grizzly急救包被认为是最好的急救包之一。它包含了所有极端情况下所需要的一切医疗用品。" +
-        "即使它看上去尘封许久，但里面的药品还很完好。\n\n" +
-        "<color=#54ff9f>效果：大幅加速骨折恢复与止血；中幅表皮和肌肉健康度恢复；略微消毒。耐久极高但很重。</color>";
+    public static string DisplayName => I18n.Tr("grizzlykit.name");
+    public static string Description => I18n.Tr("grizzlykit.desc");
 
     private const float PerformanceDivisor = 100f;
 

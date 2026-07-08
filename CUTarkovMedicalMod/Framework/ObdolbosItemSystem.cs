@@ -20,19 +20,8 @@ public static class ObdolbosItemSystem
     public const string ItemKey = "obdolbos";
     public const string BaseGameItemId = "syringe";
 
-    public const string DisplayName = "Obdolbos鸡尾酒兴奋剂注射器【Obdolbos】";
-    public const string Description =
-        "装有自制药品的注射器，由 TerraGroup 实验室的前雇员Sanitar制作，标签处有着他的签名，每次带来的副作用都不一样。" +
-        "要是没什么可失去了的话，你大可以冒这个险。这个一看就和其他针剂不太一样，不太对劲...\n\n" +
-        "<color=#ffcc00>效果：延迟5秒后随机触发以下效果之一：</color>\n" +
-        "<color=#4fc3f7>  · 10%：血容量每秒回复0.1L持续30s；所有肢体+50肌肉/表皮；脑组织+40；力量/智力/韧性等级永久+10</color>\n" +
-        "<color=#ff6666>  · 15%：精神抹除</color>\n" +
-        "<color=#4fc3f7>  · 15%：立即回复5吃喝；体温-2°C持续10分钟</color>\n" +
-        "<color=#ff6666>  · 15%：脑组织健康度-25</color>\n" +
-        "<color=#cc0000>  · 15%：猝死</color>\n" +
-        "<color=#ff6666>  · 15%：每秒-1水分与饱食度、减重0.1kg、体温+3°C持续30秒</color>\n" +
-        "<color=#4fc3f7>  · 15%：耐力恢复+80%持续25分钟；永久力量等级+3</color>\n" +
-        "<color=#ff6666>  · 15%：辐射+10gy、患病+30；永久智力等级+5</color>";
+    public static string DisplayName => I18n.Tr("obdolbos.name");
+    public static string Description => I18n.Tr("obdolbos.desc");
 
     private static Sprite? _cachedIcon;
 
@@ -365,7 +354,7 @@ public sealed class ObdolbosEffectController : MonoBehaviour
 
         StimBuffIndicator.ShowBuff(
             _instanceKey,
-            "Obdolbos",
+            I18n.Tr("obdolbos.buff"),
             TryGetObdolbosIcon(),
             _timer,
             _timer,
@@ -391,7 +380,7 @@ public sealed class ObdolbosEffectController : MonoBehaviour
         {
             StimBuffIndicator.ShowBuff(
                 _instanceKey,
-                "Obdolbos",
+                I18n.Tr("obdolbos.buff"),
                 TryGetObdolbosIcon(),
                 Mathf.Max(0f, _timer),
                 ActivationDelay,
@@ -520,8 +509,8 @@ public sealed class ObdolbosEffectController : MonoBehaviour
         SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatRES, 10);
 
         // 肢体修复、脑组织、技能提升均为一次性永久效果
-        StimBuffIndicator.ShowOneTimeEffect(_instanceKey, "肢体+50 脑组织+40");
-        StimBuffIndicator.ShowOneTimeEffect(_instanceKey, "STR+10 INT+10 RES+10 永久");
+        StimBuffIndicator.ShowOneTimeEffect(_instanceKey, I18n.Tr("obdolbos.ot.0"));
+        StimBuffIndicator.ShowOneTimeEffect(_instanceKey, I18n.Tr("obdolbos.ot.1"));
 
         Plugin.Log.LogInfo("[Obdolbos] 天神下凡: limbs+50 muscle/skin, brain+40, STR/INT/RES+10 permanent.");
     }
@@ -555,7 +544,7 @@ public sealed class ObdolbosEffectController : MonoBehaviour
                 mindWipe.active = true;
             }
 
-            StimBuffIndicator.ShowOneTimeEffect(_instanceKey, "精神抹除触发", isNegative: true);
+            StimBuffIndicator.ShowOneTimeEffect(_instanceKey, I18n.Tr("obdolbos.ot.2"), isNegative: true);
 
             // 隐藏减益：头部和胸部增加70疼痛
             var limbs = _body.limbs;
@@ -585,7 +574,7 @@ public sealed class ObdolbosEffectController : MonoBehaviour
         if (_body == null) return;
         _body.Eat(5f, 0.03f); // 3:1 比例，0.03f = +0.01kg 实际
         _body.Drink(5f);
-        StimBuffIndicator.ShowOneTimeEffect(_instanceKey, "饱食/水分+5");
+        StimBuffIndicator.ShowOneTimeEffect(_instanceKey, I18n.Tr("obdolbos.ot.3"));
         Plugin.Log.LogInfo($"[Obdolbos] 生理恢复: food/water +5, temp -2°C (from {_initialTemp:F1}) for 600s.");
     }
 
@@ -596,7 +585,7 @@ public sealed class ObdolbosEffectController : MonoBehaviour
     {
         if (_body == null) return;
         _body.brainHealth = Mathf.Max(0f, _body.brainHealth - 25f);
-        StimBuffIndicator.ShowOneTimeEffect(_instanceKey, "脑组织-25", isNegative: true);
+        StimBuffIndicator.ShowOneTimeEffect(_instanceKey, I18n.Tr("obdolbos.ot.4"), isNegative: true);
         Plugin.Log.LogInfo($"[Obdolbos] 脑损伤: brainHealth -25 (now {_body.brainHealth:F1}).");
     }
 
@@ -607,7 +596,7 @@ public sealed class ObdolbosEffectController : MonoBehaviour
     {
         if (_body == null) return;
         _body.brainHealth = 0f;
-        StimBuffIndicator.ShowOneTimeEffect(_instanceKey, "立即死亡", isNegative: true);
+        StimBuffIndicator.ShowOneTimeEffect(_instanceKey, I18n.Tr("obdolbos.ot.5"), isNegative: true);
         Plugin.Log.LogInfo("[Obdolbos] 猝死: brainHealth = 0.");
     }
 
@@ -630,7 +619,7 @@ public sealed class ObdolbosEffectController : MonoBehaviour
         // 注册耐力恢复加成到多来源叠加管理器（+80%，持续 25 分钟）
         StaminaBonusManager.AddBonus(_body, 0.8f, CombatStimDuration, ObdolbosItemSystem.ItemKey);
         SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatSTR, 3);
-        StimBuffIndicator.ShowOneTimeEffect(_instanceKey, "力量+3 永久");
+        StimBuffIndicator.ShowOneTimeEffect(_instanceKey, I18n.Tr("obdolbos.ot.6"));
         Plugin.Log.LogInfo("[Obdolbos] 战斗兴奋: stamina recovery +80% for 1500s, STR +3 permanent.");
     }
 
@@ -643,8 +632,8 @@ public sealed class ObdolbosEffectController : MonoBehaviour
         _body.radiationSickness += 33f;   // ≈ 显示 +10Gy（内部单位~3.3:1）
         _body.sicknessAmount += 30f;
         SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatINT, 5);
-        StimBuffIndicator.ShowOneTimeEffect(_instanceKey, "辐射+10Gy 患病+30", isNegative: true);
-        StimBuffIndicator.ShowOneTimeEffect(_instanceKey, "INT+5 永久");
+        StimBuffIndicator.ShowOneTimeEffect(_instanceKey, I18n.Tr("obdolbos.ot.7"), isNegative: true);
+        StimBuffIndicator.ShowOneTimeEffect(_instanceKey, I18n.Tr("obdolbos.ot.8"));
         Plugin.Log.LogInfo($"[Obdolbos] 放射性污染: radiation +10Gy (now {_body.radiationSickness:F1}), sickness +30, INT +5 permanent.");
     }
 
@@ -794,26 +783,26 @@ public sealed class ObdolbosEffectController : MonoBehaviour
 
     private static string GetOutcomeLabel(Outcome outcome) => outcome switch
     {
-        Outcome.GodMode => "天神下凡",
-        Outcome.MindWipe => "精神抹除",
-        Outcome.PhysRecovery => "生理恢复",
-        Outcome.BrainDamage => "脑损伤",
-        Outcome.InstantDeath => "猝死",
-        Outcome.MetabolicChaos => "代谢紊乱",
-        Outcome.CombatStim => "战斗兴奋",
-        Outcome.Radioactive => "放射性污染",
-        _ => "Obdolbos"
+        Outcome.GodMode => I18n.Tr("obdolbos.outcome.0"),
+        Outcome.MindWipe => I18n.Tr("obdolbos.outcome.1"),
+        Outcome.PhysRecovery => I18n.Tr("obdolbos.outcome.2"),
+        Outcome.BrainDamage => I18n.Tr("obdolbos.outcome.3"),
+        Outcome.InstantDeath => I18n.Tr("obdolbos.outcome.4"),
+        Outcome.MetabolicChaos => I18n.Tr("obdolbos.outcome.5"),
+        Outcome.CombatStim => I18n.Tr("obdolbos.outcome.6"),
+        Outcome.Radioactive => I18n.Tr("obdolbos.outcome.7"),
+        _ => I18n.Tr("obdolbos.buff")
     };
 
     private static (IReadOnlyList<string>? Positive, IReadOnlyList<string>? Negative) GetOutcomeDescriptions(Outcome outcome) => outcome switch
     {
-        Outcome.GodMode => (new[] { "血容量每秒+0.1L" }, null as string[]),
+        Outcome.GodMode => (I18n.TrAll("obdolbos.outcome_pos.0"), null as string[]),
         Outcome.MindWipe => (null, null as string[]),
-        Outcome.PhysRecovery => (new[] { "体温-2℃" }, null as string[]),
+        Outcome.PhysRecovery => (I18n.TrAll("obdolbos.outcome_pos.2"), null as string[]),
         Outcome.BrainDamage => (null, null as string[]),
         Outcome.InstantDeath => (null, null as string[]),
-        Outcome.MetabolicChaos => (null, new[] { "每秒-1饱食", "每秒-1水分", "体重-0.1/秒", "体温+3℃" }),
-        Outcome.CombatStim => (new[] { "耐力恢复+80%" }, null as string[]),
+        Outcome.MetabolicChaos => (null, I18n.TrAll("obdolbos.outcome_neg.5.0", "obdolbos.outcome_neg.5.1", "obdolbos.outcome_neg.5.2", "obdolbos.outcome_neg.5.3")),
+        Outcome.CombatStim => (I18n.TrAll("obdolbos.outcome_pos.6"), null as string[]),
         Outcome.Radioactive => (null, null as string[]),
         _ => (null as string[], null as string[])
     };

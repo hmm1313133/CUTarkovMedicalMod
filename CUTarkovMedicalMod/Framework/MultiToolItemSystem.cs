@@ -20,11 +20,8 @@ public static class MultiToolItemSystem
     public const string ItemKey = "multitool";
     public const string BaseGameItemId = "bruisekit";
 
-    public const string DisplayName = "Surv12野战手术包【Surv12】";
-    public const string Description =
-        "带有更多高质量器械的高级外科手术包，让使用者在野战条件下也能治疗严重伤害。\n" +
-        "在肢体上使用时会自动判断需要的手术类型，耐久很高但略重。\n\n" +
-        "<color=#54ff9f>效果：拔出弹片、复位脱臼、加速90%骨折恢复（造成中小幅疼痛），自动检测（治疗骨折需要先治疗弹片和脱臼）。</color>\n" ;
+    public static string DisplayName => I18n.Tr("multitool.name");
+    public static string Description => I18n.Tr("multitool.desc");
 
     internal const float DislocationCost = 0.05f; // 复位关节消耗耐久
     internal const float ShrapnelCost = 0.02f;    // 拔出弹片消耗耐久
@@ -146,7 +143,7 @@ public static class MultiToolItemSystem
         {
             if (limb.dismembered)
             {
-                PlayerCamera.main?.DoAlert("该肢体已截肢", true);
+                PlayerCamera.main?.DoAlert(I18n.Tr("multitool.alert.dismembered"), true);
                 return;
             }
 
@@ -174,14 +171,14 @@ public static class MultiToolItemSystem
                 if (item.condition <= 0f)
                     item.SetCondition(0f);
 
-                PlayerCamera.main?.DoAlert("骨折恢复加速完成", false);
+                PlayerCamera.main?.DoAlert(I18n.Tr("multitool.alert.fracture_done"), false);
                 Plugin.Log.LogInfo($"[MultiTool] Fracture treatment done, condition -{FractureCost} (now {item.condition:F2}), pain +{FracturePain}.");
                 return;
             }
 
             if (minigame == null)
             {
-                PlayerCamera.main?.DoAlert("该部位无需手术处理", true);
+                PlayerCamera.main?.DoAlert(I18n.Tr("multitool.alert.no_surgery"), true);
                 return;
             }
 

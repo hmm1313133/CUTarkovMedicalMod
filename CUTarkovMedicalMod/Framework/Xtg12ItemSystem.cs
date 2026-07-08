@@ -19,12 +19,8 @@ public static class Xtg12ItemSystem
     public const string ItemKey = "xtg12";
     public const string BaseGameItemId = "syringe";
 
-    public const string DisplayName = "xTG-12解毒剂注射器【xTG-12】";
-    public const string Description =
-        "它能够中和战争中使用过的大多数已知毒素。也能够用于解除一些自然毒素。" +
-        "其成分在血液中时，可提供对毒素的免疫效果。它会导致健康状况下降。\n\n" +
-        "<color=#54ff9f>效果：+70% 抵抗力，毒素 -100%，2分钟内大幅抑制消退全身感染并小幅改善败血症症状。持续 5 分钟。</color>\n" +
-        "<color=#ff6666>副作用：3 分钟后 20% 概率呕吐；5 分钟后颤栗 1 分钟。</color>";
+    public static string DisplayName => I18n.Tr("xtg12.name");
+    public static string Description => I18n.Tr("xtg12.desc");
 
     private static Sprite? _cachedIcon;
 
@@ -337,7 +333,7 @@ public sealed class Xtg12EffectController : MonoBehaviour
     {
         bool isRefresh = enabled;
         if (isRefresh)
-            StimBuffIndicator.ShowOneTimeEffect(Xtg12ItemSystem.ItemKey, "二次注射 计时器已刷新");
+            StimBuffIndicator.ShowOneTimeEffect(Xtg12ItemSystem.ItemKey, I18n.Tr("xtg12.ot.0"));
 
         _remaining = DetoxDurationSeconds;
         _accumulator = 0f;
@@ -362,12 +358,12 @@ public sealed class Xtg12EffectController : MonoBehaviour
 
         StimBuffIndicator.ShowBuff(
             Xtg12ItemSystem.ItemKey,
-            "xTG-12",
+            I18n.Tr("xtg12.buff"),
             TryGetXtg12Icon(),
             _remaining,
             DetoxDurationSeconds,
             new Color(0.3f, 0.7f, 1f), // 蓝色（解毒）
-            positiveDescs: new[] { "免疫力+70", "毒素清零", "感染清除中" });
+            positiveDescs: I18n.TrAll("xtg12.pos.0", "xtg12.pos.1", "xtg12.pos.2"));
     }
 
     private void Awake() => enabled = false;
@@ -408,14 +404,14 @@ public sealed class Xtg12EffectController : MonoBehaviour
 
             StimBuffIndicator.ShowBuff(
                 Xtg12ItemSystem.ItemKey,
-                "xTG-12",
+                I18n.Tr("xtg12.buff"),
                 TryGetXtg12Icon(),
                 _remaining,
                 DetoxDurationSeconds,
                 new Color(0.3f, 0.7f, 1f),
                 positiveDescs: _infectionClearRemaining > 0f
-                    ? new[] { "免疫力+70", "毒素清零", "感染清除中" }
-                    : new[] { "免疫力+70", "毒素清零" });
+                    ? I18n.TrAll("xtg12.pos.0", "xtg12.pos.1", "xtg12.pos.2")
+                    : I18n.TrAll("xtg12.pos.0", "xtg12.pos.1"));
 
             if (_remaining <= 0f)
             {
@@ -444,12 +440,12 @@ public sealed class Xtg12EffectController : MonoBehaviour
 
             StimBuffIndicator.ShowBuff(
                 Xtg12ItemSystem.ItemKey,
-                "颤栗",
+                I18n.Tr("xtg12.buff_alt"),
                 TryGetXtg12Icon(),
                 _tremorRemaining,
                 TremorDurationSeconds,
                 new Color(1f, 0.4f, 0.4f), // 红色（负面）
-                negativeDescs: new[] { "全身颤栗" });
+                negativeDescs: I18n.TrAll("xtg12.neg.0"));
 
             if (_tremorRemaining <= 0f)
             {

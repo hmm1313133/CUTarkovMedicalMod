@@ -18,11 +18,8 @@ public static class IfakKitItemSystem
     public const string ItemKey = "ifak";
     public const string BaseGameItemId = "bruisekit";
 
-    public const string DisplayName = "IFAK单兵战术急救包";
-    public const string Description =
-        "IFAK（美国海军陆战队单兵急救包）是每一位当时陆战队员的标配急救装备。" +
-        "第三代 IFAK 医疗包是设计最为合理、内容物最多的版本。\n\n" +
-        "<color=#54ff9f>效果：中幅止血。耐久中等。</color>";
+    public static string DisplayName => I18n.Tr("ifak.name");
+    public static string Description => I18n.Tr("ifak.desc");
 
     private const float PerformanceDivisor = 20f; // 20圈耗尽
 

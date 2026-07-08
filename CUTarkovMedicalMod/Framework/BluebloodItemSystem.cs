@@ -19,13 +19,8 @@ public static class BluebloodItemSystem
     public const string ItemKey = "blueblood";
     public const string BaseGameItemId = "syringe";
 
-    public const string DisplayName = "人造血（蓝血）注射器【Blue Blood】";
-    public const string Description =
-        "一种能够转运氧气的血液替代品，被用作中毒、辐射的超级解药。" +
-        "它是苏联科学家于20世纪80年代发明的。这是一种基于PFO混合物的亚微米级乳化液。" +
-        "注入血液后，它能暂时加快代谢，并促进组织恢复。过量使用和免疫反应会对健康带来不利影响。\n\n" +
-        "<color=#54ff9f>效果：立即止住并预防所有出血，持续2分钟（120秒）；立即毒素-70%；立即辐射-10gy。</color>\n" +
-        "<color=#ff6666>副作用（延迟3分钟触发）：免疫力-40%；33%概率呕吐；每秒-0.3饱食度持续1分钟。</color>";
+    public static string DisplayName => I18n.Tr("blueblood.name");
+    public static string Description => I18n.Tr("blueblood.desc");
 
     private static Sprite? _cachedIcon;
 
@@ -329,7 +324,7 @@ public sealed class BluebloodEffectController : MonoBehaviour
     {
         bool isRefresh = enabled;
         if (isRefresh)
-            StimBuffIndicator.ShowOneTimeEffect(BluebloodItemSystem.ItemKey, "二次注射 计时器已刷新");
+            StimBuffIndicator.ShowOneTimeEffect(BluebloodItemSystem.ItemKey, I18n.Tr("blueblood.ot.0"));
 
         // === 立即正面效果（可叠加）===
         // 1) 立即止住所有出血
@@ -344,8 +339,8 @@ public sealed class BluebloodEffectController : MonoBehaviour
         _body.radiationSickness = Mathf.Max(0f, _body.radiationSickness - RadiationReduce);
         Plugin.Log.LogInfo($"[Blueblood] Radiation -{RadiationReduce}gy (now {_body.radiationSickness:F1}).");
 
-        StimBuffIndicator.ShowOneTimeEffect(BluebloodItemSystem.ItemKey, "毒素-70%");
-        StimBuffIndicator.ShowOneTimeEffect(BluebloodItemSystem.ItemKey, "辐射-10Gy");
+        StimBuffIndicator.ShowOneTimeEffect(BluebloodItemSystem.ItemKey, I18n.Tr("blueblood.ot.1"));
+        StimBuffIndicator.ShowOneTimeEffect(BluebloodItemSystem.ItemKey, I18n.Tr("blueblood.ot.2"));
 
         _timer = TotalDuration;
         _sideEffectDelayTimer = SideEffectDelay;
@@ -358,12 +353,12 @@ public sealed class BluebloodEffectController : MonoBehaviour
 
         StimBuffIndicator.ShowBuff(
             BluebloodItemSystem.ItemKey,
-            "Blue Blood",
+            I18n.Tr("blueblood.buff"),
             TryGetBluebloodIcon(),
             _timer,
             TotalDuration,
             new Color(0.15f, 0.4f, 0.9f), // 深蓝色（人造血）
-            positiveDescs: new[] { "止住预防出血2min" },
+            positiveDescs: I18n.TrAll("blueblood.pos.0"),
             negativeDescs: Array.Empty<string>());
     }
 
@@ -413,12 +408,12 @@ public sealed class BluebloodEffectController : MonoBehaviour
 
             StimBuffIndicator.ShowBuff(
                 BluebloodItemSystem.ItemKey,
-                "Blue Blood",
+                I18n.Tr("blueblood.buff"),
                 TryGetBluebloodIcon(),
                 _timer,
                 TotalDuration,
                 new Color(0.15f, 0.4f, 0.9f), // 深蓝色
-                positiveDescs: new[] { "止住预防出血2min" },
+                positiveDescs: I18n.TrAll("blueblood.pos.0"),
                 negativeDescs: Array.Empty<string>());
 
             if (_sideEffectDelayTimer <= 0f)
@@ -432,13 +427,13 @@ public sealed class BluebloodEffectController : MonoBehaviour
 
             StimBuffIndicator.ShowBuff(
                 BluebloodItemSystem.ItemKey,
-                "Blue Blood",
+                I18n.Tr("blueblood.buff"),
                 TryGetBluebloodIcon(),
                 _timer,
                 TotalDuration,
                 new Color(0.9f, 0.4f, 0.2f), // 橙红色（副作用阶段）
                 positiveDescs: Array.Empty<string>(),
-                negativeDescs: new[] { "免疫力-40%", "33%概率呕吐", "每秒-0.3饱食度" });
+                negativeDescs: I18n.TrAll("blueblood.neg.0", "blueblood.neg.1", "blueblood.neg.2"));
 
             // 每秒扣除饱食度
             _tickAccumulator += Time.deltaTime;

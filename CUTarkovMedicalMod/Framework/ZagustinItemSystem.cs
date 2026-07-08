@@ -18,11 +18,8 @@ public static class ZagustinItemSystem
     public const string ItemKey = "zagustin";
     public const string BaseGameItemId = "syringe";
 
-    public const string DisplayName = "Zagustin止血剂【Zagustin】";
-    public const string Description =
-        "共济止血药物，以凝血酶为基础的止血剂。用于制止各种内外出血，包括大出血。\n\n" +
-        "<color=#54ff9f>效果：180秒内立即止住所有出血、防止新出血。</color>\n" +
-        "<color=#ff6666>副作用：大幅增加血液黏度，2分钟内每秒-0.3口渴。</color>";
+    public static string DisplayName => I18n.Tr("zagustin.name");
+    public static string Description => I18n.Tr("zagustin.desc");
 
     private static Sprite? _cachedIcon;
 
@@ -356,7 +353,7 @@ public sealed class ZagustinEffectController : MonoBehaviour
 
         if (isRefresh)
         {
-            StimBuffIndicator.ShowOneTimeEffect(ZagustinItemSystem.ItemKey, "二次注射 正面效果不叠加");
+            StimBuffIndicator.ShowOneTimeEffect(ZagustinItemSystem.ItemKey, I18n.Tr("zagustin.ot.0"));
             Plugin.Log.LogInfo("[Zagustin] Refresh: timer reset, negatives re-trigger.");
         }
 
@@ -370,17 +367,17 @@ public sealed class ZagustinEffectController : MonoBehaviour
         Plugin.Log.LogInfo($"Zagustin: bloodViscosity +{BloodViscosityIncrease} (now {_body.bloodViscosity}).");
 
         // 显示 buff 图标
-        StimBuffIndicator.ShowOneTimeEffect(ZagustinItemSystem.ItemKey, "立即止血");
-        StimBuffIndicator.ShowOneTimeEffect(ZagustinItemSystem.ItemKey, "血液粘稠度+50");
+        StimBuffIndicator.ShowOneTimeEffect(ZagustinItemSystem.ItemKey, I18n.Tr("zagustin.ot.1"));
+        StimBuffIndicator.ShowOneTimeEffect(ZagustinItemSystem.ItemKey, I18n.Tr("zagustin.ot.2"));
         StimBuffIndicator.ShowBuff(
             ZagustinItemSystem.ItemKey,
-            "Zagustin",
+            I18n.Tr("zagustin.buff"),
             TryGetZagustinIcon(),
             _remaining,
             DurationSeconds,
             new Color(0.7f, 0.3f, 0.9f), // 紫色（止血）
-            positiveDescs: new[] { "预防出血" },
-            negativeDescs: new[] { "每秒 -0.3 水分" });
+            positiveDescs: I18n.TrAll("zagustin.pos.0"),
+            negativeDescs: I18n.TrAll("zagustin.neg.0"));
     }
 
     private void Awake() => enabled = false;
@@ -417,13 +414,13 @@ public sealed class ZagustinEffectController : MonoBehaviour
         // 更新 buff 图标剩余时间
         StimBuffIndicator.ShowBuff(
             ZagustinItemSystem.ItemKey,
-            "Zagustin",
+            I18n.Tr("zagustin.buff"),
             TryGetZagustinIcon(),
             _remaining,
             DurationSeconds,
             new Color(0.7f, 0.3f, 0.9f),
-            positiveDescs: new[] { "预防出血" },
-            negativeDescs: new[] { "每秒 -0.3 水分" });
+            positiveDescs: I18n.TrAll("zagustin.pos.0"),
+            negativeDescs: I18n.TrAll("zagustin.neg.0"));
 
         if (_remaining <= 0f)
         {

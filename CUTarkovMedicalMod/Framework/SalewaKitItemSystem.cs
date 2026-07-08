@@ -18,11 +18,8 @@ public static class SalewaKitItemSystem
     public const string ItemKey = "salewa";
     public const string BaseGameItemId = "bruisekit";
 
-    public const string DisplayName = "Salewa急救包";
-    public const string Description =
-        "内含保温毯、各种类型的绷带敷料以及医疗工具的急救包。\n\n" +
-        "<color=#54ff9f>效果（每圈）：中幅止血。耐久很高。</color>\n" +
-        "<color=#c3b091>特殊效果：体温低于30°C时，角色会使用保温毯，对胸部使用，绷带变为卡其色，体温可快速回升（上限36°C）。</color>";
+    public static string DisplayName => I18n.Tr("salewa.name");
+    public static string Description => I18n.Tr("salewa.desc");
 
     private const float PerformanceDivisor = 40f; // 40圈耗尽
 

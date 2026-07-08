@@ -19,11 +19,8 @@ public static class PnbItemSystem
     public const string ItemKey = "pnb";
     public const string BaseGameItemId = "syringe";
 
-    public const string DisplayName = "PNB兴奋剂注射器【PNB】";
-    public const string Description =
-        "代号PNB。其能短期激活内部肌肉，让它们变为高渗透状态，以此降低人体受到的伤害。它还能同时提高蛋白质的合成速度，加快组织恢复。它被用于在战斗的关键时刻提高机能。仅供特种部队使用。具有一定副作用。上面写着'TerraGroup 实验室开发'。\n\n" +
-        "<color=#54ff9f>效果：修复并预防指甲损伤；每秒恢复所有肢体 0.2 肌肉健康，持续2分钟；耐力恢复速度 +30%，临时韧性等级 +3 ，持续5分钟。</color>\n" +
-        "<color=#ff6666>副作用：延迟5分钟后力量等级永久 -1；兴奋剂震颤持续1分钟。</color>";
+    public static string DisplayName => I18n.Tr("pnb.name");
+    public static string Description => I18n.Tr("pnb.desc");
 
     private static Sprite? _cachedIcon;
 
@@ -348,7 +345,7 @@ public sealed class PnbEffectController : MonoBehaviour
 
         if (isRefresh)
         {
-            StimBuffIndicator.ShowOneTimeEffect(PnbItemSystem.ItemKey, "二次注射 正面效果不叠加");
+            StimBuffIndicator.ShowOneTimeEffect(PnbItemSystem.ItemKey, I18n.Tr("pnb.ot.0"));
             Plugin.Log.LogInfo("[PNB] Refresh: positive effects skipped, timer reset.");
         }
 
@@ -363,13 +360,13 @@ public sealed class PnbEffectController : MonoBehaviour
 
         StimBuffIndicator.ShowBuff(
             PnbItemSystem.ItemKey,
-            "PNB",
+            I18n.Tr("pnb.buff"),
             TryGetPnbIcon(),
             BuffDuration + TremorDuration + ActivationDelay,
             BuffDuration + TremorDuration + ActivationDelay,
             new Color(0.4f, 0.8f, 0.5f), // 嫩绿色（再生+恢复）
-            positiveDescs: new[] { "力量+3", "韧性+4", "智力+2", "肌肉治疗", "耐力上限+50%" },
-            negativeDescs: new[] { "每秒-0.3饱食/水分" });
+            positiveDescs: I18n.TrAll("pnb.pos.0", "pnb.pos.1", "pnb.pos.2", "pnb.pos.3", "pnb.pos.4"),
+            negativeDescs: I18n.TrAll("pnb.neg.0"));
     }
 
     private void Awake() => enabled = false;
@@ -449,7 +446,7 @@ public sealed class PnbEffectController : MonoBehaviour
 
         // 更新 buff 显示
         var isHealing = _elapsed <= HealDuration;
-        var label = isHealing ? "PNB(愈合+耐力)" : "PNB(耐力恢复)";
+        var label = isHealing ? I18n.Tr("pnb.buff_alt") : I18n.Tr("pnb.buff_alt2");
         var color = new Color(0.4f, 0.8f, 0.5f);
 
         StimBuffIndicator.ShowBuff(
@@ -487,13 +484,13 @@ public sealed class PnbEffectController : MonoBehaviour
         // 更新 buff 显示
         StimBuffIndicator.ShowBuff(
             PnbItemSystem.ItemKey,
-            "PNB(副作用)",
+            I18n.Tr("pnb.buff_side"),
             TryGetPnbIcon(),
             _phaseTimer,
             TremorDuration,
             new Color(1f, 0.3f, 0.3f), // 红色（副作用警告）
             positiveDescs: Array.Empty<string>(),
-            negativeDescs: new[] { "震颤" });
+            negativeDescs: I18n.TrAll("pnb.neg.1"));
 
         if (_phaseTimer <= 0f)
         {
@@ -583,7 +580,7 @@ public sealed class PnbEffectController : MonoBehaviour
         {
             SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatSTR, -StrengthPenalty);
             _strengthPenaltyApplied = true;
-            StimBuffIndicator.ShowOneTimeEffect(PnbItemSystem.ItemKey, $"力量-{StrengthPenalty} 永久", isNegative: true);
+            StimBuffIndicator.ShowOneTimeEffect(PnbItemSystem.ItemKey, I18n.TrFmt("pnb.ot.1", StrengthPenalty), isNegative: true);
             Plugin.Log.LogInfo($"[PNB] Permanent STR -{StrengthPenalty} applied "
                 + $"(now {SkillEffectHelper.GetLevel(_body, SkillEffectHelper.StatSTR)}).");
         }

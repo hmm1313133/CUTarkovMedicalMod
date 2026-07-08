@@ -19,11 +19,8 @@ public static class SJ6ItemSystem
     public const string ItemKey = "sj6";
     public const string BaseGameItemId = "syringe";
 
-    public const string DisplayName = "SJ6 TGLabs战斗兴奋剂注射器【SJ6】";
-    public const string Description =
-        "战斗兴奋剂。在战斗前注射能够提高身体能力。兴奋剂被允许供特种作战单位使用。上面有SJ6的标记，写着'TerraGroup 实验室开发'。\n\n" +
-        "<color=#54ff9f>效果：耐力上限+20%、耐力恢复+120%（持续15分钟/900秒）。</color>\n" +
-        "<color=#ff6666>副作用：立即 +25患病；10分钟后出现严重管视效应与颤栗，持续5分钟。</color>";
+    public static string DisplayName => I18n.Tr("sj6.name");
+    public static string Description => I18n.Tr("sj6.desc");
 
     private static Sprite? _cachedIcon;
 
@@ -347,14 +344,14 @@ public sealed class SJ6EffectController : MonoBehaviour
 
         if (isRefresh)
         {
-            StimBuffIndicator.ShowOneTimeEffect(SJ6ItemSystem.ItemKey, "二次注射 正面效果不叠加");
+            StimBuffIndicator.ShowOneTimeEffect(SJ6ItemSystem.ItemKey, I18n.Tr("sj6.ot.0"));
             Plugin.Log.LogInfo("[SJ6] Refresh: timer reset, negatives re-trigger.");
         }
 
         // 立即副作用：患病 +25（每次注射都触发）
         _body!.sicknessAmount += SicknessOnUse;
         Plugin.Log.LogInfo($"[SJ6] Immediate sicknessAmount +{SicknessOnUse} (now {_body.sicknessAmount}).");
-        StimBuffIndicator.ShowOneTimeEffect(SJ6ItemSystem.ItemKey, "患病+25", isNegative: true);
+        StimBuffIndicator.ShowOneTimeEffect(SJ6ItemSystem.ItemKey, I18n.Tr("sj6.ot.1"), isNegative: true);
 
         _phase = Phase.Delay;
         _phaseTimer = ActivationDelay;
@@ -365,12 +362,12 @@ public sealed class SJ6EffectController : MonoBehaviour
 
         StimBuffIndicator.ShowBuff(
             SJ6ItemSystem.ItemKey,
-            "SJ6",
+            I18n.Tr("sj6.buff"),
             TryGetSJ6Icon(),
             BuffDuration + ActivationDelay,
             BuffDuration + ActivationDelay,
             new Color(0.9f, 0.55f, 0.1f), // 橙色（战斗兴奋剂）
-            positiveDescs: new[] { "耐力上限+20%", "耐力恢复+120%" },
+            positiveDescs: I18n.TrAll("sj6.pos.0", "sj6.pos.1"),
             negativeDescs: Array.Empty<string>());
     }
 
@@ -402,12 +399,12 @@ public sealed class SJ6EffectController : MonoBehaviour
 
         StimBuffIndicator.ShowBuff(
             SJ6ItemSystem.ItemKey,
-            "SJ6",
+            I18n.Tr("sj6.buff"),
             TryGetSJ6Icon(),
             _phaseTimer + BuffDuration,
             BuffDuration + ActivationDelay,
             new Color(0.9f, 0.55f, 0.1f),
-            positiveDescs: new[] { "耐力上限+20%", "耐力恢复+120%" },
+            positiveDescs: I18n.TrAll("sj6.pos.0", "sj6.pos.1"),
             negativeDescs: Array.Empty<string>());
 
         if (_phaseTimer <= 0f)
@@ -494,7 +491,7 @@ public sealed class SJ6EffectController : MonoBehaviour
         }
 
         // 更新 buff 显示
-        var label = _tunnelTremorActive ? "SJ6(副作用)" : "SJ6";
+        var label = _tunnelTremorActive ? I18n.Tr("sj6.buff_side") : I18n.Tr("sj6.buff");
         var color = _tunnelTremorActive
             ? new Color(1f, 0.3f, 0.3f)   // 红色（副作用警告）
             : new Color(0.9f, 0.55f, 0.1f); // 橙色（战斗兴奋剂）
@@ -506,8 +503,8 @@ public sealed class SJ6EffectController : MonoBehaviour
             _phaseTimer,
             BuffDuration,
             color,
-            positiveDescs: _tunnelTremorActive ? null : new[] { "耐力上限+20%", "耐力恢复+120%" },
-            negativeDescs: _tunnelTremorActive ? new[] { "管视效应", "震颤" } : Array.Empty<string>());
+            positiveDescs: _tunnelTremorActive ? null : I18n.TrAll("sj6.pos.0", "sj6.pos.1"),
+            negativeDescs: _tunnelTremorActive ? I18n.TrAll("sj6.neg.0", "sj6.neg.1") : Array.Empty<string>());
 
         if (_phaseTimer <= 0f)
         {

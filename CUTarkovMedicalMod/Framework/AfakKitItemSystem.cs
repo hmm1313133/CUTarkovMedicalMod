@@ -18,12 +18,8 @@ public static class AfakKitItemSystem
     public const string ItemKey = "afak";
     public const string BaseGameItemId = "bruisekit";
 
-    public const string DisplayName = "AFAK单兵战术急救包";
-    public const string Description =
-        "AFAK（自适应急救包），IFAK 单兵急救包的升级版本。这款急救包结构紧凑，" +
-        "装有单兵作战人员或执法部门警员在紧急情况下所需要的一切急救物资，有效治疗各种枪伤与开放性伤口。" +
-        "看着就很高级。\n\n" +
-        "<color=#54ff9f>效果：中幅止血。耐久较高。</color>";
+    public static string DisplayName => I18n.Tr("afak.name");
+    public static string Description => I18n.Tr("afak.desc");
 
     private const float PerformanceDivisor = 30f; // 30圈耗尽
 

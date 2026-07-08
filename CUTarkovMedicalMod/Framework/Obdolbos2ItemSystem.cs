@@ -20,12 +20,8 @@ public static class Obdolbos2ItemSystem
     public const string ItemKey = "obdolbos2";
     public const string BaseGameItemId = "syringe";
 
-    public const string DisplayName = "Obdolbos 2 鸡尾酒兴奋剂注射器【Obdolbos 2】";
-    public const string Description =
-        "装有自制药剂的注射器。这是那款老产品的全新版本。看起来，Sanitar这个人真的很狂热。\n\n" +
-        "<color=#54ff9f>效果：立即永久提升力量/韧性/智力 6 级、永久负重上限 +3u。</color>\n" +
-        "<color=#ff6666>副作用：立即耐力恢复 -30%、最大耐力 -20%，持续40分钟；延迟5分钟后 每秒-0.2饱食/水分，头部/胸部肌肉-0.3/秒，持续5分钟。</color>\n" +
-        "<color=#ff6666>注意！：第二次注射后，不会叠加正面效果！</color>";
+    public static string DisplayName => I18n.Tr("obdolbos2.name");
+    public static string Description => I18n.Tr("obdolbos2.desc");
     private static Sprite? _cachedIcon;
 
     public static bool IsObdolbos2Request(MedicalGrantRequest request)
@@ -284,14 +280,14 @@ public sealed class Obdolbos2EffectController : MonoBehaviour
                 SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatRES, StatBoost);
                 SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatINT, StatBoost);
             }
-            StimBuffIndicator.ShowOneTimeEffect(Obdolbos2ItemSystem.ItemKey, $"STR+{StatBoost} RES+{StatBoost} INT+{StatBoost} 永久");
-            StimBuffIndicator.ShowOneTimeEffect(Obdolbos2ItemSystem.ItemKey, $"负重上限+{CarryWeightBonus}u 永久");
+            StimBuffIndicator.ShowOneTimeEffect(Obdolbos2ItemSystem.ItemKey, I18n.TrFmt("obdolbos2.ot.0", StatBoost));
+            StimBuffIndicator.ShowOneTimeEffect(Obdolbos2ItemSystem.ItemKey, I18n.TrFmt("obdolbos2.ot.1", CarryWeightBonus));
             Plugin.Log.LogInfo("[Obdolbos 2] First injection: positive effects applied.");
         }
         else
         {
             // 第二次及以后注射：跳过正面效果，仅触发负面效果
-            StimBuffIndicator.ShowOneTimeEffect(Obdolbos2ItemSystem.ItemKey, $"二次注射 无正面增益");
+            StimBuffIndicator.ShowOneTimeEffect(Obdolbos2ItemSystem.ItemKey, I18n.Tr("obdolbos2.ot.2"));
             Plugin.Log.LogInfo($"[Obdolbos 2] Injection #{_injectionCount}: positive effects skipped, negative only.");
         }
 
@@ -396,17 +392,17 @@ public sealed class Obdolbos2EffectController : MonoBehaviour
         IReadOnlyList<string> neg;
 
         if (hasSide)
-            neg = new[] { "耐力恢复-30%", "最大耐力-20%", "每秒-0.2饱食/水分", "头/胸肌肉-0.3/秒" };
+            neg = I18n.TrAll("obdolbos2.neg.0", "obdolbos2.neg.1", "obdolbos2.neg.2", "obdolbos2.neg.3");
         else if (hasDebuff)
-            neg = new[] { "耐力恢复-30%", "最大耐力-20%" };
+            neg = I18n.TrAll("obdolbos2.neg.0", "obdolbos2.neg.1");
         else
             neg = Array.Empty<string>();
 
         var remaining = _phaseTimer;
         var total = BuffDuration + ActivationDelay;
         var label = _injectionCount >= 2
-            ? (hasSide ? "Obdolbos 2(二次·副作用)" : "Obdolbos 2(二次)")
-            : (hasSide ? "Obdolbos 2(副作用)" : "Obdolbos 2");
+            ? (hasSide ? I18n.Tr("obdolbos2.buff_alt2") : I18n.Tr("obdolbos2.buff_alt"))
+            : (hasSide ? I18n.Tr("obdolbos2.buff_side") : I18n.Tr("obdolbos2.buff"));
 
         StimBuffIndicator.ShowBuff(
             Obdolbos2ItemSystem.ItemKey,
