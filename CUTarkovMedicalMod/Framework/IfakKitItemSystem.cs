@@ -121,7 +121,7 @@ public static class IfakKitItemSystem
             combineable = true,
             value = 14,
             tags = "medicine,medical,combine,craft",
-            rec = new Recognition(3),
+            rec = new Recognition(8),
         };
         clone.SetTags();
         return clone;
@@ -143,7 +143,7 @@ public static class IfakKitItemSystem
             useLimbAction = IfakLimbAction,
             value = 14,
             tags = "medicine,medical,combine,craft",
-            rec = new Recognition(3),
+            rec = new Recognition(8),
         };
         info.SetTags();
         return info;
@@ -207,6 +207,7 @@ public static class IfakKitItemSystem
         {
             var marker = item.GetComponent<IfakKitItemMarker>();
             if (marker == null) return;
+            if (!item.Stats.rec.recognizable) return;
             __result.Item1 = marker.displayName;
             HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);
         }

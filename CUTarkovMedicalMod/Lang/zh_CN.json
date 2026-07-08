@@ -2,6 +2,8 @@
     "fw.buff_default": "针剂效果持续中，剩余 {0} 秒",
     "fw.onetime_prefix": "○一次性",
     "fw.onetime_warn": " ⚠",
+    "fw.unrecognized_name": "某种药剂",
+    "fw.unrecognized_desc": "药效正在发作",
 
     "etg_c.name": "eTG-change再生兴奋剂注射器【eTG-c】",
     "etg_c.desc": "强大的再生过程促进剂。用于伤员受伤后或重伤员运输过程中的快速恢复，只允许专业医师和护理人员使用。写着'TerraGroup 实验室开发'\n\n<color=#54ff9f>效果：每秒恢复每个部位2点肌肉健康，血容量每秒回升50ml，持续60秒。</color>\n<color=#ff6666>副作用：效果结束后20秒内持续消耗饱食度与水分，并引发胸口剧烈疼痛。</color>",

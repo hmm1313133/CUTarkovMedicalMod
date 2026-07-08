@@ -263,7 +263,7 @@ public static class CmsKitItemSystem
             tags = source.tags,
             decayInfo = source.decayInfo,
             decayMinutes = source.decayMinutes,
-            rec = source.rec,
+            rec = new Recognition(6),
             qualities = source.qualities
         };
         clone.SetTags();
@@ -440,6 +440,7 @@ public static class CmsHoverPatch
 
         var marker = item.GetComponent<CmsItemMarker>();
         if (marker == null) return;
+        if (!item.Stats.rec.recognizable) return;
 
         __result.Item1 = marker.displayName;
         HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);

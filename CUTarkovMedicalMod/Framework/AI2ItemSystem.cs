@@ -323,7 +323,7 @@ public static class AI2ItemSystem
             tags = source.tags,
             decayInfo = source.decayInfo,
             decayMinutes = source.decayMinutes,
-            rec = source.rec,
+            rec = new Recognition(13),
             qualities = source.qualities,
             // LiquidItemInfo 字段（后续在 EnsureRegisteredInItemTable 中覆盖）
             capacity = (source is LiquidItemInfo li) ? li.capacity : TotalMl,
@@ -471,6 +471,7 @@ public static class AI2HoverPatch
 
         var marker = item.GetComponent<AI2ItemMarker>();
         if (marker == null) return;
+        if (!item.Stats.rec.recognizable) return;
 
         __result.Item1 = marker.displayName;
         HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);

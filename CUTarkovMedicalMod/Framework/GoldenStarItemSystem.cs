@@ -296,7 +296,7 @@ public static class GoldenStarItemSystem
             tags = source.tags,
             decayInfo = source.decayInfo,
             decayMinutes = source.decayMinutes,
-            rec = source.rec,
+            rec = new Recognition(8),
             qualities = source.qualities,
             capacity = (source is LiquidItemInfo li) ? li.capacity : TotalMl,
             autoFill = (source is LiquidItemInfo li2) ? li2.autoFill : false,
@@ -551,6 +551,7 @@ public static class GoldenStarHoverPatch
 
         var marker = item.GetComponent<GoldenStarItemMarker>();
         if (marker == null) return;
+        if (!item.Stats.rec.recognizable) return;
 
         __result.Item1 = marker.displayName;
         HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);

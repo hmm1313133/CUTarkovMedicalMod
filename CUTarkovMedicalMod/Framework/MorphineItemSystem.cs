@@ -219,7 +219,7 @@ public static class MorphineItemSystem
             tags = source.tags,
             decayInfo = source.decayInfo,
             decayMinutes = source.decayMinutes,
-            rec = source.rec,
+            rec = new Recognition(9),
             qualities = source.qualities
         };
         clone.SetTags();
@@ -426,6 +426,7 @@ public static class MorphineHoverPatch
 
         var marker = item.GetComponent<MorphineItemMarker>();
         if (marker == null) return;
+        if (!item.Stats.rec.recognizable) return;
 
         __result.Item1 = marker.displayName;
         HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);

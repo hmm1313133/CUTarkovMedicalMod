@@ -2,6 +2,8 @@
     "fw.buff_default": "Stimulant effect active, {0} sec remaining",
     "fw.onetime_prefix": "○One-time",
     "fw.onetime_warn": " ⚠",
+    "fw.unrecognized_name": "Unknown Substance",
+    "fw.unrecognized_desc": "Drug effect is taking effect",
 
     "etg_c.name": "eTG-change Regenerative Stimulant [eTG-c]",
     "etg_c.desc": "A powerful regenerative process promoter. Used for rapid recovery of wounded personnel after injury or during transport of severely wounded casualties. Only to be used by qualified physicians and medical personnel. Labeled 'TerraGroup Labs'.\n\n<color=#54ff9f>Effect: Restores 2 muscle health per limb per second, blood volume recovers 50ml/s, for 60 seconds.</color>\n<color=#ff6666>Side effect: After effect ends, continuously drains hunger and hydration for 20 seconds and causes severe chest pain.</color>",

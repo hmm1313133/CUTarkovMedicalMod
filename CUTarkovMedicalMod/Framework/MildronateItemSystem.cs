@@ -206,7 +206,7 @@ public static class MildronateItemSystem
             tags = source.tags,
             decayInfo = source.decayInfo,
             decayMinutes = source.decayMinutes,
-            rec = source.rec,
+            rec = new Recognition(13),
             qualities = source.qualities
         };
         clone.SetTags();
@@ -560,6 +560,7 @@ public static class MildronateHoverPatch
 
         var marker = item.GetComponent<MildronateItemMarker>();
         if (marker == null) return;
+        if (!item.Stats.rec.recognizable) return;
 
         __result.Item1 = marker.displayName;
         HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);

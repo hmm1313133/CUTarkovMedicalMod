@@ -148,7 +148,8 @@ public static class Sj9ItemSystem
             scaleWeightWithCondition = false,
             weight = 0.1f,
             value = 16,
-            tags = "drug,medicine,stim,combine,craft"
+            tags = "drug,medicine,stim,combine,craft",
+            rec = new Recognition(13)
         };
         info.SetTags();
 
@@ -199,7 +200,7 @@ public static class Sj9ItemSystem
             tags = source.tags,
             decayInfo = source.decayInfo,
             decayMinutes = source.decayMinutes,
-            rec = source.rec,
+            rec = new Recognition(13),
             qualities = source.qualities
         };
         clone.SetTags();
@@ -500,6 +501,7 @@ public static class Sj9HoverPatch
 
         var marker = item.GetComponent<Sj9ItemMarker>();
         if (marker == null) return;
+            if (!item.Stats.rec.recognizable) return;
 
         __result.Item1 = marker.displayName;
         HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);

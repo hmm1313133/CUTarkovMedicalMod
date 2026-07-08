@@ -296,22 +296,44 @@ public static class StimBuffIndicator
 
                 var mins = Mathf.Max(0, Mathf.FloorToInt(buff.Remaining / 60f));
                 var secs = Mathf.Max(0, Mathf.FloorToInt(buff.Remaining % 60f));
-                var name = $"{buff.DisplayName} ({mins}:{secs:D2})";
 
-                // 清理过期的一次性效果（基于真实时间）
-                buff.OneTimeEffects.RemoveAll(ot => Time.time >= ot.ExpireTime);
+                // 检查玩家智力是否足以识别此物品
+                bool recognizable = true;
+                try
+                {
+                    if (Item.GlobalItems.TryGetValue(buff.Key, out var info))
+                        recognizable = info.rec.recognizable;
+                }
+                catch { /* 无法查询时默认可识别 */ }
 
-                // 构建效果描述（正面绿色 / 负面红色 / 一次性灰色）
-                var descParts = new List<string>();
-                foreach (var e in buff.PositiveEffects)
-                    descParts.Add($"<color=#4fc3f7>+ {e}</color>");
-                foreach (var e in buff.NegativeEffects)
-                    descParts.Add($"<color=#ff6666>- {e}</color>");
-                foreach (var ot in buff.OneTimeEffects)
-                    descParts.Add($"<color=#aaaaaa>{ot.Text}</color>");
-                var desc = descParts.Count > 0
-                    ? string.Join("\n", descParts)
-                    : I18n.TrFmt("fw.buff_default", Mathf.CeilToInt(buff.Remaining));
+                string name;
+                string desc;
+
+                if (!recognizable)
+                {
+                    // 智力不够：只显示"某种药剂"和"药效正在发作"
+                    name = $"{I18n.Tr("fw.unrecognized_name")} ({mins}:{secs:D2})";
+                    desc = I18n.Tr("fw.unrecognized_desc");
+                }
+                else
+                {
+                    name = $"{buff.DisplayName} ({mins}:{secs:D2})";
+
+                    // 清理过期的一次性效果（基于真实时间）
+                    buff.OneTimeEffects.RemoveAll(ot => Time.time >= ot.ExpireTime);
+
+                    // 构建效果描述（正面绿色 / 负面红色 / 一次性灰色）
+                    var descParts = new List<string>();
+                    foreach (var e in buff.PositiveEffects)
+                        descParts.Add($"<color=#4fc3f7>+ {e}</color>");
+                    foreach (var e in buff.NegativeEffects)
+                        descParts.Add($"<color=#ff6666>- {e}</color>");
+                    foreach (var ot in buff.OneTimeEffects)
+                        descParts.Add($"<color=#aaaaaa>{ot.Text}</color>");
+                    desc = descParts.Count > 0
+                        ? string.Join("\n", descParts)
+                        : I18n.TrFmt("fw.buff_default", Mathf.CeilToInt(buff.Remaining));
+                }
 
                 // 使用统一的 intensity，通过 NormalizeMoodleIcon 覆盖背景颜色
                 const int sharedIntensity = 1;

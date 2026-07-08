@@ -121,7 +121,7 @@ public static class GrizzlyKitItemSystem
             combineable = true,
             value = 32,
             tags = "medicine,medical,combine,craft",
-            rec = new Recognition(3),
+            rec = new Recognition(8),
         };
         clone.SetTags();
         return clone;
@@ -143,7 +143,7 @@ public static class GrizzlyKitItemSystem
             useLimbAction = GrizzlyLimbAction,
             value = 32,
             tags = "medicine,medical,combine,craft",
-            rec = new Recognition(3),
+            rec = new Recognition(8),
         };
         info.SetTags();
         return info;
@@ -214,6 +214,7 @@ public static class GrizzlyKitItemSystem
         {
             var marker = item.GetComponent<GrizzlyKitItemMarker>();
             if (marker == null) return;
+            if (!item.Stats.rec.recognizable) return;
             __result.Item1 = marker.displayName;
             HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);
         }

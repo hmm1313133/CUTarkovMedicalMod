@@ -169,7 +169,8 @@ public static class MuleItemSystem
             scaleWeightWithCondition = false,
             weight = 0.1f,
             value = 20,
-            tags = "drug,medicine,medical,stim,combine,craft"
+            tags = "drug,medicine,medical,stim,combine,craft",
+            rec = new Recognition(13)
         };
         info.SetTags();
 
@@ -220,7 +221,7 @@ public static class MuleItemSystem
             tags = source.tags,
             decayInfo = source.decayInfo,
             decayMinutes = source.decayMinutes,
-            rec = source.rec,
+            rec = new Recognition(13),
             qualities = source.qualities
         };
         clone.SetTags();
@@ -587,6 +588,8 @@ public static class MuleHoverPatch
 
         var marker = item.GetComponent<MuleItemMarker>();
         if (marker == null) return;
+
+        if (!item.Stats.rec.recognizable) return;
 
         __result.Item1 = marker.displayName;
         HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);

@@ -132,7 +132,7 @@ public static class SalewaKitItemSystem
             combineable = true,
             value = 20,
             tags = "medicine,medical,combine,craft",
-            rec = new Recognition(3),
+            rec = new Recognition(8),
         };
         clone.SetTags();
         return clone;
@@ -154,7 +154,7 @@ public static class SalewaKitItemSystem
             useLimbAction = SalewaLimbAction,
             value = 20,
             tags = "medicine,medical,combine,craft",
-            rec = new Recognition(3),
+            rec = new Recognition(8),
         };
         info.SetTags();
         return info;
@@ -239,6 +239,7 @@ public static class SalewaKitItemSystem
         {
             var marker = item.GetComponent<SalewaKitItemMarker>();
             if (marker == null) return;
+            if (!item.Stats.rec.recognizable) return;
             __result.Item1 = marker.displayName;
             HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);
         }

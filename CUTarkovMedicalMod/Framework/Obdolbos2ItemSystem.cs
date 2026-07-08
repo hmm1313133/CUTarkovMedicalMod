@@ -162,7 +162,7 @@ public static class Obdolbos2ItemSystem
             jumpHeightMultChange = source.jumpHeightMultChange, combineable = source.combineable,
             ignoreDepression = source.ignoreDepression, value = source.value,
             wearableVisualOffset = source.wearableVisualOffset, tags = source.tags,
-            decayInfo = source.decayInfo, decayMinutes = source.decayMinutes, rec = source.rec, qualities = source.qualities
+            decayInfo = source.decayInfo, decayMinutes = source.decayMinutes, rec = new Recognition(13), qualities = source.qualities
         };
         clone.SetTags();
         return clone;
@@ -469,6 +469,7 @@ public static class Obdolbos2HoverPatch
         if (item == null) return;
         var marker = item.GetComponent<Obdolbos2ItemMarker>();
         if (marker == null) return;
+        if (!item.Stats.rec.recognizable) return;
         __result.Item1 = marker.displayName;
         HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);
     }
