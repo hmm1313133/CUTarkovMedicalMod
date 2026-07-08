@@ -122,6 +122,7 @@ public static class TwoATwoBTGItemSystem
 
     private static void TwoATwoBTGUseAction(Body body, Item item)
     {
+        InjectorSound.Play();
         Plugin.Log.LogInfo("2A2-(b-TG) useAction invoked by game native system.");
 
         TwoATwoBTGEffectController.Attach(body).ActivateOrRefresh();

@@ -143,6 +143,7 @@ public static class SJ12ItemSystem
     /// </summary>
     private static void SJ12UseAction(Body body, Item item)
     {
+        InjectorSound.Play();
         Plugin.Log.LogInfo("SJ12 useAction invoked by game native system.");
 
         SJ12EffectController.Attach(body).ActivateOrRefresh();

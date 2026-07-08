@@ -143,6 +143,7 @@ public static class MuleItemSystem
     /// </summary>
     private static void MuleUseAction(Body body, Item item)
     {
+        InjectorSound.Play();
         Plugin.Log.LogInfo("M.U.L.E. useAction invoked by game native system.");
 
         MuleEffectController.Attach(body).ActivateOrRefresh();
@@ -393,7 +394,7 @@ public sealed class MuleEffectController : MonoBehaviour
             _delayTimer + BuffDuration,
             new Color(0.95f, 0.75f, 0.2f), // 金黄色（负重）
             positiveDescs: new[] { "最大负重+20kg", "移动速度+10%", "力量+5" },
-            negativeDescs: new[] { "意识清醒≤90%" });
+            negativeDescs: new[] { "每秒肌肉-0.2", "意识清醒≤90%" });
     }
 
     private void Awake() => enabled = false;
@@ -419,7 +420,7 @@ public sealed class MuleEffectController : MonoBehaviour
                 ActivationDelay + BuffDuration,
                 new Color(0.95f, 0.75f, 0.2f),
                 positiveDescs: new[] { "最大负重+20kg", "移动速度+10%", "力量+5" },
-                negativeDescs: new[] { "意识清醒≤90%" });
+                negativeDescs: new[] { "每秒肌肉-0.2", "意识清醒≤90%" });
             if (_delayTimer <= 0f)
                 Plugin.Log.LogInfo($"[M.U.L.E.] Effect active: +{CarryWeightBonus} encumberance for {BuffDuration}s, muscle drain {MuscleDrainPerSecond}/s per limb for {DebuffDuration}s");
             return;
@@ -451,7 +452,9 @@ public sealed class MuleEffectController : MonoBehaviour
             BuffDuration,
             new Color(0.95f, 0.75f, 0.2f),
             positiveDescs: new[] { "最大负重+20kg", "移动速度+10%", "力量+5" },
-            negativeDescs: new[] { "意识清醒≤90%" });
+            negativeDescs: _debuffRemaining > 0f
+                ? new[] { "每秒肌肉-0.2", "意识清醒≤90%" }
+                : new[] { "意识清醒≤90%" });
 
         if (_buffRemaining <= 0f)
         {

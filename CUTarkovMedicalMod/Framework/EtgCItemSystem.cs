@@ -150,6 +150,7 @@ public static class EtgCItemSystem
     /// </summary>
     private static void EtgUseAction(Body body, Item item)
     {
+        InjectorSound.Play();
         Plugin.Log.LogInfo("ETG-c useAction invoked by game native system.");
 
         // 激活 60 秒再生效果
@@ -328,6 +329,17 @@ public static class EtgStimRegistryPatch
         MildronateItemSystem.EnsureRegisteredInItemTable();
         TwoATwoBTGItemSystem.EnsureRegisteredInItemTable();
         Obdolbos2ItemSystem.EnsureRegisteredInItemTable();
+        GrizzlyKitItemSystem.EnsureRegisteredInItemTable();
+        AfakKitItemSystem.EnsureRegisteredInItemTable();
+        IfakKitItemSystem.EnsureRegisteredInItemTable();
+        SalewaKitItemSystem.EnsureRegisteredInItemTable();
+        AI2ItemSystem.EnsureRegisteredInItemTable();
+        GoldenStarItemSystem.EnsureRegisteredInItemTable();
+        VaselineItemSystem.EnsureRegisteredInItemTable();
+        LibatineItemSystem.EnsureRegisteredInItemTable();
+        IbuprofenItemSystem.EnsureRegisteredInItemTable();
+        MultiToolItemSystem.EnsureRegisteredInItemTable();
+CmsKitItemSystem.EnsureRegisteredInItemTable();
     }
 }
 
@@ -557,6 +569,9 @@ public sealed class EtgStimEffectController : MonoBehaviour
 
         var muscleMissing = Mathf.Max(0f, MaxLimbHealth - limb.muscleHealth);
         limb.muscleHealth += Mathf.Min(amount, muscleMissing);
+
+        var skinMissing = Mathf.Max(0f, MaxLimbHealth - limb.skinHealth);
+        limb.skinHealth += Mathf.Min(amount, skinMissing);
     }
 }
 

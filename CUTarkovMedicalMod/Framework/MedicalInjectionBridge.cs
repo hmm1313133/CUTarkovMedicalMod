@@ -72,6 +72,12 @@ public sealed class DefaultMedicalItemGrantSink : IMedicalItemGrantSink
         ("GuaranteedMildronate",new MedicalGrantRequest(MildronateItemSystem.ItemKey,         MildronateItemSystem.DisplayName,         1, "GuaranteedMildronate",MildronateItemSystem.BaseGameItemId)),
         ("Guaranteed2A2BTG",    new MedicalGrantRequest(TwoATwoBTGItemSystem.ItemKey,        TwoATwoBTGItemSystem.DisplayName,        1, "Guaranteed2A2BTG",    TwoATwoBTGItemSystem.BaseGameItemId)),
         ("GuaranteedObdolbos2",  new MedicalGrantRequest(Obdolbos2ItemSystem.ItemKey,       Obdolbos2ItemSystem.DisplayName,         1, "GuaranteedObdolbos2", Obdolbos2ItemSystem.BaseGameItemId)),
+        ("GuaranteedGoldenStar", new MedicalGrantRequest(GoldenStarItemSystem.ItemKey,       GoldenStarItemSystem.DisplayName,         1, "GuaranteedGoldenStar",GoldenStarItemSystem.BaseGameItemId)),
+        ("GuaranteedVaseline",   new MedicalGrantRequest(VaselineItemSystem.ItemKey,         VaselineItemSystem.DisplayName,           1, "GuaranteedVaseline",  VaselineItemSystem.BaseGameItemId)),
+        ("GuaranteedLibatine",   new MedicalGrantRequest(LibatineItemSystem.ItemKey,         LibatineItemSystem.DisplayName,           1, "GuaranteedLibatine",  LibatineItemSystem.BaseGameItemId)),
+        ("GuaranteedIbuprofen",  new MedicalGrantRequest(IbuprofenItemSystem.ItemKey,        IbuprofenItemSystem.DisplayName,          2, "GuaranteedIbuprofen", IbuprofenItemSystem.BaseGameItemId)),
+        ("GuaranteedMultiTool",  new MedicalGrantRequest(MultiToolItemSystem.ItemKey,         MultiToolItemSystem.DisplayName,          1, "GuaranteedMultiTool", MultiToolItemSystem.BaseGameItemId)),
+        ("GuaranteedCms",        new MedicalGrantRequest(CmsKitItemSystem.ItemKey,             CmsKitItemSystem.DisplayName,              1, "GuaranteedCms",       CmsKitItemSystem.BaseGameItemId)),
     };
 
         var checkingPredicates = new Func<MedicalGrantRequest, bool>[]
@@ -92,6 +98,12 @@ public sealed class DefaultMedicalItemGrantSink : IMedicalItemGrantSink
             MildronateItemSystem.IsMildronateRequest,
             TwoATwoBTGItemSystem.IsTwoATwoBTGRequest,
             Obdolbos2ItemSystem.IsObdolbos2Request,
+            GoldenStarItemSystem.IsGoldenStarRequest,
+            VaselineItemSystem.IsVaselineRequest,
+            LibatineItemSystem.IsLibatineRequest,
+            IbuprofenItemSystem.IsIbuprofenRequest,
+            MultiToolItemSystem.IsMultiToolRequest,
+            CmsKitItemSystem.IsCmsRequest,
         };
 
         for (var i = 0; i < allGuaranteed.Length; i++)
@@ -148,7 +160,26 @@ public sealed class DefaultMedicalItemGrantSink : IMedicalItemGrantSink
            || Xtg12ItemSystem.IsXtg12Request(request)
            || MildronateItemSystem.IsMildronateRequest(request)
            || TwoATwoBTGItemSystem.IsTwoATwoBTGRequest(request)
-           || Obdolbos2ItemSystem.IsObdolbos2Request(request);
+           || Obdolbos2ItemSystem.IsObdolbos2Request(request)
+           || GoldenStarItemSystem.IsGoldenStarRequest(request)
+           || VaselineItemSystem.IsVaselineRequest(request)
+           || LibatineItemSystem.IsLibatineRequest(request)
+           || IbuprofenItemSystem.IsIbuprofenRequest(request)
+           || MultiToolItemSystem.IsMultiToolRequest(request)
+           || CmsKitItemSystem.IsCmsRequest(request);
+
+    /// <summary>
+    /// 判断是否为自定义物品（针剂 + 药品）。
+    /// 自定义物品通过容器刷新系统（WorldContainerLootSpawner / CorpseLootSpawner）刷新，
+    /// 不作为地面掉落物生成。
+    /// </summary>
+    private static bool IsCustomItem(MedicalGrantRequest request)
+        => IsInjectorRequest(request)
+           || AI2ItemSystem.IsAi2Request(request)
+           || GrizzlyKitItemSystem.IsGrizzlyKitRequest(request)
+           || AfakKitItemSystem.IsAfakKitRequest(request)
+           || IfakKitItemSystem.IsIfakKitRequest(request)
+           || SalewaKitItemSystem.IsSalewaKitRequest(request);
 
     /// <summary>
     /// 发放一个 medkit，并将所有针剂装入其中（通过原生 Container.LoadItem）。
@@ -232,7 +263,7 @@ public sealed class DefaultMedicalItemGrantSink : IMedicalItemGrantSink
 
             if (TryPlaceItemInInventory(body, item, request, autoPickUp, firstEmptySlot, pickUpItemCandidates, log))
             {
-                // 拾取成功后配置自定义针剂（修改 id + 耐久 + 图标）
+                // 放置成功后配置（先放后配，避免重量/容器校验被自定义属性干扰）
                 ConfigureCustomItem(item, request);
                 any = true;
             }
@@ -358,6 +389,28 @@ public sealed class DefaultMedicalItemGrantSink : IMedicalItemGrantSink
             TwoATwoBTGItemSystem.ConfigureSpawnedItem(item, request);
         else if (Obdolbos2ItemSystem.IsObdolbos2Request(request))
             Obdolbos2ItemSystem.ConfigureSpawnedItem(item, request);
+        else if (GrizzlyKitItemSystem.IsGrizzlyKitRequest(request))
+            GrizzlyKitItemSystem.ConfigureSpawnedItem(item, request);
+        else if (AfakKitItemSystem.IsAfakKitRequest(request))
+            AfakKitItemSystem.ConfigureSpawnedItem(item, request);
+        else if (IfakKitItemSystem.IsIfakKitRequest(request))
+            IfakKitItemSystem.ConfigureSpawnedItem(item, request);
+        else if (SalewaKitItemSystem.IsSalewaKitRequest(request))
+            SalewaKitItemSystem.ConfigureSpawnedItem(item, request);
+        else if (AI2ItemSystem.IsAi2Request(request))
+            AI2ItemSystem.ConfigureSpawnedItem(item, request);
+        else if (GoldenStarItemSystem.IsGoldenStarRequest(request))
+            GoldenStarItemSystem.ConfigureSpawnedItem(item, request);
+        else if (VaselineItemSystem.IsVaselineRequest(request))
+            VaselineItemSystem.ConfigureSpawnedItem(item, request);
+        else if (LibatineItemSystem.IsLibatineRequest(request))
+            LibatineItemSystem.ConfigureSpawnedItem(item, request);
+        else if (IbuprofenItemSystem.IsIbuprofenRequest(request))
+            IbuprofenItemSystem.ConfigureSpawnedItem(item, request);
+        else if (MultiToolItemSystem.IsMultiToolRequest(request))
+            MultiToolItemSystem.ConfigureSpawnedItem(item, request);
+        else if (CmsKitItemSystem.IsCmsRequest(request))
+            CmsKitItemSystem.ConfigureSpawnedItem(item, request);
     }
 
     public bool TryInjectWorldLoot(object worldGenerationInstance, IReadOnlyList<MedicalGrantRequest> plan, ManualLogSource log)
@@ -373,6 +426,14 @@ public sealed class DefaultMedicalItemGrantSink : IMedicalItemGrantSink
 
         foreach (var request in plan)
         {
+            // 自定义物品通过容器刷新系统（WorldContainerLootSpawner / CorpseLootSpawner）刷新，
+            // 不再作为地面掉落物生成
+            if (IsCustomItem(request))
+            {
+                log.LogInfo($"World loot '{request.ItemKey}' is custom item, skipping ground drop (spawns from containers).");
+                continue;
+            }
+
             var spawnCount = Math.Max(1, request.Count);
             for (var i = 0; i < spawnCount; i++)
             {
@@ -505,6 +566,15 @@ public sealed class DefaultMedicalItemGrantSink : IMedicalItemGrantSink
                     var col = item.gameObject.GetComponent<BoxCollider2D>();
                     if (col == null) col = item.gameObject.AddComponent<BoxCollider2D>();
 
+                    // 根据当前 Sprite 大小调整碰撞箱
+                    var sr = item.GetComponent<SpriteRenderer>();
+                    if (sr != null && sr.sprite != null)
+                    {
+                        var bounds = sr.sprite.bounds;
+                        col.size = new Vector2(bounds.size.x, bounds.size.y);
+                        col.offset = Vector2.zero;
+                    }
+
                     genMethod.Invoke(world, new object[] { (Vector2)body.transform.position, item.gameObject });
                     return true;
                 }
@@ -541,136 +611,17 @@ public static class MedicalSpawnHooks
 
     [HarmonyPatch(typeof(WorldGeneration), nameof(WorldGeneration.Start))]
     [HarmonyPrefix]
-    static void ResetRunState() => _startingLoadoutGrantedThisRun = false;
-
-    [HarmonyPatch(typeof(WorldGeneration), nameof(WorldGeneration.Start))]
-    [HarmonyPostfix]
-    static void GrantOnWorldStart()
-    {
-        if (!MedicalFrameworkApi.IsInitialized || _startingLoadoutGrantedThisRun) return;
-
-        var plan = MedicalFrameworkApi.BuildStartingLoadout();
-        if (plan.Count == 0)
-        {
-            plan = new[] { new MedicalGrantRequest(
-                EtgCItemSystem.EtgItemKey, EtgCItemSystem.EtgDisplayName,
-                1, "WorldStartFallback", EtgCItemSystem.EtgBaseGameItemId) };
-        }
-
-        var body = WorldGeneration.world?.body;
-        if (body == null) return;
-
-        if (MedicalInjectionBridge.TryGrantStartingLoadout(body, plan, _log ?? Plugin.Log))
-        {
-            _startingLoadoutGrantedThisRun = true;
-            _log?.LogInfo($"WorldGeneration.Start grant completed. Items={plan.Count}");
-        }
-        else
-        {
-            MedicalStartLoadoutRetrier.Attach(body, plan, _log ?? Plugin.Log);
-        }
-    }
-
-    [HarmonyPatch(typeof(Body), nameof(Body.Start))]
-    [HarmonyPostfix]
-    static void GrantOnBodyStart()
-    {
-        if (!MedicalFrameworkApi.IsInitialized || _startingLoadoutGrantedThisRun) return;
-
-        var plan = MedicalFrameworkApi.BuildStartingLoadout();
-        if (plan.Count == 0) return;
-
-        var body = WorldGeneration.world?.body;
-        if (body == null) return;
-
-        if (MedicalInjectionBridge.TryGrantStartingLoadout(body, plan, _log ?? Plugin.Log))
-        {
-            _startingLoadoutGrantedThisRun = true;
-        }
-        else
-        {
-            MedicalStartLoadoutRetrier.Attach(body, plan, _log ?? Plugin.Log);
-        }
-    }
+    static void ResetRunState() => _startingLoadoutGrantedThisRun = true;
 
     internal static void MarkGrantedFromRetry(int items)
     {
         _startingLoadoutGrantedThisRun = true;
-        _log?.LogInfo($"Delayed grant completed. Items={items}");
     }
 
     public static void ForceDebugGrantCurrentRun() => _startingLoadoutGrantedThisRun = false;
 
-    public static void TickGlobalGrantFallback()
-    {
-        if (_startingLoadoutGrantedThisRun || !MedicalFrameworkApi.IsInitialized) return;
+    public static void TickGlobalGrantFallback() { /* 开局发放已禁用 */ }
 
-        var body = WorldGeneration.world?.body;
-        if (body == null) return;
-
-        var plan = MedicalFrameworkApi.BuildStartingLoadout();
-        if (plan.Count == 0)
-        {
-            plan = new[] { new MedicalGrantRequest(
-                EtgCItemSystem.EtgItemKey, EtgCItemSystem.EtgDisplayName,
-                1, "UpdateFallback", EtgCItemSystem.EtgBaseGameItemId) };
-        }
-
-        if (MedicalInjectionBridge.TryGrantStartingLoadout(body, plan, _log ?? Plugin.Log))
-        {
-            _startingLoadoutGrantedThisRun = true;
-        }
-    }
-}
-
-public sealed class MedicalStartLoadoutRetrier : MonoBehaviour
-{
-    private const float RetryIntervalSeconds = 1f;
-    private const int MaxAttempts = 8;
-
-    private readonly List<MedicalGrantRequest> _plan = new();
-    private ManualLogSource? _log;
-    private Body? _body;
-    private float _timer;
-    private int _attempt;
-
-    public static void Attach(Body body, IReadOnlyList<MedicalGrantRequest> plan, ManualLogSource log)
-    {
-        if (body == null || plan.Count == 0) return;
-
-        var retrier = body.gameObject.GetComponent<MedicalStartLoadoutRetrier>();
-        if (retrier == null) retrier = body.gameObject.AddComponent<MedicalStartLoadoutRetrier>();
-
-        retrier._body = body;
-        retrier._log = log;
-        retrier._plan.Clear();
-        retrier._plan.AddRange(plan);
-        retrier._attempt = 0;
-        retrier._timer = 0f;
-        retrier.enabled = true;
-    }
-
-    private void Awake() => enabled = false;
-
-    private void Update()
-    {
-        if (_body == null || _plan.Count == 0) { enabled = false; return; }
-
-        _timer += Time.deltaTime;
-        if (_timer < RetryIntervalSeconds) return;
-
-        _timer = 0f;
-        _attempt++;
-
-        if (MedicalInjectionBridge.TryGrantStartingLoadout(_body, _plan, _log ?? Plugin.Log))
-        {
-            MedicalSpawnHooks.MarkGrantedFromRetry(_plan.Count);
-            enabled = false;
-            return;
-        }
-
-        if (_attempt >= MaxAttempts) enabled = false;
-    }
 }
 
 [HarmonyPatch]
@@ -685,31 +636,6 @@ public static class MedicalWorldLootHooks
     {
         if (!MedicalFrameworkApi.IsInitialized || MedicalFrameworkApi.EffectiveMode == MedicalFeatureMode.Disabled)
             return;
-
-        // KrokMP 模式下补充发放
-        if (!MedicalSpawnHooks.WasStartingLoadoutGrantedThisRun)
-        {
-            var loadoutPlan = MedicalFrameworkApi.BuildStartingLoadout();
-            if (loadoutPlan.Count == 0)
-            {
-                loadoutPlan = new[] { new MedicalGrantRequest(
-                    EtgCItemSystem.EtgItemKey, EtgCItemSystem.EtgDisplayName,
-                    1, "FinishWorldGenFallback", EtgCItemSystem.EtgBaseGameItemId) };
-            }
-
-            var body = WorldGeneration.world?.body;
-            if (body != null)
-            {
-                if (MedicalInjectionBridge.TryGrantStartingLoadout(body, loadoutPlan, _log ?? Plugin.Log))
-                {
-                    MedicalSpawnHooks.MarkGrantedFromRetry(loadoutPlan.Count);
-                }
-                else
-                {
-                    MedicalStartLoadoutRetrier.Attach(body, loadoutPlan, _log ?? Plugin.Log);
-                }
-            }
-        }
 
         // World loot（KrokMP 安全模式下跳过）
         if (MedicalFrameworkApi.IsKrokMpDetected && MedicalFrameworkApi.EffectiveMode == MedicalFeatureMode.StartingLoadoutOnly)

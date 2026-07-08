@@ -132,6 +132,7 @@ public static class PropitalItemSystem
     /// </summary>
     private static void PropitalUseAction(Body body, Item item)
     {
+        InjectorSound.Play();
         Plugin.Log.LogInfo("Propital useAction invoked by game native system.");
 
         PropitalEffectController.Attach(body).ActivateOrRefresh();

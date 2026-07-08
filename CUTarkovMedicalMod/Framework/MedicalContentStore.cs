@@ -154,8 +154,6 @@ public static class MedicalContentStore
         };
     }
 
-    public static string DescribePath() => DefaultContentFilePath;
-
     private static void Normalize(MedicalContentFile file, IReadOnlyList<MedicalItemDefinition> defaults)
     {
         file.SchemaVersion = Math.Max(1, file.SchemaVersion);

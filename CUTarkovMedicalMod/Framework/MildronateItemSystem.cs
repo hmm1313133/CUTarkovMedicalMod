@@ -133,6 +133,7 @@ public static class MildronateItemSystem
     /// </summary>
     private static void MildronateUseAction(Body body, Item item)
     {
+        InjectorSound.Play();
         Plugin.Log.LogInfo("Mildronate useAction invoked by game native system.");
 
         MildronateEffectController.Attach(body).ActivateOrRefresh();
@@ -403,7 +404,11 @@ public sealed class MildronateEffectController : MonoBehaviour
             // 以当前耐力值为基准，追踪峰值以计算 +20% 上限
             _staminaCapBaseline = _body!.stamina;
 
-            Plugin.Log.LogInfo($"[Mildronate] Buff phase: stamina cap +10% (baseline={_staminaCapBaseline:F1}), "
+            // 注册耐力恢复和耐力上限加成到多来源叠加管理器
+            StaminaBonusManager.AddBonus(_body, StaminaRecoveryBoost, BuffDuration, MildronateItemSystem.ItemKey);
+            StaminaCapBonusManager.AddBonus(_body, StaminaCapBonus - 1f, BuffDuration, MildronateItemSystem.ItemKey);
+
+            Plugin.Log.LogInfo($"[Mildronate] Buff phase: stamina cap +{(StaminaCapBonus-1f)*100}% (baseline={_staminaCapBaseline:F1}), "
                 + $"stamina recovery +50% for {BuffDuration}s, "
                 + $"food/water drain {FoodWaterDrainPerSec}/s for {DrainDuration}s");
         }
@@ -415,38 +420,45 @@ public sealed class MildronateEffectController : MonoBehaviour
         _phaseTimer -= dt;
 
         // ===== 耐力操纵：每帧直接操作 Body.stamina =====
+        // 仅当本物品是当前最强来源时才执行，避免多来源重复追加
 
         // 1. 耐力上限 +10%：先追踪原生峰值（在额外恢复之前），再 clamp。
         //    注意顺序必须在恢复 boost 之前，否则 baseline 会被自己抬高的值污染导致滚雪球。
-        try
+        if (StaminaCapBonusManager.IsTopSource(_body!, MildronateItemSystem.ItemKey))
         {
-            // 持续追踪原生峰值（此时 stamina 尚未被本帧额外恢复抬高）
-            if (_body!.stamina > _staminaCapBaseline)
-                _staminaCapBaseline = _body.stamina;
+            try
+            {
+                // 持续追踪原生峰值（此时 stamina 尚未被本帧额外恢复抬高）
+                if (_body!.stamina > _staminaCapBaseline)
+                    _staminaCapBaseline = _body.stamina;
 
-            var effectiveCap = _staminaCapBaseline * StaminaCapBonus;
-            if (_body.stamina > effectiveCap)
-                _body.stamina = effectiveCap;
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.LogWarning($"[Mildronate] Stamina cap clamp failed: {ex.Message}");
+                var effectiveCap = _staminaCapBaseline * StaminaCapBonus;
+                if (_body.stamina > effectiveCap)
+                    _body.stamina = effectiveCap;
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogWarning($"[Mildronate] Stamina cap clamp failed: {ex.Message}");
+            }
         }
 
         // 2. 耐力恢复 +50%：使用游戏原生的 staminaStrength 曲线计算额外恢复量。
         //    游戏 HandleCirculation 每帧通过 staminaStrength.Evaluate(energy*0.01) 计算自然恢复，
         //    这里加上其 50% 额外恢复。
-        try
+        if (StaminaBonusManager.IsTopSource(_body!, MildronateItemSystem.ItemKey))
         {
-            if (_body!.staminaStrength != null)
+            try
             {
-                var extraRecovery = _body.staminaStrength.Evaluate(_body.energy * 0.01f) * dt * StaminaRecoveryBoost;
-                _body.stamina += extraRecovery;
+                if (_body!.staminaStrength != null)
+                {
+                    var extraRecovery = _body.staminaStrength.Evaluate(_body.energy * 0.01f) * dt * StaminaRecoveryBoost;
+                    _body.stamina += extraRecovery;
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.LogWarning($"[Mildronate] Stamina recovery boost failed: {ex.Message}");
+            catch (Exception ex)
+            {
+                Plugin.Log.LogWarning($"[Mildronate] Stamina recovery boost failed: {ex.Message}");
+            }
         }
 
         // ===== 前 15 分钟：饱和度和水分消耗 =====
@@ -485,6 +497,11 @@ public sealed class MildronateEffectController : MonoBehaviour
         if (_phaseTimer <= 0f)
         {
             _phase = Phase.Idle;
+            if (_body != null)
+            {
+                StaminaBonusManager.ClearBonus(_body, MildronateItemSystem.ItemKey);
+                StaminaCapBonusManager.ClearBonus(_body, MildronateItemSystem.ItemKey);
+            }
             StimBuffIndicator.HideBuff(MildronateItemSystem.ItemKey);
             enabled = false;
             Plugin.Log.LogInfo("[Mildronate] Effect ended. Stamina manipulation stopped.");

@@ -131,6 +131,7 @@ public static class ObdolbosItemSystem
 
     private static void ObdolbosUseAction(Body body, Item item)
     {
+        InjectorSound.Play();
         Plugin.Log.LogInfo("Obdolbos useAction invoked.");
 
         // 激活延迟 + 随机效果控制器
@@ -357,6 +358,9 @@ public sealed class ObdolbosEffectController : MonoBehaviour
         _outcomeApplied = false;
         _staminaRecoveryActive = false;
         _tickAccumulator = 0f;
+        // 清除上一次注射可能残留的耐力恢复加成（新注射可能触发不同效果）
+        if (_body != null)
+            StaminaBonusManager.ClearBonus(_body, ObdolbosItemSystem.ItemKey);
         enabled = true;
 
         StimBuffIndicator.ShowBuff(
@@ -523,23 +527,34 @@ public sealed class ObdolbosEffectController : MonoBehaviour
     }
 
     /// <summary>
-    /// 精神抹除：触发 Body.mindWipe (MindwipeScript)。
+    /// 精神抹除：通过原生 mindwipe 液体的 onDrink 回调触发，保留完整的视觉效果（Vignette、音效等）。
+    /// 直接设置 mindWipe.active=true 会跳过 MindwipeScript.Start() 中的视觉特效实例化。
     /// </summary>
     private void ApplyMindWipe()
     {
         if (_body == null) return;
         try
         {
-            var mindWipe = _body.mindWipe;
-            if (mindWipe == null)
+            // 通过原生 mindwipe 液体的 onDrink 回调触发精神抹除（服用1ml）
+            if (Liquids.Registry.TryGetValue("mindwipe", out var mindwipeLiquid) && mindwipeLiquid.onDrink != null)
             {
-                // 游戏可能未自动挂载 MindwipeScript，动态创建
-                mindWipe = _body.gameObject.AddComponent<MindwipeScript>();
-                mindWipe.body = _body;
-                _body.mindWipe = mindWipe;
-                Plugin.Log.LogInfo("[Obdolbos] MindwipeScript was null, created dynamically.");
+                mindwipeLiquid.onDrink.Invoke(1f, _body);
+                Plugin.Log.LogInfo("[Obdolbos] Mindwipe triggered via native onDrink callback (1ml).");
             }
-            mindWipe.active = true;
+            else
+            {
+                // Fallback: 直接设置 mindWipe.active（无视觉特效）
+                Plugin.Log.LogWarning("[Obdolbos] mindwipe liquid not found in Registry, falling back to direct active=true.");
+                var mindWipe = _body.mindWipe;
+                if (mindWipe == null)
+                {
+                    mindWipe = _body.gameObject.AddComponent<MindwipeScript>();
+                    mindWipe.body = _body;
+                    _body.mindWipe = mindWipe;
+                }
+                mindWipe.active = true;
+            }
+
             StimBuffIndicator.ShowOneTimeEffect(_instanceKey, "精神抹除触发", isNegative: true);
 
             // 隐藏减益：头部和胸部增加70疼痛
@@ -612,6 +627,8 @@ public sealed class ObdolbosEffectController : MonoBehaviour
     {
         if (_body == null) return;
         _staminaRecoveryActive = true;  // 由 UpdateActiveEffect 每帧直接操作 stamina
+        // 注册耐力恢复加成到多来源叠加管理器（+80%，持续 25 分钟）
+        StaminaBonusManager.AddBonus(_body, 0.8f, CombatStimDuration, ObdolbosItemSystem.ItemKey);
         SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatSTR, 3);
         StimBuffIndicator.ShowOneTimeEffect(_instanceKey, "力量+3 永久");
         Plugin.Log.LogInfo("[Obdolbos] 战斗兴奋: stamina recovery +80% for 1500s, STR +3 permanent.");
@@ -662,8 +679,10 @@ public sealed class ObdolbosEffectController : MonoBehaviour
                 TickMetabolicChaos();
                 break;
             case Outcome.CombatStim:
-                // 每帧直接追加耐力恢复 +80%
-                if (_staminaRecoveryActive && _body!.staminaStrength != null)
+                // 每帧直接追加耐力恢复 +80%（仅当本物品是当前最强来源时）
+                if (_staminaRecoveryActive
+                    && StaminaBonusManager.IsTopSource(_body!, ObdolbosItemSystem.ItemKey)
+                    && _body!.staminaStrength != null)
                 {
                     var extraRecovery = _body.staminaStrength.Evaluate(_body.energy * 0.01f) * Time.deltaTime * 0.8f;
                     _body.stamina += extraRecovery;
@@ -725,6 +744,8 @@ public sealed class ObdolbosEffectController : MonoBehaviour
     private void Cleanup()
     {
         _staminaRecoveryActive = false;
+        if (_body != null)
+            StaminaBonusManager.ClearBonus(_body, ObdolbosItemSystem.ItemKey);
         _outcome = Outcome.None;
         _outcomeApplied = false;
         StimBuffIndicator.HideBuff(_instanceKey);
@@ -767,6 +788,8 @@ public sealed class ObdolbosEffectController : MonoBehaviour
     private void OnDisable()
     {
         _staminaRecoveryActive = false;
+        if (_body != null)
+            StaminaBonusManager.ClearBonus(_body, ObdolbosItemSystem.ItemKey);
     }
 
     private static string GetOutcomeLabel(Outcome outcome) => outcome switch

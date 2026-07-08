@@ -24,7 +24,7 @@ public static class Sj9ItemSystem
     public const string Description =
         "专为特种部队人员定制。它能够在短时间内降低体温，显著减缓代谢。" +
         "使用SJ9可以显著减少向周围环境散发的热量，同时保持在体内新陈代谢的安全水平上。它被用于夜间行动，让人体在热成像仪器下几乎不可见。\n\n" +
-        "<color=#54ff9f>效果：体温持续锁定在31°C，持续20分钟（1200秒）。</color>\n" +
+        "<color=#54ff9f>效果：体温持续锁定在31°C，持续20分钟（可在失温时使用以保持下限体温）。</color>\n" +
         "<color=#ff6666>副作用：立即+15患病；韧性等级永久-2；延迟10分钟后胸口持续疼痛、胸口肌肉每秒-0.2 持续10分钟。</color>";
 
     private static Sprite? _cachedIcon;
@@ -124,6 +124,7 @@ public static class Sj9ItemSystem
 
     private static void Sj9UseAction(Body body, Item item)
     {
+        InjectorSound.Play();
         Plugin.Log.LogInfo("SJ9 useAction invoked.");
 
         Sj9EffectController.Attach(body).Activate();

@@ -133,6 +133,17 @@ public static class StimBuffIndicator
             InjectIcon(icons, MildronateItemSystem.ItemKey);
             InjectIcon(icons, TwoATwoBTGItemSystem.ItemKey);
             InjectIcon(icons, Obdolbos2ItemSystem.ItemKey);
+            InjectIcon(icons, GrizzlyKitItemSystem.ItemKey);
+            InjectIcon(icons, AfakKitItemSystem.ItemKey);
+            InjectIcon(icons, IfakKitItemSystem.ItemKey);
+            InjectIcon(icons, SalewaKitItemSystem.ItemKey);
+            InjectIcon(icons, AI2ItemSystem.ItemKey);
+            InjectIcon(icons, GoldenStarItemSystem.ItemKey);
+            InjectIcon(icons, VaselineItemSystem.ItemKey);
+            InjectIcon(icons, LibatineItemSystem.ItemKey);
+            InjectIcon(icons, IbuprofenItemSystem.ItemKey);
+            InjectIcon(icons, MultiToolItemSystem.ItemKey);
+            InjectIcon(icons, CmsKitItemSystem.ItemKey);
 
             // 为去重用的 stim_ 前缀 key 也注入相同图标
             InjectIconAlias(icons, EtgCItemSystem.EtgItemKey);
@@ -151,6 +162,17 @@ public static class StimBuffIndicator
             InjectIconAlias(icons, MildronateItemSystem.ItemKey);
             InjectIconAlias(icons, TwoATwoBTGItemSystem.ItemKey);
             InjectIconAlias(icons, Obdolbos2ItemSystem.ItemKey);
+            InjectIconAlias(icons, GrizzlyKitItemSystem.ItemKey);
+            InjectIconAlias(icons, AfakKitItemSystem.ItemKey);
+            InjectIconAlias(icons, IfakKitItemSystem.ItemKey);
+            InjectIconAlias(icons, SalewaKitItemSystem.ItemKey);
+            InjectIconAlias(icons, AI2ItemSystem.ItemKey);
+            InjectIconAlias(icons, GoldenStarItemSystem.ItemKey);
+            InjectIconAlias(icons, VaselineItemSystem.ItemKey);
+            InjectIconAlias(icons, LibatineItemSystem.ItemKey);
+            InjectIconAlias(icons, IbuprofenItemSystem.ItemKey);
+            InjectIconAlias(icons, MultiToolItemSystem.ItemKey);
+            InjectIconAlias(icons, CmsKitItemSystem.ItemKey);
 
             _iconsInjected = true;
         }
@@ -189,6 +211,17 @@ public static class StimBuffIndicator
                 _ when key == MildronateItemSystem.ItemKey => typeof(MildronateItemSystem),
                 _ when key == TwoATwoBTGItemSystem.ItemKey => typeof(TwoATwoBTGItemSystem),
                 _ when key == Obdolbos2ItemSystem.ItemKey => typeof(Obdolbos2ItemSystem),
+                _ when key == GrizzlyKitItemSystem.ItemKey => typeof(GrizzlyKitItemSystem),
+                _ when key == AfakKitItemSystem.ItemKey => typeof(AfakKitItemSystem),
+                _ when key == IfakKitItemSystem.ItemKey => typeof(IfakKitItemSystem),
+                _ when key == SalewaKitItemSystem.ItemKey => typeof(SalewaKitItemSystem),
+                _ when key == AI2ItemSystem.ItemKey => typeof(AI2ItemSystem),
+                _ when key == GoldenStarItemSystem.ItemKey => typeof(GoldenStarItemSystem),
+                _ when key == VaselineItemSystem.ItemKey => typeof(VaselineItemSystem),
+                _ when key == LibatineItemSystem.ItemKey => typeof(LibatineItemSystem),
+                _ when key == IbuprofenItemSystem.ItemKey => typeof(IbuprofenItemSystem),
+                _ when key == MultiToolItemSystem.ItemKey => typeof(MultiToolItemSystem),
+                _ when key == CmsKitItemSystem.ItemKey => typeof(CmsKitItemSystem),
                 _ => null
             };
 

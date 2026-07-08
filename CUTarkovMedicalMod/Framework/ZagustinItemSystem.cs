@@ -131,6 +131,7 @@ public static class ZagustinItemSystem
     /// </summary>
     private static void ZagustinUseAction(Body body, Item item)
     {
+        InjectorSound.Play();
         Plugin.Log.LogInfo("Zagustin useAction invoked by game native system.");
 
         // 激活 180 秒止血效果

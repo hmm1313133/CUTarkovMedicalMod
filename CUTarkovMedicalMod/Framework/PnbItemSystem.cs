@@ -131,6 +131,7 @@ public static class PnbItemSystem
     /// </summary>
     private static void PnbUseAction(Body body, Item item)
     {
+        InjectorSound.Play();
         Plugin.Log.LogInfo("PNB useAction invoked by game native system.");
 
         PnbEffectController.Attach(body).ActivateOrRefresh();

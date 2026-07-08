@@ -132,6 +132,7 @@ public static class SJ6ItemSystem
     /// </summary>
     private static void SJ6UseAction(Body body, Item item)
     {
+        InjectorSound.Play();
         Plugin.Log.LogInfo("SJ6 useAction invoked by game native system.");
 
         SJ6EffectController.Attach(body).ActivateOrRefresh();
@@ -418,7 +419,11 @@ public sealed class SJ6EffectController : MonoBehaviour
             // 以当前耐力值为基准
             _staminaCapBaseline = _body!.stamina;
 
-            Plugin.Log.LogInfo($"[SJ6] Buff phase: stamina cap +20%, recovery +120% for {BuffDuration}s");
+            // 注册耐力恢复和耐力上限加成到多来源叠加管理器
+            StaminaBonusManager.AddBonus(_body, StaminaRecoveryBoost, BuffDuration, SJ6ItemSystem.ItemKey);
+            StaminaCapBonusManager.AddBonus(_body, StaminaCapBonus - 1f, BuffDuration, SJ6ItemSystem.ItemKey);
+
+            Plugin.Log.LogInfo($"[SJ6] Buff phase: stamina cap +{(StaminaCapBonus-1f)*100}%, recovery +{StaminaRecoveryBoost*100}% for {BuffDuration}s");
         }
     }
 
@@ -429,34 +434,41 @@ public sealed class SJ6EffectController : MonoBehaviour
         _elapsed += dt;
 
         // ===== 耐力操纵：直接操作 Body.stamina =====
+        // 仅当本物品是当前最强来源时才执行，避免多来源重复追加
 
         // 1. 耐力上限 +20%
-        try
+        if (StaminaCapBonusManager.IsTopSource(_body!, SJ6ItemSystem.ItemKey))
         {
-            if (_body!.stamina > _staminaCapBaseline)
-                _staminaCapBaseline = _body.stamina;
+            try
+            {
+                if (_body!.stamina > _staminaCapBaseline)
+                    _staminaCapBaseline = _body.stamina;
 
-            var effectiveCap = _staminaCapBaseline * StaminaCapBonus;
-            if (_body.stamina > effectiveCap)
-                _body.stamina = effectiveCap;
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.LogWarning($"[SJ6] Stamina cap clamp failed: {ex.Message}");
+                var effectiveCap = _staminaCapBaseline * StaminaCapBonus;
+                if (_body.stamina > effectiveCap)
+                    _body.stamina = effectiveCap;
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogWarning($"[SJ6] Stamina cap clamp failed: {ex.Message}");
+            }
         }
 
         // 2. 耐力恢复 +120%
-        try
+        if (StaminaBonusManager.IsTopSource(_body!, SJ6ItemSystem.ItemKey))
         {
-            if (_body!.staminaStrength != null)
+            try
             {
-                var extraRecovery = _body.staminaStrength.Evaluate(_body.energy * 0.01f) * dt * StaminaRecoveryBoost;
-                _body.stamina += extraRecovery;
+                if (_body!.staminaStrength != null)
+                {
+                    var extraRecovery = _body.staminaStrength.Evaluate(_body.energy * 0.01f) * dt * StaminaRecoveryBoost;
+                    _body.stamina += extraRecovery;
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.LogWarning($"[SJ6] Stamina recovery boost failed: {ex.Message}");
+            catch (Exception ex)
+            {
+                Plugin.Log.LogWarning($"[SJ6] Stamina recovery boost failed: {ex.Message}");
+            }
         }
 
         // 延迟 10 分钟：管视 + 兴奋剂震颤（持续 5 分钟）
@@ -503,6 +515,11 @@ public sealed class SJ6EffectController : MonoBehaviour
             _tunnelTremorActive = false;
             _tunnelTremorRemaining = 0f;
             SkillEffectHelper.ClearTunnelVision(_body);
+            if (_body != null)
+            {
+                StaminaBonusManager.ClearBonus(_body, SJ6ItemSystem.ItemKey);
+                StaminaCapBonusManager.ClearBonus(_body, SJ6ItemSystem.ItemKey);
+            }
             StimBuffIndicator.HideBuff(SJ6ItemSystem.ItemKey);
             enabled = false;
             Plugin.Log.LogInfo("[SJ6] Effect ended.");

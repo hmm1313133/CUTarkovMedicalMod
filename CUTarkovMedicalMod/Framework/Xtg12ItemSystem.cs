@@ -23,7 +23,7 @@ public static class Xtg12ItemSystem
     public const string Description =
         "它能够中和战争中使用过的大多数已知毒素。也能够用于解除一些自然毒素。" +
         "其成分在血液中时，可提供对毒素的免疫效果。它会导致健康状况下降。\n\n" +
-        "<color=#54ff9f>效果：+70% 抵抗力，毒素 -100%，持续 5 分钟。</color>\n" +
+        "<color=#54ff9f>效果：+70% 抵抗力，毒素 -100%，2分钟内大幅抑制消退全身感染并小幅改善败血症症状。持续 5 分钟。</color>\n" +
         "<color=#ff6666>副作用：3 分钟后 20% 概率呕吐；5 分钟后颤栗 1 分钟。</color>";
 
     private static Sprite? _cachedIcon;
@@ -123,6 +123,7 @@ public static class Xtg12ItemSystem
 
     private static void Xtg12UseAction(Body body, Item item)
     {
+        InjectorSound.Play();
         Plugin.Log.LogInfo("xTG-12 useAction invoked.");
 
         Xtg12EffectController.Attach(body).Activate();
@@ -307,6 +308,10 @@ public sealed class Xtg12EffectController : MonoBehaviour
     private const float TremorDurationSeconds = 60f;
     // 颤栗强度（游戏内 miscShakeIntensity 每秒衰减 1.0，设 60 则约 60s 归零）
     private const float TremorIntensity = 60f;
+    // 感染清除：2分钟内线性降低80%感染度，败血症 -20%
+    private const float InfectionClearDuration = 120f;
+    private const float InfectionClearRatio = 0.8f;
+    private const float SicknessClearRatio = 0.2f;
 
     private Body? _body;
     private float _remaining;
@@ -315,6 +320,9 @@ public sealed class Xtg12EffectController : MonoBehaviour
     private bool _immunityModified;
     private bool _isTremorPhase;
     private float _tremorRemaining;
+    private float _infectionClearRemaining;
+    private float[]? _initialInfections;
+    private float _initialSepticShock;
 
     public static Xtg12EffectController Attach(Body body)
     {
@@ -339,6 +347,16 @@ public sealed class Xtg12EffectController : MonoBehaviour
         _tremorRemaining = 0f;
         enabled = true;
 
+        // 记录初始感染度和败血症，用于线性清除
+        _infectionClearRemaining = InfectionClearDuration;
+        if (_body != null && _body.limbs != null)
+        {
+            _initialInfections = new float[_body.limbs.Length];
+            for (int i = 0; i < _body.limbs.Length; i++)
+                _initialInfections[i] = _body.limbs[i].infectionAmount;
+            _initialSepticShock = _body.septicShock;
+        }
+
         // 解毒效果（可叠加）
         ApplyDetoxEffect();
 
@@ -349,7 +367,7 @@ public sealed class Xtg12EffectController : MonoBehaviour
             _remaining,
             DetoxDurationSeconds,
             new Color(0.3f, 0.7f, 1f), // 蓝色（解毒）
-            positiveDescs: new[] { "免疫力+70", "毒素清零" });
+            positiveDescs: new[] { "免疫力+70", "毒素清零", "感染清除中" });
     }
 
     private void Awake() => enabled = false;
@@ -395,7 +413,9 @@ public sealed class Xtg12EffectController : MonoBehaviour
                 _remaining,
                 DetoxDurationSeconds,
                 new Color(0.3f, 0.7f, 1f),
-                positiveDescs: new[] { "免疫力+70", "毒素清零" });
+                positiveDescs: _infectionClearRemaining > 0f
+                    ? new[] { "免疫力+70", "毒素清零", "感染清除中" }
+                    : new[] { "免疫力+70", "毒素清零" });
 
             if (_remaining <= 0f)
             {
@@ -428,7 +448,8 @@ public sealed class Xtg12EffectController : MonoBehaviour
                 TryGetXtg12Icon(),
                 _tremorRemaining,
                 TremorDurationSeconds,
-                new Color(1f, 0.4f, 0.4f)); // 红色（负面）
+                new Color(1f, 0.4f, 0.4f), // 红色（负面）
+                negativeDescs: new[] { "全身颤栗" });
 
             if (_tremorRemaining <= 0f)
             {
@@ -441,15 +462,15 @@ public sealed class Xtg12EffectController : MonoBehaviour
     {
         if (_body == null) return;
 
-        // +70 免疫力持续 300 秒（通过原生 antibioticImmunityTime 机制）
-        _body.antibioticImmunityTime = DetoxDurationSeconds;
+        // +70 免疫力持续 300 秒（通过 ImmunityBonusManager，支持多来源叠加）
+        ImmunityBonusManager.AddBonus(_body, 70f, DetoxDurationSeconds, Xtg12ItemSystem.ItemKey);
         _immunityModified = true;
 
         // 毒素 -100%
         _body.venomCurrent = 0f;
         _body.venomTotal = 0f;
 
-        Plugin.Log.LogInfo($"[xTG-12] Detox applied: antibioticImmunityTime = {DetoxDurationSeconds}s (+70 immunity), venom cleared.");
+        Plugin.Log.LogInfo($"[xTG-12] Detox applied: ImmunityBonus +70 for {DetoxDurationSeconds}s, venom cleared.");
     }
 
     /// <summary>
@@ -464,6 +485,26 @@ public sealed class Xtg12EffectController : MonoBehaviour
             _body.venomCurrent = 0f;
         if (_body.venomTotal > 0f)
             _body.venomTotal = 0f;
+
+        // 感染清除：2分钟内线性降低80%感染度 + 败血症 -20%
+        if (_infectionClearRemaining > 0f)
+        {
+            _infectionClearRemaining -= 1f;
+
+            if (_body.limbs != null && _initialInfections != null)
+            {
+                float reductionPerTick = InfectionClearRatio / InfectionClearDuration;
+                for (int i = 0; i < _body.limbs.Length && i < _initialInfections.Length; i++)
+                {
+                    float reduce = _initialInfections[i] * reductionPerTick;
+                    _body.limbs[i].infectionAmount = Mathf.Max(0f, _body.limbs[i].infectionAmount - reduce);
+                }
+            }
+
+            // 败血症线性降低20%
+            float septicReduce = _initialSepticShock * (SicknessClearRatio / InfectionClearDuration);
+            _body.septicShock = Mathf.Max(0f, _body.septicShock - septicReduce);
+        }
     }
 
     private void TryTriggerVomit()
@@ -477,7 +518,7 @@ public sealed class Xtg12EffectController : MonoBehaviour
         {
             try
             {
-                _body.vomiter?.DoVomit();
+                _body.vomiter?.Vomit();
                 Plugin.Log.LogInfo("[xTG-12] Vomiting triggered (20% chance).");
             }
             catch (Exception ex)
@@ -502,11 +543,11 @@ public sealed class Xtg12EffectController : MonoBehaviour
 
     private void Cleanup()
     {
-        // 恢复抗生素免疫力计时器
+        // 清除抵抗力加成
         if (_immunityModified && _body != null)
         {
-            _body.antibioticImmunityTime = 0f;
-            Plugin.Log.LogInfo("[xTG-12] antibioticImmunityTime reset.");
+            ImmunityBonusManager.ClearBonus(_body, Xtg12ItemSystem.ItemKey);
+            Plugin.Log.LogInfo("[xTG-12] Immunity bonus cleared.");
         }
 
         // 确保不再颤栗
@@ -523,7 +564,7 @@ public sealed class Xtg12EffectController : MonoBehaviour
     {
         if (_immunityModified && _body != null)
         {
-            _body.antibioticImmunityTime = 0f;
+            ImmunityBonusManager.ClearBonus(_body, Xtg12ItemSystem.ItemKey);
             _immunityModified = false;
         }
         if (_body != null)

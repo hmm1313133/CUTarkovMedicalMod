@@ -123,6 +123,7 @@ public static class Obdolbos2ItemSystem
 
     private static void Obdolbos2UseAction(Body body, Item item)
     {
+        InjectorSound.Play();
         Plugin.Log.LogInfo("Obdolbos 2 useAction invoked by game native system.");
         Obdolbos2EffectController.Attach(body).ActivateOrRefresh();
         try { body.DropItem(item); } catch { }

@@ -22,39 +22,10 @@ public sealed class MedicalDebugHotkeys
             _log.LogInfo("[Debug] Medical hotkey polling is active.");
         }
 
-        if (Input.GetKeyDown(KeyCode.F6) || Input.GetKeyDown(KeyCode.Keypad6))
-        {
-            GiveEtgToCurrentPlayer();
-        }
-
         if (Input.GetKeyDown(KeyCode.F7) || Input.GetKeyDown(KeyCode.Keypad7))
         {
             DumpRuntimeState();
         }
-    }
-
-    private void GiveEtgToCurrentPlayer()
-    {
-        var world = WorldGeneration.world;
-        var body = world?.body;
-        if (body == null)
-        {
-            _log.LogWarning("[Debug] F6 ignored: WorldGeneration/body not ready.");
-            return;
-        }
-
-        MedicalSpawnHooks.ForceDebugGrantCurrentRun();
-        var request = new MedicalGrantRequest(
-            EtgCItemSystem.EtgItemKey,
-            EtgCItemSystem.EtgDisplayName,
-            1,
-            "DebugHotkey",
-            EtgCItemSystem.EtgBaseGameItemId);
-
-        var ok = MedicalInjectionBridge.TryGrantStartingLoadout(body, new List<MedicalGrantRequest> { request }, _log);
-        _log.LogInfo(ok
-            ? "[Debug] F6: ETG-c grant request succeeded."
-            : "[Debug] F6: ETG-c grant request failed.");
     }
 
     private void DumpRuntimeState()

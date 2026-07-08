@@ -136,6 +136,7 @@ public static class MorphineItemSystem
     /// </summary>
     private static void MorphineUseAction(Body body, Item item)
     {
+        InjectorSound.Play();
         Plugin.Log.LogInfo("Morphine useAction invoked by game native system.");
 
         // 激活效果控制器（管理 buff 图标显示）

@@ -131,6 +131,7 @@ public static class Sj1ItemSystem
     /// </summary>
     private static void Sj1UseAction(Body body, Item item)
     {
+        InjectorSound.Play();
         Plugin.Log.LogInfo("SJ1 useAction invoked by game native system.");
 
         Sj1EffectController.Attach(body).ActivateOrRefresh();
@@ -362,7 +363,7 @@ public sealed class Sj1EffectController : MonoBehaviour
             BuffDuration + ActivationDelay,
             BuffDuration + ActivationDelay,
             new Color(0.3f, 0.7f, 0.9f), // 蓝青色（轻型战斗兴奋剂）
-            positiveDescs: new[] { "力量+5", "韧性+3", "阿片镇痛+5" },
+            positiveDescs: new[] { "力量+5", "韧性+3", "耐力恢复+30%" },
             negativeDescs: new[] { "每秒-0.1饱食/水分" });
     }
 
@@ -399,7 +400,9 @@ public sealed class Sj1EffectController : MonoBehaviour
             TryGetSj1Icon(),
             _phaseTimer + BuffDuration,
             BuffDuration + ActivationDelay,
-            new Color(0.3f, 0.7f, 0.9f));
+            new Color(0.3f, 0.7f, 0.9f),
+            positiveDescs: new[] { "力量+5", "韧性+3", "耐力恢复+30%" },
+            negativeDescs: new[] { "每秒-0.1饱食/水分" });
 
         if (_phaseTimer <= 0f)
         {
@@ -436,7 +439,9 @@ public sealed class Sj1EffectController : MonoBehaviour
             TryGetSj1Icon(),
             _phaseTimer,
             BuffDuration,
-            new Color(0.3f, 0.7f, 0.9f));
+            new Color(0.3f, 0.7f, 0.9f),
+            positiveDescs: new[] { "力量+5", "韧性+3", "耐力恢复+30%" },
+            negativeDescs: new[] { "每秒-0.1饱食/水分" });
 
         if (_phaseTimer <= 0f)
         {

@@ -138,6 +138,17 @@ public static class MedicalCatalog
         new MedicalItemDefinition("mildronate", "米屈肼注射器【Mildronate】", MedicalItemCategory.Stim, 6, 1, 1, "syringe"),
         new MedicalItemDefinition("2a2btg", "2A2-(b-TG)兴奋剂注射器【2A2-(b-TG)】", MedicalItemCategory.Stim, 6, 1, 1, "syringe"),
         new MedicalItemDefinition("obdolbos2", "Obdolbos 2 鸡尾酒兴奋剂注射器【Obdolbos 2】", MedicalItemCategory.Stim, 5, 1, 1, "syringe"),
+        new MedicalItemDefinition("ai2", "AI-2急救组合注射器【AI-2】", MedicalItemCategory.Support, 7, 1, 1, "syringe"),
+        new MedicalItemDefinition("grizzlykit", "Grizzly急救包【Grizzly Kit】", MedicalItemCategory.Support, 5, 1, 1, "bruisekit"),
+        new MedicalItemDefinition("afak", "AFAK单兵战术急救包【AFAK】", MedicalItemCategory.Support, 5, 1, 1, "bruisekit"),
+        new MedicalItemDefinition("ifak", "IFAK单兵战术急救包【IFAK】", MedicalItemCategory.Support, 5, 1, 1, "bruisekit"),
+        new MedicalItemDefinition("salewa", "Salewa急救包【Salewa】", MedicalItemCategory.Support, 5, 1, 1, "bruisekit"),
+        new MedicalItemDefinition("goldenstar", "金星药膏【Golden Star】", MedicalItemCategory.Support, 8, 1, 1, "bruisekit"),
+        new MedicalItemDefinition("vaseline", "凡士林【Vaseline】", MedicalItemCategory.Support, 10, 1, 1, "bruisekit"),
+        new MedicalItemDefinition("libatine", "力百汀【Augmentin】", MedicalItemCategory.Support, 7, 1, 1, "bruisekit"),
+        new MedicalItemDefinition("ibuprofen", "布洛芬止痛药【Ibuprofen】", MedicalItemCategory.Support, 8, 1, 1, "bruisekit"),
+        new MedicalItemDefinition("multitool", "多功能手术工具包【Multi-Tool Surgical Kit】", MedicalItemCategory.Support, 5, 1, 1, "bruisekit"),
+        new MedicalItemDefinition("cms", "CMS手术包【CMS Surgical Kit】", MedicalItemCategory.Support, 6, 1, 1, "bruisekit"),
         new MedicalItemDefinition("adhesivebandage", "Adhesive Bandage", MedicalItemCategory.Bandage, 28, 1, 2, "adhesivebandage"),
         new MedicalItemDefinition("bandage", "Bandage", MedicalItemCategory.Bandage, 35, 1, 2, "bandage"),
         new MedicalItemDefinition("sterilizedbandage", "Sterilized Bandage", MedicalItemCategory.Bandage, 24, 1, 2, "sterilizedbandage"),
@@ -151,19 +162,6 @@ public static class MedicalCatalog
         new MedicalItemDefinition("ringersolution", "Ringer's Solution", MedicalItemCategory.Saline, 8, 1, 1, "ringersolution")
     };
 
-    public static MedicalItemDefinition[] GetByCategory(params MedicalItemCategory[] categories)
-    {
-        var results = new List<MedicalItemDefinition>();
-        foreach (var item in DefaultItems)
-        {
-            if (categories.Contains(item.Category))
-            {
-                results.Add(item);
-            }
-        }
-
-        return results.ToArray();
-    }
 }
 
 public sealed class MedicalModConfig
@@ -325,7 +323,51 @@ public sealed class MedicalFramework
 
         var min = Math.Max(0, _config.StartingLoadoutMinItems.Value);
         var max = Math.Max(min, _config.StartingLoadoutMaxItems.Value);
-        return BuildRandomGrantList(min, max, "StartingLoadout");
+        var randomGrants = BuildRandomGrantList(min, max, "StartingLoadout");
+
+        // Grizzly急救包 固定发放 1 个
+        var grizzly = new MedicalGrantRequest(
+            GrizzlyKitItemSystem.ItemKey,
+            GrizzlyKitItemSystem.DisplayName,
+            1, "StartingLoadout",
+            GrizzlyKitItemSystem.BaseGameItemId);
+
+        // AFAK 急救包 固定发放 1 个
+        var afak = new MedicalGrantRequest(
+            AfakKitItemSystem.ItemKey,
+            AfakKitItemSystem.DisplayName,
+            1, "StartingLoadout",
+            AfakKitItemSystem.BaseGameItemId);
+
+        // IFAK 急救包 固定发放 1 个
+        var ifak = new MedicalGrantRequest(
+            IfakKitItemSystem.ItemKey,
+            IfakKitItemSystem.DisplayName,
+            1, "StartingLoadout",
+            IfakKitItemSystem.BaseGameItemId);
+
+        // Salewa 急救包 固定发放 1 个
+        var salewa = new MedicalGrantRequest(
+            SalewaKitItemSystem.ItemKey,
+            SalewaKitItemSystem.DisplayName,
+            1, "StartingLoadout",
+            SalewaKitItemSystem.BaseGameItemId);
+
+        // AI-2 急救组合 固定发放 1 个
+        var ai2 = new MedicalGrantRequest(
+            AI2ItemSystem.ItemKey,
+            AI2ItemSystem.DisplayName,
+            1, "StartingLoadout",
+            AI2ItemSystem.BaseGameItemId);
+
+        var result = new List<MedicalGrantRequest>(randomGrants.Count + 5);
+        result.Add(grizzly);
+        result.Add(afak);
+        result.Add(ifak);
+        result.Add(salewa);
+        result.Add(ai2);
+        result.AddRange(randomGrants);
+        return result;
     }
 
     public IReadOnlyList<MedicalGrantRequest> BuildWorldLoot()
@@ -557,10 +599,5 @@ public static class MedicalFrameworkApi
     public static IReadOnlyList<MedicalGrantRequest> BuildWorldLoot()
     {
         return _instance?.BuildWorldLoot() ?? Array.Empty<MedicalGrantRequest>();
-    }
-
-    public static MedicalPlan BuildPlan()
-    {
-        return _instance?.BuildPlan() ?? new MedicalPlan(MedicalFeatureMode.Disabled, "<uninitialized>", Array.Empty<MedicalGrantRequest>(), Array.Empty<MedicalGrantRequest>());
     }
 }

@@ -124,6 +124,7 @@ public static class BluebloodItemSystem
 
     private static void BluebloodUseAction(Body body, Item item)
     {
+        InjectorSound.Play();
         Plugin.Log.LogInfo("Blueblood useAction invoked.");
 
         BluebloodEffectController.Attach(body).Activate();
@@ -301,7 +302,7 @@ public sealed class BluebloodEffectController : MonoBehaviour
     internal const float SideEffectDuration = 60f;                // 1 分钟
     internal const float ToxinReducePct = 0.7f;                   // 毒素 -70%
     internal const float RadiationReduce = 33f;                   // 辐射 -10gy（内部单位~3.3:1 换算）
-    internal const float ImmunityReducePct = 0.4f;                // 免疫力 -40%
+    internal const float ImmunityReduceAmount = 40f;               // 免疫力 -40（百分比单位）
     internal const float VomitChance = 0.33f;                     // 33% 呕吐概率
     internal const float HungerDrainPerSec = 0.3f;                // 每秒 -0.3 饱食度
 
@@ -455,11 +456,11 @@ public sealed class BluebloodEffectController : MonoBehaviour
         _sideEffectRemaining = SideEffectDuration;
         _tickAccumulator = 0f;
 
-        // 免疫力 -40%
+        // 免疫力 -40（百分比单位，通过 ImmunityReductionManager 持续应用，持续整个副作用阶段）
         try
         {
-            _body!.immunity *= (1f - ImmunityReducePct);
-            Plugin.Log.LogInfo($"[Blueblood] Immunity -40% (now {_body.immunity:F2}).");
+            ImmunityReductionManager.AddReduction(_body!, ImmunityReduceAmount, SideEffectDuration);
+            Plugin.Log.LogInfo($"[Blueblood] Immunity -{ImmunityReduceAmount} for {SideEffectDuration}s (via ImmunityReductionManager).");
         }
         catch (Exception ex)
         {
@@ -473,7 +474,7 @@ public sealed class BluebloodEffectController : MonoBehaviour
             {
                 if (_body!.vomiter != null)
                 {
-                    _body.vomiter.DoVomit();
+                    _body.vomiter.Vomit();
                     Plugin.Log.LogInfo("[Blueblood] Vomiting triggered (33% chance).");
                 }
             }
@@ -492,6 +493,10 @@ public sealed class BluebloodEffectController : MonoBehaviour
 
     private void Cleanup()
     {
+        // 清除免疫力降低（安全措施，即使定时器未到期也确保恢复）
+        if (_body != null)
+            ImmunityReductionManager.ClearReductions(_body);
+
         StimBuffIndicator.HideBuff(BluebloodItemSystem.ItemKey);
         enabled = false;
         Plugin.Log.LogInfo("[Blueblood] Effect ended.");
