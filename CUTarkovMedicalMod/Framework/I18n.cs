@@ -17,6 +17,7 @@ public static class I18n
     private static readonly Dictionary<string, string> _translations = new();
     private static string _lastDetectedLang = "";
     private static string _pluginDir = "";
+    private static readonly List<string> _externalLangDirs = new();
 
     /// <summary>
     /// 当前实际加载的语言代码。
@@ -27,6 +28,20 @@ public static class I18n
     /// 翻译键数量。
     /// </summary>
     public static int Count => _translations.Count;
+
+    /// <summary>
+    /// 注册外部翻译文件目录（供其他mod注入翻译）。
+    /// 目录下应有 {langCode}.json 文件（如 EN.json, zh_CN.json）。
+    /// </summary>
+    public static void RegisterExternalLangDir(string langDir)
+    {
+        if (!_externalLangDirs.Contains(langDir))
+        {
+            _externalLangDirs.Add(langDir);
+            _lastDetectedLang = ""; // 强制下次访问时重新加载
+            Plugin.Log?.LogInfo($"[I18n] Registered external lang dir: {langDir}");
+        }
+    }
 
     /// <summary>
     /// 翻译查找。找不到时返回 key 本身。
@@ -112,19 +127,40 @@ public static class I18n
 
     private static bool TryLoadLanguage(string langCode)
     {
-        var path = GetTranslationFilePath(langCode);
-        if (!File.Exists(path)) return false;
+        bool anyLoaded = false;
 
+        // 主翻译文件
+        var path = GetTranslationFilePath(langCode);
+        if (File.Exists(path))
+        {
+            LoadFileInto(path, _translations);
+            anyLoaded = true;
+        }
+
+        // 外部翻译文件（来自其他mod）
+        foreach (var dir in _externalLangDirs)
+        {
+            var extPath = Path.Combine(dir, $"{langCode}.json");
+            if (File.Exists(extPath))
+            {
+                LoadFileInto(extPath, _translations);
+                anyLoaded = true;
+            }
+        }
+
+        return anyLoaded;
+    }
+
+    private static void LoadFileInto(string path, Dictionary<string, string> output)
+    {
         try
         {
             var json = File.ReadAllText(path);
-            ParseFlatJson(json, _translations);
-            return true;
+            ParseFlatJson(json, output);
         }
         catch (Exception ex)
         {
-            Plugin.Log?.LogWarning($"[I18n] Failed to load '{langCode}': {ex.Message}");
-            return false;
+            Plugin.Log?.LogWarning($"[I18n] Failed to load '{path}': {ex.Message}");
         }
     }
 

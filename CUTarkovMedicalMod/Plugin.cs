@@ -10,8 +10,8 @@ namespace CUTarkovMedicalMod;
 public sealed class Plugin : BaseUnityPlugin
 {
     public const string ModGuid = "com.yourname.cu.tarkovmedicalmod";
-    public const string ModName = "Casualties: Unknown - Tarkov-Style Medical&Weapon Mod";
-    public const string ModVersion = "0.1.5.0";
+    public const string ModName = "Casualties: Unknown - Tarkov-Style Medical Mod";
+    public const string ModVersion = "0.2.0.0";
 
     internal static ManualLogSource Log = null!;
 
@@ -37,22 +37,6 @@ public sealed class Plugin : BaseUnityPlugin
             MedicalSpawnHooks.SetLog(Logger);
             MedicalWorldLootHooks.SetLog(Logger);
             harmony.PatchAll();
-
-            // PatchAll() 的属性发现机制无法识别 PlayerCamera.HandleVariables（private 方法），
-            // 需要手动注册 ScopeZoom 补丁
-            try
-            {
-                var hvMethod = AccessTools.Method(typeof(PlayerCamera), "HandleVariables");
-                if (hvMethod != null)
-                {
-                    var postfix = new HarmonyMethod(typeof(ScopeZoomPatch), nameof(ScopeZoomPatch.PostfixHandleVariables));
-                    harmony.Patch(hvMethod, postfix: postfix);
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.LogError($"[ScopeZoom] Manual patch failed: {ex}");
-            }
         }
         catch (Exception ex)
         {

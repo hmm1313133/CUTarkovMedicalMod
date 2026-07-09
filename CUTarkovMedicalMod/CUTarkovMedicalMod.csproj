@@ -5,8 +5,8 @@
     <Nullable>enable</Nullable>
     <AssemblyName>CUTarkovMedicalMod</AssemblyName>
     <RootNamespace>CUTarkovMedicalMod</RootNamespace>
-    <Product>Casualties: Unknown - Tarkov-Style Medical&amp;Weapon Mod</Product>
-    <Version>0.1.5.0</Version>
+    <Product>Casualties: Unknown - Tarkov-Style Medical Mod</Product>
+    <Version>0.2.0.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>$(NoWarn);0649</NoWarn>
     <Platforms>AnyCPU;x64;x86</Platforms>
@@ -48,6 +48,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="CUTarkovWeaponMod" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="Framework\Assets\*.png" Exclude="Framework\Assets\*_preview.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -55,12 +59,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Framework\Assets\*.wav">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\guns\**\*.wav">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Framework\Assets\guns\**\*" Exclude="Framework\Assets\guns\**\*.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Lang\*.json">
@@ -75,15 +73,6 @@
   <Target Name="CopyOutputDllsToPluginsFolder" AfterTargets="AfterBuild">
     <MakeDir Directories="$(BepInExDir)/plugins/$(PluginDirName)" />
     <MakeDir Directories="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" />
-    <MakeDir Directories="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets/guns/ax" />
-    <MakeDir Directories="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets/guns/dvl10" />
-    <MakeDir Directories="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets/guns/akm" />
-    <MakeDir Directories="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets/guns/mp133" />
-    <MakeDir Directories="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets/guns/sks" />
-    <MakeDir Directories="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets/guns/deagle" />
-    <MakeDir Directories="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets/guns/glock" />
-    <MakeDir Directories="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets/guns/m4" />
-    <MakeDir Directories="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets/guns/p90" />
     <MakeDir Directories="$(BepInExDir)/plugins/$(PluginDirName)/Lang" />
     <CombinePath BasePath="$(OutDir)" Paths="$(RequiredFilesToCopy)">
       <Output TaskParameter="CombinedPaths" ItemName="RequiredFilesToCopy_Combined" />
@@ -91,11 +80,9 @@
     <Copy SourceFiles="@(RequiredFilesToCopy_Combined)" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)" />
     <ItemGroup>
       <PluginAssets Include="$(OutDir)Framework\Assets\*.*" />
-      <PluginGunSounds Include="$(OutDir)Framework\Assets\guns\**\*.*" />
       <PluginLang Include="$(OutDir)Lang\*.*" />
     </ItemGroup>
     <Copy SourceFiles="@(PluginAssets)" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('%(Identity)')" />
-    <Copy SourceFiles="@(PluginGunSounds)" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets/guns/%(RecursiveDir)" Condition="Exists('%(Identity)')" />
     <Copy SourceFiles="@(PluginLang)" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Lang" Condition="Exists('%(Identity)')" />
   </Target>
 </Project>
