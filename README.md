@@ -1,16 +1,22 @@
-# Casualties: Unknown - Tarkov-Style Medical Mod
+# Casualties: Unknown - Tarkov-Style Medical&Weapon Mod
 
-> `未知伤亡（Casualties: Unknown）：塔科夫医疗模组`
+> `未知伤亡（Casualties: Unknown）：塔科夫医疗&武器模组`
 >
-> **v0.1.1**
+> **v0.1.5.0**
 
-一个为 **Casualties: Unknown Demo** 开发的 BepInEx 模组，将《逃离塔科夫》中的 16 种战斗兴奋剂注射器、12 种医疗物品及其完整医疗系统引入游戏。每根针剂拥有独立的增益/副作用机制，通过反射注册到游戏原生物品表，利用原生 `Body.UseItem` -> `useAction` 委托链触发自定义效果；医疗包通过 `useLimbAction` 接入原生 BandageMinigame / SyringeMinigame / ShrapnelMinigame 等小游戏系统。所有物品支持原生智力识别系统（Recognition），智力不足时物品名称和效果将隐藏显示。
+一个为 **Casualties: Unknown Demo** 开发的 BepInEx 模组，将《逃离塔科夫》中的 16 种战斗兴奋剂注射器、12 种医疗物品、9 把自定义枪械、9 种弹药、7 个弹匣及其完整医疗/武器系统引入游戏。
 
 ## 目录
 
 - [功能概览](#功能概览)
 - [16 种针剂一览](#16-种针剂一览)
-- [11 种医疗物品一览](#11-种医疗物品一览)
+- [12 种医疗物品一览](#12-种医疗物品一览)
+- [9 把枪械一览](#9-把枪械一览)
+- [9 种弹药一览](#9-种弹药一览)
+- [7 个弹匣一览](#7-个弹匣一览)
+- [口径系统](#口径系统)
+- [世界生成](#世界生成)
+- [合成配方](#合成配方)
 - [项目结构](#项目结构)
 - [核心架构](#核心架构)
 - [原生游戏系统](#原生游戏系统)
@@ -24,17 +30,23 @@
 | 功能 | 说明 |
 |------|------|
 | 16 种自定义针剂 | 每种针剂有独立的 ItemKey、ItemInfo、useAction 委托和效果控制器 |
-| 11 种医疗物品 | 急救包（BandageMinigame）、手术包（自动检测）、药膏/药片（液体系统） |
+| 12 种医疗物品 | 急救包（BandageMinigame）、手术包（自动检测）、药膏/药片（液体系统） |
+| 9 把自定义枪械 | 栓动狙击/半自动卡宾/全自动步枪/泵动霰弹枪/手枪/冲锋枪/PDW |
+| 9 种自定义弹药 | 每把枪对应专属口径弹药，通过口径系统强制隔离 |
+| 7 个自定义弹匣 | 弹匣供弹枪械的专属弹匣，可合成、世界生成 |
+| 口径隔离系统 | 三层 Harmony 补丁防止跨口径装弹（GunScript.LoadMag / AmmoScript.LoadRound / UnloadRound） |
 | 开局发放 | 固定发放 5 件医疗物品（Grizzly/AFAK/IFAK/Salewa/AI-2）+ 随机医疗物品 |
-| 世界战利品 | 随机医疗物品（含针剂和药品）在世界中刷新 |
-| 容器掉落 | 医疗箱/物资箱/尸体破坏时按概率掉落针剂或药品 |
+| 世界战利品 | 医疗物品 + 枪械 + 弹匣 + 弹药在世界中刷新 |
+| 容器掉落 | 医疗箱/物资箱/尸体破坏时按概率掉落针剂、药品、枪械或弹匣 |
 | 智力识别系统 | 所有物品支持原生 Recognition 系统，智力不足时隐藏名称和效果 |
 | 多语言支持 | 中/英双语 I18n 系统，通过 Lang 文件夹下的 JSON 加载 |
 | Buff 指示器 | 通过原生 MoodleManager 显示针剂效果图标和倒计时 |
 | 管视效果 | URP Vignette 后处理实现暗角遮罩，部分针剂副作用触发 |
 | 注射器音效 | 自定义 `med_stimulator_use.wav` 音效，使用时播放 |
+| 枪械音效 | 每把枪有独立的开火/拉栓/换弹音效 |
 | 悬停描述 | 按住 SHIFT 展开物品效果详情，不按则仅显示简介 |
 | 控制台 Spawn | 控制台 `spawn` 命令支持所有自定义物品 ID |
+| 合成系统 | 弹匣和弹药可通过合成配方制作 |
 | 多人兼容 | 自动检测 KrokMP，安全模式下仅启用开局发放 |
 
 ## 16 种针剂一览
@@ -45,7 +57,7 @@
 | 2 | **Zagustin** | `zagustin` | 止血剂（紫针） | 立即止血 + 180s 防出血 | 血液粘稠度 +50，前 120s 每秒 -0.3 水分 | 180s |
 | 3 | **Morphine** | `cu_morphine` | 止痛剂 | 原生 Painkillers 止疼（opiateAmount=100） | 一次性 -10 饱食 / -15 水分 | ~300s |
 | 4 | **SJ12** | `sj12` | 体温调节 | 体温 -4°C，每秒 +0.2 饱食/水分，韧性 +2 | +4 患病，-2kg；增益后体温 +4°C 过热 | 600s + 120s debuff |
-| 5 | **M.U.L.E.** | `mule` | 负重增强 | 负重上限 +15（Harmony Postfix） | +10 患病，每秒 -0.2 肌肉/s（25min），意识 ≤90 | 2400s（40min） |
+| 5 | **M.U.L.E.** | `mule` | 负重增强 | 负重上限 +15（Transpiler） | +10 患病，每秒 -0.2 肌肉/s（25min），意识 ≤90 | 2400s（40min） |
 | 6 | **Propital** | `propital` | 再生兴奋剂 | 每部位 +0.1 肌肉/s +0.1 表皮/s，阿片 +20 | +10 患病；3min 后 RES/STR 永久 -2；10min 后管视+震颤 5min | 900s（15min） |
 | 7 | **SJ1** | `sj1` | 属性强化 | STR +5、RES +3、阿片镇痛 +5 | +10 患病，每秒 -0.1 饱食/水分 | 300s（5min） |
 | 8 | **SJ6** | `sj6` | 耐力强化 | +20% 耐力上限，+120% 耐力恢复 | +25 患病，10min 后管视+震颤 5min | 900s（15min） |
@@ -58,11 +70,11 @@
 | 15 | **Mildronate** | `mildronate` | 心脏保护 | 纤颤 -20%，+10% 耐力上限，+50% 耐力恢复 | 前 15min 每秒 -0.1 饱食/水分 | 1500s（25min） |
 | 16 | **2A2-(b-TG)** | `2a2btg` | 负重增强 | 负重 +7u，心情 +5 | 前 15min 每秒 -0.1 水分 | 1200s（20min） |
 
-## 11 种医疗物品一览
+## 12 种医疗物品一览
 
 | # | 物品 | ItemKey | 模板 | 使用方式 | 效果 | 副作用 |
 |---|------|---------|------|----------|------|--------|
-| 1 | **AI-2** | `ai2` | syringe | 贴肢 SyringeMinigame（100ml，每次10ml） | 辐射 -1Gy，阿片 +0.2，内出血 -8%（每10ml） | +3 患病，-10% 免疫力，-1 饱食/水分 |
+| 1 | **AI-2** | `ai2` | syringe | 贴肢 SyringeMinigame（100ml，每次10ml） | 辐射 -1Gy，阿片 +0.2，内出血 -2（每10ml） | +3 患病，-10% 免疫力，-1 饱食/水分 |
 | 2 | **Grizzly** | `grizzlykit` | bruisekit | 贴肢 BandageMinigame | 大幅止血+骨折恢复+脱臼恢复+表皮+肌肉恢复+消毒，耐久极高 | 重量 3u（很重） |
 | 3 | **AFAK** | `afak` | bruisekit | 贴肢 BandageMinigame | 中幅止血+骨折/脱臼恢复+表皮恢复，耐久较高 | - |
 | 4 | **IFAK** | `ifak` | bruisekit | 贴肢 BandageMinigame | 中幅止血+骨折/脱臼恢复+表皮恢复，耐久中等 | - |
@@ -74,6 +86,117 @@
 | 10 | **凡士林** | `vaseline` | bruisekit | 贴肢（10ml，每次2ml） | 脏污度 -2，表皮 +5，手部使用爪子 +10 | - |
 | 11 | **力百汀** | `libatine` | bruisekit | 物品栏饮用（2ml，1次） | 抵抗力 +80 持续5min，1min内感染降至60% | 心情 -3，5/7/10min各5%概率呕吐 |
 | 12 | **布洛芬** | `ibuprofen` | bruisekit | 物品栏饮用（10ml，每次2ml） | 抵抗力+50%/感染降至15%/体温-2°C/止痛/耐力恢复+20% 持续7min | 心情-3，7/10min各10%呕吐；10min内二次服用触发过量（可能致死） |
+
+## 9 把枪械一览
+
+| # | 枪械 | ItemKey | 基础预制体 | 口径 | 射击模式 | 供弹 | 弹匣容量 | 生物伤害 | 方块伤害 | 弹丸数 | 特殊功能 |
+|---|------|---------|-----------|------|---------|------|---------|---------|---------|--------|---------|
+| 1 | **AXMC** | `axmc` | rifle | .338 LM | 栓动 | 弹匣 | 10 | 310 | 299 | 1 | 瞄准镜视野扩展 |
+| 2 | **DVL-10** | `dvl10` | rifle | 7.62x51 | 栓动 | 弹匣 | 10 | 205 | 180 | 1 | - |
+| 3 | **SKS** | `sks` | rifle | 7.62x39 | 半自动 | 直供 | 10 | 150 | 100 | 1 | - |
+| 4 | **AKM** | `akm` | rifle | 7.62x39 | 全自动 | 弹匣 | 30 | 120 | 90 | 1 | - |
+| 5 | **Desert Eagle** | `deagle` | pistol | .50 AE | 半自动 | 弹匣 | 7 | 110 | 60 | 1 | - |
+| 6 | **M4A1** | `m4a1` | rifle | 5.56x45 | 全自动 | 弹匣 | 30 | 90 | 70 | 1 | - |
+| 7 | **Glock 17** | `glock17` | pistol | 9x19 | 半自动 | 弹匣 | 17 | 50 | 20 | 1 | - |
+| 8 | **P90** | `p90` | rifle | 5.7x28 | 全自动 | 弹匣 | 50 | 45 | 35 | 1 | - |
+| 9 | **MP-133** | `mp133` | shotgun | 12g | 泵动 | 直供 | 4 | 40 | 30 | 8 | - |
+
+> AXMC 瞄准镜功能：拿在主手时通过 `PlayerCamera.zoomTime` 机制扩展视野范围（与原版 autozoomgoggles 互斥）。
+
+## 9 种弹药一览
+
+| # | 弹药 | ItemKey | 口径 | 对应枪械 | 基础预制体 |
+|---|------|---------|------|---------|-----------|
+| 1 | .338 LM UCW | `338ucw` | 338lm | AXMC | 556round |
+| 2 | 7.62x51 BPZ | `76251bpz` | 762x51 | DVL-10 | 556round |
+| 3 | 7.62x39 SP | `76239sp` | 762x39 | SKS / AKM | 556round |
+| 4 | 12g 8.5mm | `12g85` | 12g | MP-133 | 12gauge |
+| 5 | .50 Copper | `50copper` | 50ae | Desert Eagle | 556round |
+| 6 | .45 FMJ | `45fmj` | 45acp | -（备用口径） | 556round |
+| 7 | 9x19 PSO | `919pso` | 9x19 | Glock 17 | 556round |
+| 8 | 5.56x45 FMJ | `55645fmj` | 556x45 | M4A1 | 556round |
+| 9 | 5.7x28 SB193 | `5728sb193` | 5728 | P90 | 556round |
+
+## 7 个弹匣一览
+
+| # | 弹匣 | ItemKey | 对应枪械 | 对应弹药 | 容量 | 基础预制体 |
+|---|------|---------|---------|---------|------|-----------|
+| 1 | AXMC 弹匣 | `axmc_mag` | AXMC | 338ucw | 10 | riflemagazine |
+| 2 | DVL-10 弹匣 | `dvl10_mag` | DVL-10 | 76251bpz | 10 | riflemagazine |
+| 3 | AKM 弹匣 | `akm_mag` | AKM | 76239sp | 30 | riflemagazine |
+| 4 | 沙漠之鹰弹匣 | `deagle_mag` | Desert Eagle | 50copper | 7 | smallmagazine |
+| 5 | Glock 17 弹匣 | `glock17_mag` | Glock 17 | 919pso | 17 | smallmagazine |
+| 6 | M4A1 弹匣 | `m4a1_mag` | M4A1 | 55645fmj | 30 | riflemagazine |
+| 7 | P90 弹匣 | `p90_mag` | P90 | 5728sb193 | 50 | riflemagazine |
+
+## 口径系统
+
+模组实现了三层口径隔离，防止跨口径装弹：
+
+| 层 | 补丁目标 | 文件 | 作用 |
+|----|---------|------|------|
+| 1 | `GunScript.LoadMag` | GunMagPatch.cs | 阻止错误口径弹药装入枪械，阻止错误弹匣插入枪械 |
+| 2 | `AmmoScript.LoadRound` | CaliberPatch.cs | 阻止错误口径弹药装入自定义弹匣 |
+| 3 | `AmmoScript.UnloadRound` | CaliberPatch.cs | 从自定义弹匣退弹时生成正确的自定义弹药（原版硬编码 556round） |
+
+**口径注册表（CaliberRegistry）：**
+
+| 枪械 | 口径 | 弹药 | 弹匣 |
+|------|------|------|------|
+| AXMC | 338lm | 338ucw | axmc_mag |
+| DVL-10 | 762x51 | 76251bpz | dvl10_mag |
+| SKS | 762x39 | 76239sp | -（直供） |
+| AKM | 762x39 | 76239sp | akm_mag |
+| MP-133 | 12g | 12g85 | -（直供） |
+| Desert Eagle | 50ae | 50copper | deagle_mag |
+| Glock 17 | 9x19 | 919pso | glock17_mag |
+| M4A1 | 556x45 | 55645fmj | m4a1_mag |
+| P90 | 5728 | 5728sb193 | p90_mag |
+
+**规则：** 自定义枪只接受口径匹配的自定义弹药；自定义弹药只装入口径匹配的自定义枪；原版枪+原版弹药走原版逻辑。
+
+## 世界生成
+
+### 枪械生成概率
+
+| 来源 | 概率 | 说明 |
+|------|------|------|
+| 物资箱（Container） | 6.6% | 从 CustomGunIds 随机选一把 |
+| 空投舱（LifePod） | 3% | 通过 GenerateLifePods 期间的 Container.Awake |
+| 尸体旁（CorpseScript） | 3% | 从 CustomGunIds 随机选一把 |
+
+### 弹匣生成概率
+
+| 来源 | 概率 | 说明 |
+|------|------|------|
+| 物资箱（Container） | 10% | 从 CustomMagIds 随机选一个 |
+| 崩溃舱旁（CollapsedPod） | 50% | 通过 Item.Start 替换原版弹匣 |
+| 尸体旁（CorpseScript） | 3% | 从 CustomMagIds 随机选一个 |
+
+### 弹匣子弹数
+
+- **世界生成的弹匣**：子弹在 0~满 之间随机（`Random.Range(0, maxRounds + 1)`）
+- **合成产出的弹匣**：0 发子弹
+
+## 合成配方
+
+### 弹匣配方（所有弹匣统一）
+
+```
+3 × 废料板（scrappanel）+ 1 × 弹匣基座（magazinebase）+ 10ml 生化流体（biochem）+ 切割工具 + 锤打工具 -> 1 × 弹匣
+```
+
+### 弹药配方
+
+所有自定义弹药均可通过合成制作，配方注册在 `RecipePatch.cs` 中。
+
+**配方系统三层补丁：**
+
+| 补丁 | 目标方法 | 作用 |
+|------|---------|------|
+| RecipePatch | `Recipes.SetUpRecipes` Postfix | 添加自定义配方到游戏配方列表 |
+| RecipeSpritePatch | `Recipe.resultSprite` Prefix | 拦截自定义物品的 `Resources.Load`，从 PNG 文件加载图标 |
+| RecipeSpawnPatch | `RecipeResult.SpawnResult` Prefix | 拦截 `Utils.Create`，用克隆基础预制体+ConfigureCustomItem 生成物品 |
 
 ## 项目结构
 
@@ -91,15 +214,23 @@ CasualtiesUnknownTarkovMedicalMod/
         ├── MedicalContentStore.cs               # JSON 内容文件 I/O
         ├── MedicalDebugHotkeys.cs               # 调试热键（F7）
         ├── StimBuffIndicator.cs                 # Buff 指示器（MoodleManager 集成）
-        ├── SkillEffectHelper.cs                 # 技能/震颤/管视辅助工具
+        ├── SkillEffectHelper.cs                 # 技能/震颤/管视/瞄准镜辅助工具
+        ├── ScopeZoomPatch.cs                    # AXMC 瞄准镜视野扩展补丁
         ├── TunnelVisionOverlay.cs               # URP Vignette 管视遮罩
         ├── HoverDescriptionHelper.cs            # 悬停描述 SHIFT 展开逻辑
         ├── StimConditionFix.cs                  # 修复针剂耐久被覆盖
-        ├── InjectorSound.cs                     # 注射器音效播放（med_stimulator_use.wav）
+        ├── InjectorSound.cs                     # 注射器音效播放
         ├── ImmunityReductionManager.cs          # 免疫力降低/加成管理（Transpiler + BonusManager）
-        ├── ConsoleSpawnPatch.cs                 # 控制台 spawn 命令支持自定义物品
+        ├── ConsoleSpawnPatch.cs                 # 控制台 spawn + ConfigureCustomItem
+        ├── CustomSpawnPatch.cs                  # 世界生成枪械/弹匣掉落
         ├── HasTagNullSafetyPatch.cs             # ItemInfo.HasTag 空安全补丁
-        ├── WorldContainerLootSpawner.cs         # 世界容器战利品刷新（医疗箱/物资箱/尸体）
+        ├── WorldContainerLootSpawner.cs         # 世界容器战利品刷新
+        ├── RecipePatch.cs                       # 合成配方注册
+        ├── RecipeSpritePatch.cs                 # 合成配方图标拦截
+        ├── RecipeSpawnPatch.cs                  # 合成配方产物生成
+        ├── LocalePatch.cs                       # 自定义物品名称注入 Language.main
+        ├── GunMagPatch.cs                       # 枪<->弹匣映射、弹匣定义、LoadMag/UnloadMag 补丁
+        ├── CaliberPatch.cs                      # 口径注册表 + LoadRound/UnloadRound 口径补丁
         ├── EtgCItemSystem.cs                    # eTG-c + 全局注册 Patch
         ├── ZagustinItemSystem.cs                # Zagustin 止血剂
         ├── MorphineItemSystem.cs                # 吗啡止痛剂
@@ -127,7 +258,20 @@ CasualtiesUnknownTarkovMedicalMod/
         ├── VaselineItemSystem.cs                # 凡士林
         ├── LibatineItemSystem.cs                # 力百汀抗生素
         ├── IbuprofenItemSystem.cs               # 布洛芬止痛药
-        └── Assets/                              # 图标资源（.png 16x16 + .webp 512x512 + .wav 音效）
+        ├── AXMCItemSystem.cs                    # AXMC 狙击步枪
+        ├── DVL10ItemSystem.cs                   # DVL-10 狙击步枪
+        ├── AKMItemSystem.cs                     # AKM 突击步枪
+        ├── M4A1ItemSystem.cs                    # M4A1 卡宾枪
+        ├── P90ItemSystem.cs                     # P90 冲锋枪
+        ├── MP133ItemSystem.cs                   # MP-133 霰弹枪
+        ├── SKSItemSystem.cs                     # SKS 卡宾枪
+        ├── DeagleItemSystem.cs                  # 沙漠之鹰
+        ├── Glock17ItemSystem.cs                 # Glock 17 手枪
+        ├── AmmoItemSystem.cs                    # 所有自定义弹药定义
+        ├── Lang/                                # 中英文翻译 JSON
+        └── Assets/                              # 图标/音效资源
+            ├── *.png / *.webp                   # 物品图标
+            └── guns/[key]/[key]_fire.wav        # 枪械音效
 ```
 
 ## 核心架构
@@ -139,8 +283,8 @@ Plugin.Awake()
   ├─ SkillEffectHelper.InitializeTunnelVision()   # 创建管视遮罩单例
   ├─ MedicalFramework.Initialize()                 # 加载配置、目录、构建发放计划
   ├─ MedicalInjectionBridge.RegisterSink()         # 注册发放策略
-  ├─ MedicalSpawnHooks.SetLog() / MedicalWorldLootHooks.SetLog()
-  └─ harmony.PatchAll()                            # 挂载所有 Harmony 补丁
+  ├─ harmony.PatchAll()                            # 挂载所有 Harmony 补丁
+  └─ ScopeZoomPatch (手动 Patch)                   # AXMC 瞄准镜补丁
 ```
 
 ### 物品注册机制
@@ -148,14 +292,12 @@ Plugin.Awake()
 每根针剂通过 `EnsureRegisteredInItemTable()` 注册：
 
 1. 反射获取 `Item.GlobalItems` 字典（`Dictionary<string, ItemInfo>`）
-2. 克隆 `syringe` 的 `ItemInfo` 作为基础模板（药品类克隆 `bruisekit`）
-3. 覆盖 `fullName`、`description`、`category="ModStim"`、`tags`、`usable`/`usableOnLimb`
+2. 克隆 `syringe` 的 `ItemInfo` 作为基础模板（药品类克隆 `bruisekit`，枪械克隆 `rifle`/`pistol`/`shotgun`）
+3. 覆盖 `fullName`、`description`、`category`、`tags`、`usable`/`usableOnLimb`
 4. 通过 `Delegate.CreateDelegate` 将私有静态方法绑定为 `ItemInfo.Use` / `ItemInfo.UseLimb` 委托
 5. 写入字典：`map[itemKey] = clone`
 
-注册由两处触发：
-- `EtgStimRegistryPatch`（`Item.SetupItems` Postfix）- 游戏初始化物品表时
-- `Plugin.Update` 每 300 帧轮询 - 确保注册不丢失
+注册由 `EtgStimRegistryPatch`（`Item.SetupItems` Postfix）触发，游戏初始化物品表时执行。
 
 ### 使用流程
 
@@ -163,12 +305,11 @@ Plugin.Awake()
 ```
 玩家左键点击针剂
   -> Body.UseItem(item)
-    -> 检查 Stats.usable == true（不检查 condition）
-      -> useAction.Invoke(body, item)
-        -> XxxUseAction(body, item)
-          -> InjectorSound.Play()                    # 播放注射音效
-          -> 激活 EffectController（MonoBehaviour）
-          -> DropItem + Destroy(item)
+    -> useAction.Invoke(body, item)
+      -> XxxUseAction(body, item)
+        -> InjectorSound.Play()                    # 播放注射音效
+        -> 激活 EffectController（MonoBehaviour）
+        -> DropItem + Destroy(item)
 ```
 
 **医疗包类（useLimbAction）**：
@@ -176,29 +317,22 @@ Plugin.Awake()
 玩家在肢体上使用医疗包
   -> Body.UseItemOnLimb(item, limb)
     -> useLimbAction.Invoke(limb, item)
-      -> XxxLimbAction(limb, item)
-        -> MinigameBase.main.StartMinigame(...)      # 启动 BandageMinigame / ShrapnelMinigame 等
-        -> minigame 回调中消耗耐久 + 应用效果
+      -> MinigameBase.main.StartMinigame(...)      # 启动 BandageMinigame / ShrapnelMinigame 等
+      -> minigame 回调中消耗耐久 + 应用效果
 ```
 
-**液体药品类（useAction + Liquids.Registry）**：
+**枪械类（原生 GunScript）**：
 ```
-玩家左键点击 / 贴肢使用
-  -> useAction / useLimbAction
-    -> WaterContainerItem.Drink() / .Inject()
-      -> Liquids.Registry[liquidId].onDrink / onHealthUse 回调
-        -> 应用效果（抵抗力、感染减少、体温变化等）
-```
-
-### 开局发放流程
-
-```
-WorldGeneration.Start (Postfix)
-  -> MedicalSpawnHooks.GrantOnWorldStart()
-    -> MedicalInjectionBridge.TryGrantStartingLoadout(body, plan)
-      -> DefaultMedicalItemGrantSink.TryGrantStartingLoadout()
-        ├─ 固定发放 5 件医疗物品（Grizzly/AFAK/IFAK/Salewa/AI-2）
-        └─ GrantSingleItem() × N         # 随机医疗物品直接发放
+玩家装备枪械并射击
+  -> GunScript.Fire()                              # 原生射击逻辑
+    -> 读取 animalDamage / structureDamage / shotsPerFire
+    -> 播放 fireSound / muzzleParticle
+  -> GunScript.LoadMag(ammo)                       # 装弹匣
+    -> GunLoadMagPatch.Prefix                      # 口径检查 + 弹匣匹配检查
+  -> AmmoScript.LoadRound(round)                   # 装子弹入弹匣
+    -> CaliberPatch.Prefix                         # 口径检查
+  -> AmmoScript.UnloadRound()                      # 退弹
+    -> CaliberPatch.Prefix                         # 生成正确口径弹药
 ```
 
 ### 效果控制器模式
@@ -207,57 +341,46 @@ WorldGeneration.Start (Postfix)
 
 - **Attach(Body)** - 获取或添加控制器组件
 - **ActivateOrRefresh()** - 激活或刷新效果（重新计时）
-- **Update()** - 每帧/每秒执行效果逻辑（治疗、体温操控、耐力恢复等）
+- **Update()** - 每帧/每秒执行效果逻辑
 - **Buff 指示器** - 每帧调用 `StimBuffIndicator.ShowBuff()` 更新 UI
 
-### 世界战利品
+### 多来源 Bonus 叠加系统
 
-```
-WorldGeneration.FinishWorldGeneration (Postfix)
-  -> MedicalWorldLootHooks.Postfix()
-    -> MedicalInjectionBridge.TryInjectWorldLoot(world, plan)
-      -> foreach request: CreateWorldSpawnPrefab -> GenerateEntityAtPos
-```
+当多个针剂提供同类加成（免疫力/耐力恢复/耐力上限）时，使用管理器确保正确叠加：
 
-### 容器掉落
+| 管理器 | 加成类型 | 应用方式 |
+|--------|---------|---------|
+| `ImmunityBonusManager` | 免疫力加成 | Transpiler（集中注入到 HandlePeriodicChecks） |
+| `ImmunityReductionManager` | 免疫力降低 | Transpiler（在 Clamp 后的 stfld 前插入减法） |
+| `StaminaBonusManager` | 耐力恢复加成 | 各 EffectController 的 `IsTopSource` 门控 |
+| `StaminaCapBonusManager` | 耐力上限加成 | 各 EffectController 的 `IsTopSource` 门控 |
 
-```
-BuildingEntity.Update (Prefix)
-  -> WorldContainerLootSpawner.Prefix()
-    -> 检测 medcrate/containercrate/corpse 且 health < 阈值
-    -> 按分类和概率掉落针剂或药品
-```
-
-| 容器类型 | 针剂掉落 | 药品掉落 |
-|----------|----------|----------|
-| 医疗箱（medcrate） | 17% 掉 1-2 根 | 20% 掉 1-2 件 |
-| 物资箱（containercrate） | - | 15% 掉 1-3 件 |
-| 尸体（corpse） | - | 10% 掉 1 件 |
+**叠加规则：** 取最强生效；同源刷新时间不叠加；最强过期后次强自动接管。
 
 ## 原生游戏系统
-
-模组深度利用以下游戏原生子系统（通过反编译 `Assembly-CSharp.dll` 分析所得）：
 
 | 系统 | 关键字段/方法 | 模组使用方式 |
 |------|-------------|-------------|
 | **疼痛** | `Body.averagePain`、`Limb.pain`、`Painkillers` 组件 | 吗啡注入 `opiateAmount`，原生系统自动降低 `limb.pain` |
 | **体温** | `Body.temperature`、`HandleBodyTemperature()` | SJ12/SJ9 直接设置/锁定体温；Salewa 低温保温；布洛芬 -2°C |
-| **负重** | `Body.maxEncumberance`、`HandlePeriodicChecks()` | M.U.L.E. 用 Harmony Postfix 在重算后追加 50%，2A2-(b-TG) 追加 +7u |
-| **耐力** | `Body.stamina`、`staminaStrength` 曲线 | SJ6/Mildronate 每帧操作 stamina 字段 |
-| **技能** | `Skills.STR/RES/INT`、`AddExp()`、`UpdateExpBoundaries()` | SJ1/Propital/PNB/Obdolbos2 临时或永久调整等级 |
-| **智力识别** | `Recognition.min`、`Recognition.recognizable`、`ItemInfo.rec` | 所有物品设置 `rec.min` 智力要求；Hover Patch 和 StimBuffIndicator 检查 `recognizable`，智力不足时隐藏名称和效果 |
-| **出血** | `Limb.bleedAmount`、`Limb.bandageSlowAmount` | Zagustin/Blue Blood/AFAK/IFAK/Salewa/Grizzly 控制 |
-| **骨折/脱臼** | `Limb.boneHealTimer`、`Limb.dislocationTimer` | AFAK/IFAK/Salewa/Grizzly 加速恢复；CMS/Surv12 手术治疗 |
+| **负重** | `Body.maxEncumberance`、`HandlePeriodicChecks()` | M.U.L.E. 用 Transpiler 追加 +15；2A2-(b-TG) 追加 +7u；Obdolbos2 追加 +3u |
+| **耐力** | `Body.stamina`、`staminaStrength` 曲线 | SJ6/Mildronate/SJ1/Ibuprofen 通过 StaminaBonusManager 每帧操作 |
+| **技能** | `Skills.STR/RES/INT`、`AddExp()` | SJ1/Propital/PNB/Obdolbos2 临时或永久调整等级 |
+| **智力识别** | `Recognition.min`、`recognizable` | 所有物品设置智力要求；Hover Patch 检查 recognizable |
+| **出血** | `Limb.bleedAmount`、`blockedBleeding` | Zagustin/Blue Blood/急救包控制 |
+| **骨折/脱臼** | `Limb.boneHealTimer`、`Limb.dislocated` | 急救包加速恢复；CMS/Surv12 手术治疗 |
 | **弹片** | `Limb.shrapnel`、`ShrapnelMinigame` | CMS/Surv12 自动检测并启动镊子 minigame |
-| **感染** | `Limb.infectionAmount` | 力百汀 1min 内降至 60%；布洛芬 1min 内降至 15% |
-| **毒素/辐射** | `Body.toxinAmount`、`Body.radiationSickness` | Blue Blood/xTG-12 清除；AI-2 每次降辐射 |
-| **免疫力** | `Body.immunity`、`HandlePeriodicChecks` | `ImmunityReductionManager` 用 Transpiler 在 IL 层注入减幅；`ImmunityBonusManager` 管理加成 |
-| **Moodle** | `MoodleManager.AddMoodle()`、`icons` 字典 | StimBuffIndicator 注入自定义图标并显示 buff |
-| **容器** | `Item.container`、`Container.LoadItem()` | 开局发放时装入 medkit |
+| **感染** | `Limb.infectionAmount` | 力百汀降至 60%；布洛芬降至 15% |
+| **毒素/辐射** | `Body.venomCurrent`、`Body.radiationSickness` | Blue Blood/xTG-12 清除；AI-2 每次降辐射 |
+| **免疫力** | `Body.immunity`、`HandlePeriodicChecks` | Transpiler 在 IL 层注入加成/减幅 |
+| **枪械** | `GunScript`、`AmmoScript` | 克隆基础预制体，运行时修改字段 |
+| **口径** | `GunScript.LoadMag`、`AmmoScript.LoadRound/UnloadRound` | 三层 Harmony 补丁强制口径隔离 |
+| **Moodle** | `MoodleManager.AddMoodle()` | StimBuffIndicator 注入自定义图标并显示 buff |
 | **液体系统** | `Liquids.Registry`、`WaterContainerItem` | AI-2/力百汀/布洛芬/金星/凡士林注册自定义液体 |
 | **Minigame** | `BandageMinigame`、`SyringeMinigame`、`ShrapnelMinigame`、`DislocationMinigame` | 医疗包/手术包/注射器接入原生小游戏 |
+| **合成** | `Recipes.SetUpRecipes`、`Recipe.resultSprite`、`RecipeResult.SpawnResult` | 三层补丁注册自定义配方/图标/产物 |
 | **震颤** | `Body.miscShakeIntensity` | SkillEffectHelper.AddStimulantTremor |
-| **着色器** | `PlayerCamera.HandleScreenShaders` | 体温/moodle 自动驱动，模组不直接修改 |
+| **管视** | `TunnelVisionOverlay` (URP Vignette) | Propital/SJ6 副作用触发 |
 
 ## 构建与部署
 
@@ -286,16 +409,16 @@ dotnet build .\CUTarkovMedicalMod\CUTarkovMedicalMod.csproj -c Release
 ```
 {BaseGamePath}/BepInEx/plugins/CUTarkovMedicalMod/
 ├── CUTarkovMedicalMod.dll
-└── Framework/Assets/        # 全部 .png、.webp 图标和 .wav 音效
+├── Framework/Assets/        # 全部 .png、.webp 图标和 .wav 音效
+├── Framework/Assets/guns/   # 枪械音效（按枪械分目录）
+└── Lang/                    # 中英文翻译 JSON
 ```
 
 ### 验证
 
 启动游戏后检查 `BepInEx/LogOutput.log`，应看到：
 ```
-Casualties: Unknown - Tarkov-Style Medical Mod loaded. Enabled=True
-Medical content source: ...
-Catalog item count: 38
+Casualties: Unknown - Tarkov-Style Medical&Weapon Mod loaded. Enabled=True
 ```
 
 ## 配置项
@@ -309,7 +432,7 @@ Catalog item count: 38
 | Compatibility | `CompatibilityMode` | `AutoSafe` | KrokMP 检测时的兼容策略 |
 | Content | `UseExternalContentFile` | `true` | 从 JSON 文件加载物品定义 |
 | Content | `AutoCreateContentFile` | `true` | JSON 不存在时自动创建 |
-| StartingLoadout | `MinItems` / `MaxItems` | `1` / `3` | 随机医疗物品数量范围（固定发放的5件不占用此配额） |
+| StartingLoadout | `MinItems` / `MaxItems` | `1` / `3` | 随机医疗物品数量范围 |
 | WorldLoot | `MinItems` / `MaxItems` | `1` / `4` | 世界战利品数量范围 |
 | Distribution | `AllowDuplicateItems` | `true` | 允许重复物品 |
 | Distribution | `Seed` | `0` | 随机种子（0 = 随机） |
@@ -326,35 +449,28 @@ Catalog item count: 38
 ### 物品键命名
 
 - 所有针剂使用**独立 ItemKey**（如 `etg_c`、`cu_morphine`），绝不与原生物品重名
-- `EnsureRegisteredInItemTable` 的 `if(map.Contains(key)) return` 会跳过已存在的键 -- 键冲突会导致自定义 `useAction` **永远无法注册**
-- 吗啡的键从 `morphine` 改为 `cu_morphine` 即为修复此问题（原生 `morphine` 是液体药瓶 `LiquidItemInfo`）
+- `EnsureRegisteredInItemTable` 的 `if(map.Contains(key)) return` 会跳过已存在的键
 
 ### useAction / useLimbAction 委托绑定
 
 ```csharp
-// 针剂类（物品栏左键使用）
-clone.useAction = (ItemInfo.Use)Delegate.CreateDelegate(
-    typeof(ItemInfo.Use), useMethod);
-
-// 医疗包类（肢体上使用，触发 minigame）
-clone.useLimbAction = (ItemInfo.UseLimb)Delegate.CreateDelegate(
-    typeof(ItemInfo.UseLimb), useLimbMethod);
+clone.useAction = (ItemInfo.Use)Delegate.CreateDelegate(typeof(ItemInfo.Use), useMethod);
+clone.useLimbAction = (ItemInfo.UseLimb)Delegate.CreateDelegate(typeof(ItemInfo.UseLimb), useLimbMethod);
 ```
 
-游戏原生 `Body.UseItem` 在检查 `usable==true` 后直接调用 `useAction.Invoke(body, item)`；`Body.UseItemOnLimb` 调用 `useLimbAction.Invoke(limb, item)`，无需 Harmony 拦截。
+游戏原生 `Body.UseItem` / `Body.UseItemOnLimb` 直接调用委托，无需 Harmony 拦截。
 
 ### 液体药品系统
 
 AI-2、力百汀、布洛芬、金星药膏、凡士林使用原生 `LiquidItemInfo` + `Liquids.Registry` 系统：
 
-1. 注册自定义液体到 `Liquids.Registry`，定义 `color`、`onDrink`/`onHealthUse` 回调
+1. 注册自定义液体到 `Liquids.Registry`，定义 `onDrink`/`onHealthUse` 回调
 2. 物品使用 `LiquidItemInfo`，设置 `capacity` 和 `defaultContents`
-3. `WaterContainerItem.Drink()` / `.Inject()` 消耗液体并触发回调
-4. 回调中按 ml 量计算效果（支持多次使用，按比例衰减）
+3. `WaterContainerItem.Drink()` / `.Inject()` / `.ApplyToLimb()` 消耗液体并触发回调
 
 ### 免疫力操控（Transpiler）
 
-原生 `Body.HandlePeriodicChecks` 每 0.5 秒重算 `immunity` 并 Clamp 后写入。直接修改 `body.immunity` 会被覆盖。`ImmunityReductionManager` 通过 **Harmony Transpiler** 在 IL 的 `stfld immunity`（Clamp 后的最终写入）前插入减法指令，确保只在 immunity 实际被重算时应用一次减幅。`ImmunityBonusManager` 则在 Postfix 中追加加成。
+原生 `Body.HandlePeriodicChecks` 每 0.5 秒重算 `immunity`。直接修改会被覆盖。通过 Transpiler 在 IL 的 `stfld immunity` 前插入加成/减幅指令。
 
 ### 体温操控对抗
 
@@ -362,49 +478,44 @@ AI-2、力百汀、布洛芬、金星药膏、凡士林使用原生 `LiquidItemI
 
 ### 负重上限重算
 
-原生 `HandlePeriodicChecks` 每 0.5 秒重算 `maxEncumberance`，直接设置会被覆盖。M.U.L.E. 使用 Harmony Postfix 在重算后追加 50%。
+原生 `HandlePeriodicChecks` 每 0.5 秒重算 `maxEncumberance`。通过 Transpiler 在 `stfld maxEncumberance` 前插入 `GetEncumberanceBonus()` 调用，使加成只在重算时应用一次。
 
-### 管视遮罩自愈
+### 枪械系统
 
-`TunnelVisionOverlay` 使用 URP Volume + Vignette 实现。Volume 的 GameObject 可能被场景切换销毁，控制器在 `Update` 中检测引用失效后自动重建。
+- 克隆原版 `rifle`/`pistol`/`shotgun` 预制体，运行时修改 `GunScript` 字段
+- `FiringMode` 枚举：Pump=0, SemiAuto=1, Auto=2
+- 图标处理：32px 高度、水平镜像、顶部 30% 透明填充
+- 枪管/火光位置偏移：`barrel.localPosition` 和 `muzzleParticle.transform.localPosition` 同步偏移
+- AXMC 瞄准镜：通过 `PlayerCamera.zoomTime` 机制扩展视野
 
-### 耐久修复
+### 口径隔离
 
-`WaterContainerItem.UpdateCondition` 会覆写 `item.condition`，导致针剂耐久显示异常。`StimConditionFix`（Harmony Postfix）在调用后强制将模组针剂的 condition 恢复为 1f。
+三层 Harmony 补丁确保自定义弹药只能装入对应口径的枪械和弹匣，原版弹药/枪械不受影响。
 
-### HasTag 空安全
+### 合成系统三层补丁
 
-某些 ItemInfo 的 `actualTags` 可能为 null（`SetTags()` 未调用），导致 `HasTag()` 抛出 `ArgumentNullException`，每帧从多处调用引发帧率骤降。`HasTagNullSafetyPatch`（Harmony Prefix）在调用前检查 null 并返回 false。
-
-### 控制台 Spawn 支持
-
-原生控制台 `spawn` 命令通过 `Resources.Load(itemId)` 加载预制体，自定义物品没有 Resources 预制体。`ConsoleSpawnPatch` 拦截 spawn 命令，用模组逻辑（克隆基础预制体 + ConfigureSpawnedItem）生成自定义物品。
+自定义物品没有 `Resources.Load` 预制体，需要三层补丁：
+1. **RecipePatch** - 添加配方到游戏配方列表
+2. **RecipeSpritePatch** - 拦截 `resultSprite` getter，从 PNG 文件加载图标
+3. **RecipeSpawnPatch** - 拦截 `SpawnResult`，克隆基础预制体 + ConfigureCustomItem
 
 ### 智力识别系统（Recognition）
 
-游戏原生 `Recognition` 结构体通过 `ItemInfo.rec.min` 设置物品的最低智力（INT）要求。当 `Skills.INT < rec.min` 时：
-
-- **物品悬浮提示**：名称显示为"Unknown Object"（原生日志 `unknownobject`）
-- **手持物品图标**：显示"Unknown Object"
-- **状态栏 Buff**：显示"某种药剂"和"药效正在发作"，隐藏真实效果
-
 | 物品类别 | rec.min | 说明 |
 |----------|---------|------|
-| 手术包（Surv12/CMS） | 6 | 基础外科手术，低智力要求 |
+| 手术包（Surv12/CMS） | 6 | 基础外科手术 |
 | 药品/急救包 | 8 | 常见医疗知识 |
 | 吗啡 | 9 | 简单止痛剂 |
-| 其他注射器/兴奋剂 | 13 | 高级医疗化合物 |
-
-角色初始 INT=10，因此开局时大部分注射器（INT 13）无法识别，需升级智力后才能查看名称和效果。
-
-**实现要点**：
-- `CloneItemInfo` / `CreateFallbackItemInfo` 中设置 `rec = new Recognition(minInt)`
-- 所有 `PlayerCamera.ItemHoverDescription` Postfix 补丁中检查 `item.Stats.rec.recognizable`，不可识别时不覆盖名称
-- `StimBuffIndicator.AddBuffs()` 中检查 `Item.GlobalItems[key].rec.recognizable`，不可识别时只显示通用名称
+| 注射器/兴奋剂 | 13 | 高级医疗化合物 |
+| 枪械 | 11-12 | 武器识别 |
 
 ### 多语言支持（I18n）
 
-模组内置中/英双语系统，通过 `Lang/zh_CN.json` 和 `Lang/EN.json` 加载翻译。自动检测游戏 `Locale.currentLangName` 切换语言，无外部依赖（内置简易 JSON 解析器，兼容 .NET Framework 4.8）。
+模组内置中/英双语系统，通过 `Lang/zh_CN.json` 和 `Lang/EN.json` 加载翻译。自动检测游戏 `Locale.currentLangName` 切换语言。
+
+枪械描述包含富文本颜色标签：
+- 蓝色 `<color=#4fc3f7>` - 伤害数值行
+- 金色 `<color=#ffcc00>` - 特殊效果说明（如 AXMC 瞄准镜）
 
 ## 依赖
 

@@ -5,6 +5,7 @@ using System.Reflection;
 using BepInEx;
 using HarmonyLib;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace CUTarkovMedicalMod.Framework;
 
@@ -12,7 +13,7 @@ namespace CUTarkovMedicalMod.Framework;
 /// 力百汀系统。
 /// 复合型广谱抗生素，用于治疗细菌感染。
 /// 液体药品，容器 2ml，每次使用 2ml（1 次）。
-/// 效果：抵抗力+80（原生 antibioticImmunityTime）持续5分钟；1分钟内每个肢体感染线性减少到60%。
+/// 效果：抵抗力+80（ImmunityBonusManager）持续5分钟；1分钟内每个肢体感染线性减少到60%。
 /// 副作用：心情-3；第5/7/10分钟各有5%概率呕吐。
 /// 模式：物品栏饮用（useAction），基于抗生素模式。
 /// </summary>
@@ -174,13 +175,42 @@ public static class LibatineItemSystem
 
             // 饮用消耗液体并调用 onDrink 回调
             wat.Drink(body, MlPerUse, "drink");
-
+            PlayUseSound(item, "bottle");
             Plugin.Log.LogInfo($"[Libatine] Used {MlPerUse}ml, effects applied.");
         }
         catch (Exception ex)
         {
             Plugin.Log.LogWarning($"[Libatine] Failed to use: {ex.Message}");
         }
+    }
+
+    private static AudioClip? _cachedUseSound;
+    private static string? _cachedUseSoundName;
+
+    private static void PlayUseSound(Item item, string soundName)
+    {
+        try
+        {
+            if (_cachedUseSound == null || _cachedUseSoundName != soundName)
+            {
+                var assemblyDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? Paths.PluginPath;
+                var soundPath = Path.Combine(assemblyDir, "Framework", "Assets", $"{soundName}.wav");
+                if (File.Exists(soundPath))
+                {
+                    using var uwr = UnityWebRequestMultimedia.GetAudioClip("file:///" + soundPath, AudioType.WAV);
+                    uwr.SendWebRequest();
+                    while (!uwr.isDone) { }
+                    if (uwr.result == UnityWebRequest.Result.Success)
+                    {
+                        _cachedUseSound = DownloadHandlerAudioClip.GetContent(uwr);
+                        _cachedUseSoundName = soundName;
+                    }
+                }
+            }
+            if (_cachedUseSound != null)
+                Sound.Play(_cachedUseSound, item.transform.position, true);
+        }
+        catch { }
     }
 
     #region Liquid Registration

@@ -5,6 +5,7 @@ using System.Reflection;
 using BepInEx;
 using HarmonyLib;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace CUTarkovMedicalMod.Framework;
 
@@ -178,13 +179,42 @@ public static class GoldenStarItemSystem
 
             // ApplyToLimb 消耗 2ml 液体并调用 onHealthUse(2ml, limb)
             wat.ApplyToLimb(limb, MlPerUse);
-
+            PlayUseSound(item, "vg");
             Plugin.Log.LogInfo($"[GoldenStar] Applied {MlPerUse}ml to limb {limb.name}.");
         }
         catch (Exception ex)
         {
             Plugin.Log.LogWarning($"[GoldenStar] Failed to apply: {ex.Message}");
         }
+    }
+
+    private static AudioClip? _cachedUseSound;
+    private static string? _cachedUseSoundName;
+
+    private static void PlayUseSound(Item item, string soundName)
+    {
+        try
+        {
+            if (_cachedUseSound == null || _cachedUseSoundName != soundName)
+            {
+                var assemblyDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? Paths.PluginPath;
+                var soundPath = Path.Combine(assemblyDir, "Framework", "Assets", $"{soundName}.wav");
+                if (File.Exists(soundPath))
+                {
+                    using var uwr = UnityWebRequestMultimedia.GetAudioClip("file:///" + soundPath, AudioType.WAV);
+                    uwr.SendWebRequest();
+                    while (!uwr.isDone) { }
+                    if (uwr.result == UnityWebRequest.Result.Success)
+                    {
+                        _cachedUseSound = DownloadHandlerAudioClip.GetContent(uwr);
+                        _cachedUseSoundName = soundName;
+                    }
+                }
+            }
+            if (_cachedUseSound != null)
+                Sound.Play(_cachedUseSound, item.transform.position, true);
+        }
+        catch { }
     }
 
     #region Liquid Registration

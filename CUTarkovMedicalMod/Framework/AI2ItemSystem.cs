@@ -11,7 +11,7 @@ namespace CUTarkovMedicalMod.Framework;
 /// <summary>
 /// AI-2 急救组合注射器系统。
 /// 苏联制式急救装备，多剂量注射器（100ml，每次10ml）。
-/// 效果（每10ml）：辐射-1Gy，阿片+0.2，内出血-2%。
+/// 效果（每10ml）：辐射-1Gy，阿片+0.2，内出血-2。
 /// 副作用（每10ml）：+3患病，-10%免疫力，-1水分饱食度。
 /// 模板：基于原版 syringe。
 /// </summary>
@@ -238,7 +238,7 @@ public static class AI2ItemSystem
                     pk.opiateAmount += OpiateDosePerUse * per10ml;
                 }
 
-                // 3) 内出血 -2%
+                // 3) 内出血 -2（绝对值）
                 body.internalBleeding = Mathf.Max(0f, body.internalBleeding - InternalBleedReduce * per10ml);
 
                 // === 副作用（每10ml）===

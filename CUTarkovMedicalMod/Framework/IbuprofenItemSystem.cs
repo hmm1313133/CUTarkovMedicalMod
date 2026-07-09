@@ -5,6 +5,7 @@ using System.Reflection;
 using BepInEx;
 using HarmonyLib;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace CUTarkovMedicalMod.Framework;
 
@@ -12,7 +13,7 @@ namespace CUTarkovMedicalMod.Framework;
 /// 布洛芬止痛药系统。
 /// 非甾体抗炎药（NSAID），用于治疗疼痛、发烧和炎症。对犬科动物毒性较大。
 /// 液体药品，容器 10ml，每次使用 2ml（5 次）。
-/// 效果：抵抗力+50持续7分钟；1分钟内感染线性减少到50%；体温-2°C。
+/// 效果：抵抗力+50持续7分钟；1分钟内感染线性减少到15%；体温-2°C；耐力恢复+20%持续7分钟。
 /// 副作用：心情-3；第7、10分钟各有10%概率呕吐。
 /// 过量：10分钟内服用第二次→延迟1分钟后1分钟内胸头疼痛+70、肌肉-50；2分钟后每秒-2大脑完整度持续2分钟。
 /// 模式：物品栏饮用（useAction）。
@@ -193,12 +194,42 @@ public static class IbuprofenItemSystem
             }
 
             wat.Drink(body, MlPerUse, "drink");
+            PlayUseSound(item, "bottle");
             Plugin.Log.LogInfo($"[Ibuprofen] Used {MlPerUse}ml, effects applied.");
         }
         catch (Exception ex)
         {
             Plugin.Log.LogWarning($"[Ibuprofen] Failed to use: {ex.Message}");
         }
+    }
+
+    private static AudioClip? _cachedUseSound;
+    private static string? _cachedUseSoundName;
+
+    private static void PlayUseSound(Item item, string soundName)
+    {
+        try
+        {
+            if (_cachedUseSound == null || _cachedUseSoundName != soundName)
+            {
+                var assemblyDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? Paths.PluginPath;
+                var soundPath = Path.Combine(assemblyDir, "Framework", "Assets", $"{soundName}.wav");
+                if (File.Exists(soundPath))
+                {
+                    using var uwr = UnityWebRequestMultimedia.GetAudioClip("file:///" + soundPath, AudioType.WAV);
+                    uwr.SendWebRequest();
+                    while (!uwr.isDone) { }
+                    if (uwr.result == UnityWebRequest.Result.Success)
+                    {
+                        _cachedUseSound = DownloadHandlerAudioClip.GetContent(uwr);
+                        _cachedUseSoundName = soundName;
+                    }
+                }
+            }
+            if (_cachedUseSound != null)
+                Sound.Play(_cachedUseSound, item.transform.position, true);
+        }
+        catch { }
     }
 
     #region Liquid Registration
@@ -429,7 +460,7 @@ public sealed class IbuprofenItemMarker : MonoBehaviour
 
 /// <summary>
 /// 布洛芬效果控制器。
-/// 正常效果：1分钟内感染减少到50%；第7/10分钟各有10%概率呕吐；7分钟后清除免疫力。
+/// 正常效果：1分钟内感染减少到15%；第7/10分钟各有10%概率呕吐；7分钟后清除免疫力。
 /// 过量效果（10分钟内第二次服用）：
 ///   t=60-120s: 胸部头部疼痛+70、肌肉-50（线性）
 ///   t=120-240s: 每秒-2大脑完整度

@@ -50,6 +50,34 @@ public static class ConsoleSpawnPatch
         { SalewaKitItemSystem.ItemKey, "bruisekit" },
         { MultiToolItemSystem.ItemKey, "bruisekit" },
         { CmsKitItemSystem.ItemKey, "bruisekit" },
+        // 枪械类（shotgun 预制体）
+        { MP133ItemSystem.ItemKey, "shotgun" },
+        { SKSItemSystem.ItemKey, "rifle" },
+        { AXMCItemSystem.ItemKey, "rifle" },
+        { DVL10ItemSystem.ItemKey, "rifle" },
+        { AKMItemSystem.ItemKey, "rifle" },
+        { DeagleItemSystem.ItemKey, "pistol" },
+        { Glock17ItemSystem.ItemKey, "pistol" },
+        { M4A1ItemSystem.ItemKey, "rifle" },
+        { P90ItemSystem.ItemKey, "rifle" },
+        // 弹匣类（riflemagazine 预制体）
+        { AXMCMagItemSystem.ItemKey, "riflemagazine" },
+        { DVL10MagItemSystem.ItemKey, "riflemagazine" },
+        { AKMMagItemSystem.ItemKey, "riflemagazine" },
+        { DeagleMagItemSystem.ItemKey, "riflemagazine" },
+        { Glock17MagItemSystem.ItemKey, "riflemagazine" },
+        { M4A1MagItemSystem.ItemKey, "riflemagazine" },
+        { P90MagItemSystem.ItemKey, "riflemagazine" },
+        // 弹药类（556round/12gauge 预制体）
+        { Ammo76251BPZItemSystem.ItemKey, "556round" },
+        { Ammo76239SPItemSystem.ItemKey, "556round" },
+        { Ammo12g85ItemSystem.ItemKey, "12gauge" },
+        { Ammo338UCWItemSystem.ItemKey, "556round" },
+        { Ammo50CopperItemSystem.ItemKey, "556round" },
+        { Ammo45FMJItemSystem.ItemKey, "556round" },
+        { Ammo919PSOItemSystem.ItemKey, "556round" },
+        { Ammo55645FMJItemSystem.ItemKey, "556round" },
+        { Ammo5728SB193ItemSystem.ItemKey, "556round" },
     };
 
     /// <summary>判断是否为自定义物品 ID</summary>
@@ -106,7 +134,7 @@ public static class ConsoleSpawnPatch
         }
     }
 
-    private static void ConfigureCustomItem(Item item, MedicalGrantRequest request)
+    internal static void ConfigureCustomItem(Item item, MedicalGrantRequest request)
     {
         if (EtgCItemSystem.IsEtgRequest(request))
             EtgCItemSystem.ConfigureSpawnedItem(item, request);
@@ -162,6 +190,56 @@ public static class ConsoleSpawnPatch
             MultiToolItemSystem.ConfigureSpawnedItem(item, request);
         else if (CmsKitItemSystem.IsCmsRequest(request))
             CmsKitItemSystem.ConfigureSpawnedItem(item, request);
+        else if (MP133ItemSystem.IsMP133Request(request))
+            MP133ItemSystem.ConfigureSpawnedItem(item, request);
+        else if (SKSItemSystem.IsSKSRequest(request))
+            SKSItemSystem.ConfigureSpawnedItem(item, request);
+        else if (AXMCItemSystem.IsAXMCRequest(request))
+            AXMCItemSystem.ConfigureSpawnedItem(item, request);
+        else if (DVL10ItemSystem.IsDVL10Request(request))
+            DVL10ItemSystem.ConfigureSpawnedItem(item, request);
+        else if (AKMItemSystem.IsAKMRequest(request))
+            AKMItemSystem.ConfigureSpawnedItem(item, request);
+        else if (AXMCMagItemSystem.IsAXMCMagRequest(request))
+            AXMCMagItemSystem.ConfigureSpawnedItem(item, request);
+        else if (DVL10MagItemSystem.IsDVL10MagRequest(request))
+            DVL10MagItemSystem.ConfigureSpawnedItem(item, request);
+        else if (AKMMagItemSystem.IsAKMMagRequest(request))
+            AKMMagItemSystem.ConfigureSpawnedItem(item, request);
+        else if (DeagleItemSystem.IsDeagleRequest(request))
+            DeagleItemSystem.ConfigureSpawnedItem(item, request);
+        else if (DeagleMagItemSystem.IsDeagleMagRequest(request))
+            DeagleMagItemSystem.ConfigureSpawnedItem(item, request);
+        else if (Glock17ItemSystem.IsGlock17Request(request))
+            Glock17ItemSystem.ConfigureSpawnedItem(item, request);
+        else if (Glock17MagItemSystem.IsGlock17MagRequest(request))
+            Glock17MagItemSystem.ConfigureSpawnedItem(item, request);
+        else if (M4A1ItemSystem.IsM4A1Request(request))
+            M4A1ItemSystem.ConfigureSpawnedItem(item, request);
+        else if (M4A1MagItemSystem.IsM4A1MagRequest(request))
+            M4A1MagItemSystem.ConfigureSpawnedItem(item, request);
+        else if (P90ItemSystem.IsP90Request(request))
+            P90ItemSystem.ConfigureSpawnedItem(item, request);
+        else if (P90MagItemSystem.IsP90MagRequest(request))
+            P90MagItemSystem.ConfigureSpawnedItem(item, request);
+        else if (Ammo76251BPZItemSystem.Is76251BPZRequest(request))
+            Ammo76251BPZItemSystem.ConfigureSpawnedItem(item, request);
+        else if (Ammo76239SPItemSystem.Is76239SPRequest(request))
+            Ammo76239SPItemSystem.ConfigureSpawnedItem(item, request);
+        else if (Ammo12g85ItemSystem.Is12g85Request(request))
+            Ammo12g85ItemSystem.ConfigureSpawnedItem(item, request);
+        else if (Ammo338UCWItemSystem.Is338UCWRequest(request))
+            Ammo338UCWItemSystem.ConfigureSpawnedItem(item, request);
+        else if (Ammo50CopperItemSystem.Is50CopperRequest(request))
+            Ammo50CopperItemSystem.ConfigureSpawnedItem(item, request);
+        else if (Ammo45FMJItemSystem.Is45FMJRequest(request))
+            Ammo45FMJItemSystem.ConfigureSpawnedItem(item, request);
+        else if (Ammo919PSOItemSystem.Is919PSORequest(request))
+            Ammo919PSOItemSystem.ConfigureSpawnedItem(item, request);
+        else if (Ammo55645FMJItemSystem.Is55645FMJRequest(request))
+            Ammo55645FMJItemSystem.ConfigureSpawnedItem(item, request);
+        else if (Ammo5728SB193ItemSystem.Is5728SB193Request(request))
+            Ammo5728SB193ItemSystem.ConfigureSpawnedItem(item, request);
         else
         {
             item.id = request.ItemKey;
