@@ -3,6 +3,7 @@ using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
 using CUTarkovMedicalMod.Framework;
+using UnityEngine;
 
 namespace CUTarkovMedicalMod;
 
@@ -11,12 +12,13 @@ public sealed class Plugin : BaseUnityPlugin
 {
     public const string ModGuid = "com.yourname.cu.tarkovmedicalmod";
     public const string ModName = "Casualties: Unknown - Tarkov-Style Medical Mod";
-    public const string ModVersion = "0.2.0.0";
+    public const string ModVersion = "0.2.1.0";
 
     internal static ManualLogSource Log = null!;
 
     private MedicalFramework _framework = null!;
     private MedicalDebugHotkeys _debugHotkeys = null!;
+    private UpdateNotifier _updateNotifier = null!;
     private int _tickCounter;
 
     private void Awake()
@@ -47,10 +49,14 @@ public sealed class Plugin : BaseUnityPlugin
         Log.LogInfo($"Medical content source: {_framework.ContentSource}");
         Log.LogInfo($"Catalog item count: {_framework.Catalog.Count}");
         Log.LogInfo(_framework.DescribeCompatibility());
+
+        // 创建更新提醒实例（由 Plugin 的 Update/OnGUI 驱动）
+        _updateNotifier = new UpdateNotifier();
     }
 
     private void Update()
     {
+        _updateNotifier?.Tick();
         _debugHotkeys?.Tick();
 
         _tickCounter++;
@@ -67,5 +73,10 @@ public sealed class Plugin : BaseUnityPlugin
         Sj9ItemSystem.EnsureRegisteredInItemTable();
         BluebloodItemSystem.EnsureRegisteredInItemTable();
         MedicalSpawnHooks.TickGlobalGrantFallback();
+    }
+
+    private void OnGUI()
+    {
+        _updateNotifier?.OnGUI();
     }
 }
