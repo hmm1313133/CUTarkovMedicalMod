@@ -374,7 +374,9 @@ public sealed class SJ12EffectController : MonoBehaviour
         StimBuffIndicator.ShowOneTimeEffect(SJ12ItemSystem.ItemKey, I18n.Tr("sj12.ot.1"));
         StimBuffIndicator.ShowOneTimeEffect(SJ12ItemSystem.ItemKey, I18n.Tr("sj12.ot.2"), isNegative: true);
 
-        _initialTemp = _body!.temperature;
+        // 仅在首次激活时记录基准体温，refresh 时保留原值避免叠加降低
+        if (!isRefresh)
+            _initialTemp = _body!.temperature;
 
         _phase = Phase.Delay;
         _phaseTimer = ActivationDelay;

@@ -6,7 +6,7 @@
     <AssemblyName>CUTarkovMedicalMod</AssemblyName>
     <RootNamespace>CUTarkovMedicalMod</RootNamespace>
     <Product>Casualties: Unknown - Tarkov-Style Medical Mod</Product>
-    <Version>0.2.1.0</Version>
+    <Version>1.0.0.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>$(NoWarn);0649</NoWarn>
     <Platforms>AnyCPU;x64;x86</Platforms>
@@ -90,4 +90,5 @@
     <Copy SourceFiles="@(PluginAssets)" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Framework/Assets" Condition="Exists('%(Identity)')" />
     <Copy SourceFiles="@(PluginLang)" DestinationFolder="$(BepInExDir)/plugins/$(PluginDirName)/Lang" Condition="Exists('%(Identity)')" />
   </Target>
+
 </Project>
