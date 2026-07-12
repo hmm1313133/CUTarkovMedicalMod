@@ -12,7 +12,7 @@ public sealed class Plugin : BaseUnityPlugin
 {
     public const string ModGuid = "com.yourname.cu.tarkovmedicalmod";
     public const string ModName = "Casualties: Unknown - Tarkov-Style Medical Mod";
-    public const string ModVersion = "0.3.0";
+    public const string ModVersion = "0.2.2";
 
     internal static ManualLogSource Log = null!;
 
@@ -39,24 +39,10 @@ public sealed class Plugin : BaseUnityPlugin
             MedicalSpawnHooks.SetLog(Logger);
             MedicalWorldLootHooks.SetLog(Logger);
             harmony.PatchAll();
-            Log.LogInfo("Harmony PatchAll succeeded.");
         }
         catch (Exception ex)
         {
             Log.LogError($"PatchAll() threw: {ex}");
-        }
-
-        // 单独应用新增补丁，确保即使失败也不影响原有补丁（如 buff 图标）
-        try
-        {
-            var harmony2 = new Harmony(ModGuid + ".Extra");
-            harmony2.CreateClassProcessor(typeof(SaveSystemTryLoadPatch)).Patch();
-            harmony2.CreateClassProcessor(typeof(FloorTransitionReconfigurePatch)).Patch();
-            Log.LogInfo("Extra patches (SaveSystem, FloorTransition) applied successfully.");
-        }
-        catch (Exception ex)
-        {
-            Log.LogError($"Extra patches failed: {ex}");
         }
 
         Log.LogInfo($"{ModName} loaded. Enabled={_framework.EffectiveMode != MedicalFeatureMode.Disabled}, KrokMP={_framework.KrokMpDetected}");
@@ -73,15 +59,19 @@ public sealed class Plugin : BaseUnityPlugin
         _updateNotifier?.Tick();
         _debugHotkeys?.Tick();
 
-        // 每帧检查是否需要执行楼层切换后的物品重新配置（轻量级，仅检查布尔标志）
-        CustomItemReconfigurator.Tick(Log);
-
         _tickCounter++;
         if (_tickCounter < 300) return;
         _tickCounter = 0;
 
-        // 确保所有自定义物品都注册到 GlobalItems（不只是部分）
-        CustomItemReconfigurator.EnsureAllCustomItemsRegistered();
+        EtgCItemSystem.EnsureRegisteredInItemTable();
+        ZagustinItemSystem.EnsureRegisteredInItemTable();
+        PropitalItemSystem.EnsureRegisteredInItemTable();
+        SJ6ItemSystem.EnsureRegisteredInItemTable();
+        Sj1ItemSystem.EnsureRegisteredInItemTable();
+        PnbItemSystem.EnsureRegisteredInItemTable();
+        ObdolbosItemSystem.EnsureRegisteredInItemTable();
+        Sj9ItemSystem.EnsureRegisteredInItemTable();
+        BluebloodItemSystem.EnsureRegisteredInItemTable();
         MedicalSpawnHooks.TickGlobalGrantFallback();
     }
 

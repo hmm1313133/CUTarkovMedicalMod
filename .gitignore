@@ -10,25 +10,11 @@
 
 # 构建路径配置（csproj 引用，构建/部署所需）
 !vars.targets
-!vars.local.targets.example
-
-# 本地游戏路径覆盖（每开发者私有，不纳入版本控制）
-vars.local.targets
 
 # 模组源码与资产
 !CUTarkovMedicalMod/
 !CUTarkovMedicalMod/**
 
-# 发布包与描述文件
-!Release/
-!Release/*.txt
-!Release/*.md
-
-# 打包脚本
-!scripts/
-!scripts/**
-
 # 仍然排除构建产物
 CUTarkovMedicalMod/bin/
 CUTarkovMedicalMod/obj/
-Release/*.zip
