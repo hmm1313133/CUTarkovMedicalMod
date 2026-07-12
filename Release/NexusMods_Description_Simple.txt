@@ -1,0 +1,221 @@
+Casualties: Unknown - Tarkov-Style Medical Mod
+
+Version: 0.3.0
+
+A BepInEx mod for Casualties: Unknown Demo that brings the complete Escape from Tarkov medical system into the game - 16 combat stimulant injectors, 12 medical items, and a fully integrated medical framework.
+
+Each stimulant has its own unique buff/side-effect mechanics, registered into the game's native item table via reflection. Medical kits hook into native minigame systems (BandageMinigame, SyringeMinigame, ShrapnelMinigame, DislocationMinigame).
+
+---
+
+REQUIREMENTS
+
+- Game: Casualties: Unknown Demo (Steam)
+- Mod Loader: BepInEx 5.x
+
+Installing BepInEx:
+1. Download BepInEx 5.x stable (x64) from https://github.com/BepInEx/BepInEx/releases
+2. Extract into your game root folder (Steam/steamapps/common/Casualties Unknown Demo/)
+3. Launch the game once to generate the BepInEx/ folder, then close it
+
+---
+
+INSTALLATION
+
+1. Download CUTarkovMedicalMod_v0.3.0.zip
+2. Extract the contents into your game root folder
+   - After extraction:
+     [Game Root]/BepInEx/plugins/CUTarkovMedicalMod/
+       - CUTarkovMedicalMod.dll
+       - Framework/Assets/  (icons + sound effects)
+       - Lang/              (EN.json, zh_CN.json)
+3. Launch the game
+
+Verify: check BepInEx/LogOutput.log for "Casualties: Unknown - Tarkov-Style Medical Mod loaded. Enabled=True"
+
+---
+
+FEATURES
+
+- 16 custom stimulants with unique buffs and side effects
+- 12 medical items (first aid kits, surgical kits, balms, pills)
+- Starting loadout: 5 fixed medical items + random extras
+- World loot and container drops (medical crates, supply crates, corpses)
+- Buff indicator with countdown timers (MoodleManager)
+- Tunnel vision post-processing for stim side effects
+- Custom injector sound effect
+- Hold SHIFT to expand item effect descriptions
+- Console spawn command support for all custom items
+- Multiplayer compatible (auto-detects KrokMP)
+- Bilingual: English and Simplified Chinese
+
+---
+
+16 STIMULANTS
+
+1. eTG-c (etg_c) - Regenerative: +2 muscle/s per limb, blood +50ml/s | Side: hunger/hydration drain, chest pain | 60s + 20s debuff
+2. Zagustin (zagustin) - Hemostatic: long bleeding prevention | Side: hydration drain, tremors | 150s
+3. Morphine (cu_morphine) - Painkiller: native Painkillers | Side: extreme opioid - fatal if untreated! | ~300s
+4. SJ12 (sj12) - Thermoregulation: body temp to 31.5C, +2 resilience | Side: body temp to 40.5C overheating | 600s + 180s debuff
+5. M.U.L.E. (mule) - Carry weight: +50% capacity | Side: -0.1 muscle/s, consciousness capped 90% | 900s
+6. Propital (propital) - Regenerative: +0.1 muscle/s, opiate +20 | Side: +10 sickness, STR/RES -2, tunnel vision | 900s + 300s debuff
+7. SJ1 (sj1) - Attribute boost: STR +5, RES +3, +30% stamina recovery | Side: +10 sickness, hunger/hydration drain | 300s
+8. SJ6 (sj6) - Stamina boost: +20% cap, +120% recovery | Side: +25 sickness, tunnel vision + tremors | 900s + 300s debuff
+9. SJ9 (sj9) - Temp suppressant: body temp locked 31C | Side: RES -2, chest pain + muscle damage | 1200s + 600s debuff
+10. PNB (pnb) - Muscle repair: +0.2 muscle/s, RES +3 | Side: STR -1, tremors | 120s + 300s
+11. Obdolbos (obdolbos) - Gamble: random one of 8 effects (including instant death) | Random
+12. Obdolbos 2 (obdolbos2) - Permanent: STR/RES/INT +6, carry +3u | Side: -30% stamina recovery, -20% stamina cap 40min | Permanent + 300s debuff
+13. Blue Blood (blueblood) - Antidote: stop bleeding 120s, toxin -70%, radiation -10Gy | Side: immunity -40%, 33% vomiting | 120s + 60s debuff
+14. xTG-12 (xtg12) - Antidote: +70% resistance, toxin -100% | Side: 20% vomiting, tremors | 300s + 60s debuff
+15. Mildronate (mildronate) - Cardiac: fibrillation -20%, +10% stamina, +50% recovery | Side: hunger/hydration drain | 1500s + 900s debuff
+16. 2A2-(b-TG) (2a2btg) - Carry weight: +7u, mood +5 | Side: -0.1 hydration/s | 1200s + 900s debuff
+
+---
+
+12 MEDICAL ITEMS
+
+1. AI-2 (ai2) - SyringeMinigame, 100ml/10ml per use | Radiation -1Gy, opiate +0.2, bleeding -8% per 10ml | Side: +3 sickness, -10% immunity
+2. Grizzly (grizzlykit) - BandageMinigame | Major hemostasis + fracture/dislocation/skin/muscle recovery + disinfection | Heavy (3u)
+3. AFAK (afak) - BandageMinigame | Moderate hemostasis + fracture/dislocation/skin recovery | High durability
+4. IFAK (ifak) - BandageMinigame | Moderate hemostasis + fracture/dislocation/skin recovery | Medium durability
+5. Salewa (salewa) - BandageMinigame | Moderate hemostasis | Very high durability
+6. Salewa Thermal (salewa) - Auto on chest when temp < 30C | Body temp rises to 36C
+7. CMS Kit (cms) - Auto-detect on limb | Shrapnel removal / dislocation / 50% fracture recovery (+50 pain)
+8. Surv12 Kit (multitool) - Auto-detect on limb | Shrapnel removal / dislocation / 90% fracture recovery (+30 pain) | Very high durability
+9. Golden Star (goldenstar) - Apply to limb, 10ml/2ml per use | Disinfect 30s, delayed pain relief 15s | Side: skin -5, mood -5
+10. Vaseline (vaseline) - Apply to limb, 10ml/2ml per use | Dirt -2, skin +5, claw +10 on hands
+11. Augmentin (libatine) - Drink, 2ml/1 use | +80% resistance 5min, infection to 60% in 1min | Side: mood -3, vomiting
+12. Ibuprofen (ibuprofen) - Drink, 10ml/2ml per use | +50% resistance, infection to 15%, temp -2C, pain relief, +20% stamina 7min | WARNING: second dose within 10min triggers overdose - can be fatal!
+
+---
+
+CONTROLS
+
+- Left Click (inventory) - Use stimulant / drink medicine
+- Left Click (body limb) - Use medical kit / surgical kit / balm
+- Hold SHIFT - Expand item effect details
+- F7 / Numpad 7 - Debug status output
+
+---
+
+CONSOLE SPAWN
+
+All items spawnable via: spawn [itemkey]
+Examples: spawn etg_c, spawn cu_morphine, spawn grizzlykit, spawn cms
+
+---
+
+CONFIGURATION
+
+Auto-generated at BepInEx/config/com.yourname.cu.tarkovmedicalmod.cfg
+
+- EnableMod (true) - Master toggle
+- FeatureMode (Both) - Disabled / StartingLoadoutOnly / WorldLootOnly / Both
+- CompatibilityMode (AutoSafe) - KrokMP detection strategy
+- StartingLoadout MinItems/MaxItems (1/3) - Random item count range
+- WorldLoot MinItems/MaxItems (1/4) - World loot count range
+- AllowDuplicateItems (true) - Allow duplicate items
+- Seed (0) - Random seed (0 = random)
+
+---
+
+COMPATIBILITY
+
+- KrokMP: auto-detected, safe mode enables starting loadout only
+- Other BepInEx mods: should be compatible (unique GUID, Harmony patches)
+
+---
+
+UNINSTALL
+
+Delete BepInEx/plugins/CUTarkovMedicalMod/ folder.
+
+---
+
+SOURCE CODE
+
+Open source on GitHub: https://github.com/hmm1313133/CUTarkovMedicalMod
+
+---
+
+BUG REPORTS & FEEDBACK
+
+Report bugs and suggestions on GitHub Issues: https://github.com/hmm1313133/CUTarkovMedicalMod/issues
+
+Please include:
+1. Mod version (0.3.0)
+2. Game version
+3. BepInEx version
+4. Other installed mods
+5. Steps to reproduce
+6. Log file (BepInEx/LogOutput.log)
+7. Screenshots if applicable
+
+Please check existing issues before posting to avoid duplicates.
+
+---
+
+CREDITS
+
+- Escape from Tarkov by Battlestate Games - original item designs and mechanics inspiration
+- Casualties: Unknown - the base game
+- BepInEx - modding framework
+- Harmony - runtime patching library
+
+---
+
+This mod is not affiliated with or endorsed by Battlestate Games or the developers of Casualties: Unknown. All trademarks belong to their respective owners.
+
+---
+
+CHANGELOG
+
+v0.3.0
+- Fixed: custom items (stimulants, medical kits) no longer disappear when transitioning to the next map layer
+- Fixed: item markers and custom icons are now properly restored after save/load
+- Fixed: buff indicator icons no longer break due to patch loading order issues
+- Added: CustomItemReconfigurator system - reads save file to restore custom items in correct inventory slots
+- Added: SaveSystem.TryLoadGame Prefix/Postfix patches to intercept item restoration
+- Added: WorldGeneration.Start Postfix to reconfigure items after floor transition
+- Added: all 27 custom items now registered in GlobalItems on every cycle (was only 9 before)
+- Added: vars.targets auto-detection - supports env var CU_GAME_PATH, vars.local.targets, and Steam registry scanning
+- Added: make_release.py packaging script
+- Improved: PatchAll split into two stages to ensure new patches don't break existing ones
+
+v0.2.1
+- Added: auto-update system with download progress bar, cancel, and timeout
+- Added: two update options - Auto Update (download + install + restart) or Release Page
+- Added: Steam protocol detection for correct game restart after update
+- Fixed: update restart now uses correct working directory (Steam launch)
+- Fixed: Steam AppID detection matches by installdir to avoid launching wrong game
+- Updated: System.IO.Compression reference added for zip extraction
+
+v0.2.0
+- Refactored: weapon system split into a separate mod (CUTarkovWeaponMod), this mod is now medical-only
+- Fixed: XML parsing error in csproj (& not escaped as &amp;)
+- Fixed: corrected stimulant effect descriptions to match actual code behavior
+- Updated: README rewritten as medical-only mod documentation
+
+v0.1.5
+- Added: weapon / ammo / magazine system (later split to CUTarkovWeaponMod)
+- Fixed: description and code inconsistencies for several items
+
+v0.1.1
+- Added: item intelligence recognition system - all 27 items now have Recognition (intellect) requirements
+- Added: when intellect is insufficient, real item names are not overwritten in hover tooltips
+- Added: when intellect is insufficient, StimBuffIndicator hides real stimulant effects
+- Added: I18n translation keys for recognition system
+- Fixed: game path configuration
+
+v0.1.0
+- Initial release
+- 16 combat stimulant injectors with unique buffs and side effects
+- 12 medical items (first aid kits, surgical kits, balms, pills)
+- Starting loadout, world loot, and container drop systems
+- Buff indicator with countdown timers
+- Tunnel vision post-processing
+- Custom injector sound effect
+- Hold SHIFT to expand item descriptions
+- Console spawn support
+- Multiplayer compatible (KrokMP auto-detection)
+- Bilingual support (English and Simplified Chinese)

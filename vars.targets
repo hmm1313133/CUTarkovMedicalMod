@@ -1,10 +1,98 @@
 <Project>
+  <!--
+    ===== 游戏路径自动检测（解析时执行） =====
+    解析顺序（优先级从高到低）:
+      1. 环境变量 CU_GAME_PATH
+      2. vars.local.targets 本地覆盖（gitignored，每开发者私有）
+      3. Steam 注册表自动检测 + 多库路径扫描
+      4. 未找到 -> 构建报错并给出指引
+
+    多人协作时，各开发者可选择：
+      a) 设置环境变量:  setx CU_GAME_PATH "O:\SteamLibrary\steamapps\common\Casualties Unknown Demo"
+      b) 复制 vars.local.targets.example 为 vars.local.targets 并修改路径
+      c) 不做任何配置，自动检测（Steam 安装即可）
+  -->
+
+  <!-- 游戏文件夹名 -->
   <PropertyGroup>
-    <!-- Set this to the game's main folder -->
-    <BaseGamePath>F:/SteamLibrary/steamapps/common/Casualties Unknown Demo</BaseGamePath>
+    <_GameFolder>Casualties Unknown Demo</_GameFolder>
+  </PropertyGroup>
+
+  <!-- Step 1: 环境变量 -->
+  <PropertyGroup Condition="'$(CU_GAME_PATH)' != ''">
+    <BaseGamePath>$(CU_GAME_PATH)</BaseGamePath>
+  </PropertyGroup>
+
+  <!-- Step 2: 本地覆盖文件（gitignored，不纳入版本控制） -->
+  <Import Project="vars.local.targets"
+          Condition="'$(BaseGamePath)' == '' And Exists('vars.local.targets')" />
+
+  <!-- Step 3: Steam 注册表 + 常见库路径自动检测 -->
+  <PropertyGroup Condition="'$(BaseGamePath)' == ''">
+    <!-- 从注册表读取 Steam 安装路径 -->
+    <_SteamPath>$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Valve\Steam', 'InstallPath', null, RegistryView.Registry32, RegistryView.Registry64))</_SteamPath>
+    <_SteamPath Condition="'$(_SteamPath)' == ''">$([MSBuild]::GetRegistryValueFromView('HKEY_CURRENT_USER\SOFTWARE\Valve\Steam', 'SteamPath', null, RegistryView.Registry32, RegistryView.Registry64))</_SteamPath>
+  </PropertyGroup>
+
+  <!-- 3a: 主 Steam 库 -->
+  <PropertyGroup Condition="'$(BaseGamePath)' == '' And '$(_SteamPath)' != ''">
+    <BaseGamePath Condition="Exists('$(_SteamPath)\steamapps\common\$(_GameFolder)')">$(_SteamPath)\steamapps\common\$(_GameFolder)</BaseGamePath>
+  </PropertyGroup>
+
+  <!-- 3b: 常见 Steam 库盘符（覆盖 C~P 盘） -->
+  <PropertyGroup Condition="'$(BaseGamePath)' == ''">
+    <BaseGamePath Condition="Exists('C:\SteamLibrary\steamapps\common\$(_GameFolder)')">C:\SteamLibrary\steamapps\common\$(_GameFolder)</BaseGamePath>
+    <BaseGamePath Condition="'$(BaseGamePath)' == '' And Exists('D:\SteamLibrary\steamapps\common\$(_GameFolder)')">D:\SteamLibrary\steamapps\common\$(_GameFolder)</BaseGamePath>
+    <BaseGamePath Condition="'$(BaseGamePath)' == '' And Exists('E:\SteamLibrary\steamapps\common\$(_GameFolder)')">E:\SteamLibrary\steamapps\common\$(_GameFolder)</BaseGamePath>
+    <BaseGamePath Condition="'$(BaseGamePath)' == '' And Exists('F:\SteamLibrary\steamapps\common\$(_GameFolder)')">F:\SteamLibrary\steamapps\common\$(_GameFolder)</BaseGamePath>
+    <BaseGamePath Condition="'$(BaseGamePath)' == '' And Exists('G:\SteamLibrary\steamapps\common\$(_GameFolder)')">G:\SteamLibrary\steamapps\common\$(_GameFolder)</BaseGamePath>
+    <BaseGamePath Condition="'$(BaseGamePath)' == '' And Exists('H:\SteamLibrary\steamapps\common\$(_GameFolder)')">H:\SteamLibrary\steamapps\common\$(_GameFolder)</BaseGamePath>
+    <BaseGamePath Condition="'$(BaseGamePath)' == '' And Exists('I:\SteamLibrary\steamapps\common\$(_GameFolder)')">I:\SteamLibrary\steamapps\common\$(_GameFolder)</BaseGamePath>
+    <BaseGamePath Condition="'$(BaseGamePath)' == '' And Exists('J:\SteamLibrary\steamapps\common\$(_GameFolder)')">J:\SteamLibrary\steamapps\common\$(_GameFolder)</BaseGamePath>
+    <BaseGamePath Condition="'$(BaseGamePath)' == '' And Exists('K:\SteamLibrary\steamapps\common\$(_GameFolder)')">K:\SteamLibrary\steamapps\common\$(_GameFolder)</BaseGamePath>
+    <BaseGamePath Condition="'$(BaseGamePath)' == '' And Exists('L:\SteamLibrary\steamapps\common\$(_GameFolder)')">L:\SteamLibrary\steamapps\common\$(_GameFolder)</BaseGamePath>
+    <BaseGamePath Condition="'$(BaseGamePath)' == '' And Exists('M:\SteamLibrary\steamapps\common\$(_GameFolder)')">M:\SteamLibrary\steamapps\common\$(_GameFolder)</BaseGamePath>
+    <BaseGamePath Condition="'$(BaseGamePath)' == '' And Exists('N:\SteamLibrary\steamapps\common\$(_GameFolder)')">N:\SteamLibrary\steamapps\common\$(_GameFolder)</BaseGamePath>
+    <BaseGamePath Condition="'$(BaseGamePath)' == '' And Exists('O:\SteamLibrary\steamapps\common\$(_GameFolder)')">O:\SteamLibrary\steamapps\common\$(_GameFolder)</BaseGamePath>
+    <BaseGamePath Condition="'$(BaseGamePath)' == '' And Exists('P:\SteamLibrary\steamapps\common\$(_GameFolder)')">P:\SteamLibrary\steamapps\common\$(_GameFolder)</BaseGamePath>
+  </PropertyGroup>
+
+  <!-- 3c: 常见 Games 盘符（非 SteamLibrary 命名的自定义路径） -->
+  <PropertyGroup Condition="'$(BaseGamePath)' == ''">
+    <BaseGamePath Condition="Exists('C:\Games\steamapps\common\$(_GameFolder)')">C:\Games\steamapps\common\$(_GameFolder)</BaseGamePath>
+    <BaseGamePath Condition="'$(BaseGamePath)' == '' And Exists('D:\Games\steamapps\common\$(_GameFolder)')">D:\Games\steamapps\common\$(_GameFolder)</BaseGamePath>
+    <BaseGamePath Condition="'$(BaseGamePath)' == '' And Exists('E:\Games\steamapps\common\$(_GameFolder)')">E:\Games\steamapps\common\$(_GameFolder)</BaseGamePath>
+    <BaseGamePath Condition="'$(BaseGamePath)' == '' And Exists('D:\Soft\Steam\steamapps\common\$(_GameFolder)')">D:\Soft\Steam\steamapps\common\$(_GameFolder)</BaseGamePath>
+  </PropertyGroup>
+
+  <!-- Step 4: 派生路径 -->
+  <PropertyGroup Condition="'$(BaseGamePath)' != ''">
     <BepInExDir>$(BaseGamePath)/BepInEx</BepInExDir>
     <GameAssembliesDir>$(BaseGamePath)/CasualtiesUnknown_Data/Managed</GameAssembliesDir>
     <PluginDirName>CUTarkovMedicalMod</PluginDirName>
   </PropertyGroup>
-</Project>
 
+  <!-- 构建时打印检测到的路径 -->
+  <Target Name="ReportGamePath" BeforeTargets="Build">
+    <Message Condition="'$(BaseGamePath)' != ''"
+             Text="[vars.targets] 游戏路径: $(BaseGamePath)"
+             Importance="high" />
+    <Error Condition="'$(BaseGamePath)' == ''"
+           Text="
+====================================
+  无法检测到 Casualties Unknown 游戏路径。
+  请通过以下任一方式配置:
+
+  方式1 - 环境变量（推荐，永久生效）:
+    PowerShell:  setx CU_GAME_PATH 'O:\SteamLibrary\steamapps\common\Casualties Unknown Demo'
+    然后重启终端/IDE。
+
+  方式2 - 本地配置文件:
+    复制 vars.local.targets.example 为 vars.local.targets，
+    修改其中的路径为你电脑上的游戏安装位置。
+
+  方式3 - 确认 Steam 已安装且游戏在常见路径下。
+====================================" />
+  </Target>
+
+</Project>

@@ -1,0 +1,231 @@
+[size=5][b]未知伤亡：塔科夫医疗模组 (Casualties: Unknown - Tarkov-Style Medical Mod)[/b][/size]
+
+[b]版本：0.1.0[/b]
+
+一个为 [b]Casualties: Unknown Demo[/b] 开发的 BepInEx 模组，将《逃离塔科夫》中的 16 种战斗兴奋剂注射器、12 种医疗物品及其完整医疗系统引入游戏。每根针剂拥有独立的增益/副作用机制，通过反射注册到游戏原生物品表；医疗包通过原生小游戏系统（BandageMinigame / SyringeMinigame / ShrapnelMinigame / DislocationMinigame）接入。
+
+---
+
+[size=4][b]前置要求[/b][/size]
+
+[list]
+[*][b]游戏：[/b]Casualties: Unknown Demo（Steam）
+[*][b]模组加载器：[/b]BepInEx 5.x
+[/list]
+
+[b]安装 BepInEx[/b]
+
+1. 下载 [url=https://github.com/BepInEx/BepInEx/releases]BepInEx 5.x 稳定版[/url]（x64）
+2. 将内容解压到游戏根目录（Steam/steamapps/common/Casualties Unknown Demo/）
+3. 启动一次游戏以生成 BepInEx/ 文件夹结构
+4. 关闭游戏
+
+---
+
+[size=4][b]安装方法[/b][/size]
+
+1. 下载模组压缩包（CUTarkovMedicalMod_v0.1.0.zip）
+2. 将压缩包内容解压到游戏根目录
+   - 压缩包内含：BepInEx/plugins/CUTarkovMedicalMod/...
+   - 解压后结构：
+[code][游戏根目录]/
+└── BepInEx/
+    └── plugins/
+        └── CUTarkovMedicalMod/
+            ├── CUTarkovMedicalMod.dll
+            ├── Framework/
+            │   └── Assets/        (图标 + 音效)
+            └── Lang/              (EN.json, zh_CN.json)[/code]
+3. 启动游戏
+
+[b]验证安装[/b]
+
+检查 BepInEx/LogOutput.log，应看到：
+[code]Casualties: Unknown - Tarkov-Style Medical Mod loaded. Enabled=True
+Medical content source: ...
+Catalog item count: 38[/code]
+
+---
+
+[size=4][b]功能概览[/b][/size]
+
+[list]
+[*][b]16 种自定义针剂[/b] - 每种针剂有独立的 ItemKey、ItemInfo、useAction 委托和效果控制器
+[*][b]12 种医疗物品[/b] - 急救包（BandageMinigame）、手术包（自动检测）、药膏/药片（液体系统）
+[*][b]开局发放[/b] - 固定发放 5 件医疗物品（Grizzly/AFAK/IFAK/Salewa/AI-2）+ 随机医疗物品
+[*][b]世界战利品[/b] - 随机医疗物品（含针剂和药品）在世界中刷新
+[*][b]容器掉落[/b] - 医疗箱/物资箱/尸体破坏时按概率掉落针剂或药品
+[*][b]Buff 指示器[/b] - 通过原生 MoodleManager 显示针剂效果图标和倒计时
+[*][b]管视效果[/b] - URP Vignette 后处理实现暗角遮罩，部分针剂副作用触发
+[*][b]注射器音效[/b] - 自定义 med_stimulator_use.wav 音效
+[*][b]悬停描述[/b] - 按住 SHIFT 展开物品效果详情，不按则仅显示简介
+[*][b]控制台 Spawn[/b] - 控制台 spawn 命令支持所有自定义物品 ID
+[*][b]多人兼容[/b] - 自动检测 KrokMP，安全模式下仅启用开局发放
+[*][b]双语支持[/b] - 英语和简体中文
+[/list]
+
+---
+
+[size=4][b]16 种针剂[/b][/size]
+
+[table]
+[tr]
+[th]#[/th][th]针剂[/th][th]ItemKey[/th][th]定位[/th][th]增益[/th][th]副作用[/th][th]持续[/th]
+[/tr]
+[tr][td]1[/td][td]eTG-c[/td][td]etg_c[/td][td]再生兴奋剂[/td][td]每部位 +2 肌肉/s，血容量 +50ml/s 至 5L[/td][td]20s：每秒 -1 饱食/水分，胸口 +40 疼痛[/td][td]60s + 20s debuff[/td][/tr]
+[tr][td]2[/td][td]Zagustin[/td][td]zagustin[/td][td]止血剂[/td][td]长时间防出血[/td][td]饱食/水分消耗，颤栗[/td][td]150s[/td][/tr]
+[tr][td]3[/td][td]吗啡[/td][td]cu_morphine[/td][td]止痛剂[/td][td]原生 Painkillers 止疼（opiateAmount=35）[/td][td]极大幅阿片影响 - 不自救会致死！[/td][td]~300s[/td][/tr]
+[tr][td]4[/td][td]SJ12[/td][td]sj12[/td][td]体温调节[/td][td]体温 -> 31.5°C，韧性 +2，每秒 +0.2 饱食/水分[/td][td]体温 -> 40.5°C 过热[/td][td]600s buff + 180s debuff[/td][/tr]
+[tr][td]5[/td][td]M.U.L.E.[/td][td]mule[/td][td]负重增强[/td][td]+50% 负重上限[/td][td]每秒 -0.1 肌肉，意识上限 90%[/td][td]900s[/td][/tr]
+[tr][td]6[/td][td]Propital[/td][td]propital[/td][td]再生兴奋剂[/td][td]每部位 +0.1 肌肉/s +0.1 表皮/s，opiate +20[/td][td]患病 +10，延迟 STR/RES -2，管视+震颤[/td][td]900s + 300s debuff[/td][/tr]
+[tr][td]7[/td][td] SJ1[/td][td]sj1[/td][td]属性强化[/td][td]STR +5、RES +3、耐力恢复 +30%[/td][td]患病 +10，每秒 -0.1 饱食/水分[/td][td]300s[/td][/tr]
+[tr][td]8[/td][td]SJ6[/td][td]sj6[/td][td]耐力强化[/td][td]+20% 耐力上限，+120% 耐力恢复[/td][td]患病 +25，延迟管视+震颤[/td][td]900s + 300s debuff[/td][/tr]
+[tr][td]9[/td][td]SJ9[/td][td]sj9[/td][td]体温抑制[/td][td]体温锁定 31°C[/td][td]RES -2，延迟胸口疼痛+肌肉损伤[/td][td]1200s + 600s debuff[/td][/tr]
+[tr][td]10[/td][td]PNB[/td][td]pnb[/td][td]肌肉修复[/td][td]每部位 +0.2 肌肉/s（2min），RES +3（5min）[/td][td]延迟 STR -1，震颤 60s[/td][td]120s + 300s[/td][/tr]
+[tr][td]11[/td][td]Obdolbos[/td][td]obdolbos[/td][td]赌命鸡尾酒[/td][td]随机触发 8 种效果之一（含猝死）[/td][td]每次不同[/td][td]随机[/td][/tr]
+[tr][td]12[/td][td]Obdolbos 2[/td][td]obdolbos2[/td][td]永久强化[/td][td]永久 STR/RES/INT +6，负重 +3u[/td][td]-30% 耐力恢复，-20% 耐力上限 40min[/td][td]永久 + 300s debuff[/td][/tr]
+[tr][td]13[/td][td]蓝血[/td][td]blueblood[/td][td]人造血/解毒[/td][td]止血 120s，毒素 -70%，辐射 -10Gy[/td][td]延迟免疫力 -40%，33% 呕吐[/td][td]120s + 60s debuff[/td][/tr]
+[tr][td]14[/td][td]xTG-12[/td][td]xtg12[/td][td]解毒剂[/td][td]+70% 抵抗力，毒素 -100%[/td][td]20% 呕吐，延迟震颤[/td][td]300s + 60s debuff[/td][/tr]
+[tr][td]15[/td][td]米屈肼[/td][td]mildronate[/td][td]心脏保护[/td][td]纤颤 -20%，+10% 耐力上限，+50% 恢复[/td][td]每秒 -0.1 饱食/水分[/td][td]1500s + 900s debuff[/td][/tr]
+[tr][td]16[/td][td]2A2-(b-TG)[/td][td]2a2btg[/td][td]负重增强[/td][td]+7u 负重上限，心情 +5[/td][td]每秒 -0.1 水分[/td][td]1200s + 900s debuff[/td][/tr]
+[/table]
+
+---
+
+[size=4][b]12 种医疗物品[/b][/size]
+
+[table]
+[tr]
+[th]#[/th][th]物品[/th][th]ItemKey[/th][th]使用方式[/th][th]效果[/th][th]副作用[/th]
+[/tr]
+[tr][td]1[/td][td]AI-2[/td][td]ai2[/td][td]贴肢 SyringeMinigame（100ml，每次10ml）[/td][td]辐射 -1Gy，阿片 +0.2，内出血 -8%（每10ml）[/td][td]+3 患病，-10% 免疫力，-1 饱食/水分[/td][/tr]
+[tr][td]2[/td][td]Grizzly[/td][td]grizzlykit[/td][td]贴肢 BandageMinigame[/td][td]大幅止血+骨折恢复+脱臼恢复+表皮+肌肉恢复+消毒，耐久极高[/td][td]重量 3u（很重）[/td][/tr]
+[tr][td]3[/td][td]AFAK[/td][td]afak[/td][td]贴肢 BandageMinigame[/td][td]中幅止血+骨折/脱臼恢复+表皮恢复，耐久较高[/td][td]-[/td][/tr]
+[tr][td]4[/td][td]IFAK[/td][td]ifak[/td][td]贴肢 BandageMinigame[/td][td]中幅止血+骨折/脱臼恢复+表皮恢复，耐久中等[/td][td]-[/td][/tr]
+[tr][td]5[/td][td] Salewa[/td][td]salewa[/td][td]贴肢 BandageMinigame[/td][td]中幅止血，耐久很高[/td][td]-[/td][/tr]
+[tr][td]6[/td][td]Salewa（保温）[/td][td]salewa[/td][td]胸部+体温<30°C 时自动触发[/td][td]绷带变卡其色，体温回升至 36°C[/td][td]-[/td][/tr]
+[tr][td]7[/td][td]CMS 手术包[/td][td]cms[/td][td]贴肢自动检测[/td][td]拔弹片/复位脱臼/加速50%骨折恢复(+50疼痛)[/td][td]-[/td][/tr]
+[tr][td]8[/td][td]Surv12 手术包[/td][td]multitool[/td][td]贴肢自动检测[/td][td]拔弹片/复位脱臼/加速90%骨折恢复(+30疼痛)，耐久很高[/td][td]略重[/td][/tr]
+[tr][td]9[/td][td]金星药膏[/td][td]goldenstar[/td][td]贴肢（10ml，每次2ml）[/td][td]消毒 30s，延迟止痛 15s（疼痛降至10%）[/td][td]表皮 -5，心情 -5，意识降低 10s[/td][/tr]
+[tr][td]10[/td][td]凡士林[/td][td]vaseline[/td][td]贴肢（10ml，每次2ml）[/td][td]脏污度 -2，表皮 +5，手部使用爪子 +10[/td][td]-[/td][/tr]
+[tr][td]11[/td][td]力百汀[/td][td]libatine[/td][td]物品栏饮用（2ml，1次）[/td][td]抵抗力 +80 持续5min，1min内感染降至60%[/td][td]心情 -3，5/7/10min各5%概率呕吐[/td][/tr]
+[tr][td]12[/td][td]布洛芬[/td][td]ibuprofen[/td][td]物品栏饮用（10ml，每次2ml）[/td][td]抵抗力+50%/感染降至15%/体温-2°C/止痛/耐力恢复+20% 持续7min[/td][td]心情-3，7/10min各10%呕吐；10min内二次服用触发过量 - 可能致死！[/td][/tr]
+[/table]
+
+---
+
+[size=4][b]配置项[/b][/size]
+
+模组在 BepInEx/config/com.yourname.cu.tarkovmedicalmod.cfg 自动生成配置文件。
+
+[table]
+[tr][th]分类[/th][th]选项[/th][th]默认值[/th][th]说明[/th][/tr]
+[tr][td]General[/td][td]EnableMod[/td][td]true[/td][td]总开关[/td][/tr]
+[tr][td]General[/td][td]FeatureMode[/td][td]Both[/td][td]功能模式：Disabled / StartingLoadoutOnly / WorldLootOnly / Both[/td][/tr]
+[tr][td]Compatibility[/td][td]CompatibilityMode[/td][td]AutoSafe[/td][td]KrokMP 检测时的兼容策略[/td][/tr]
+[tr][td]Content[/td][td]UseExternalContentFile[/td][td]true[/td][td]从 JSON 文件加载物品定义[/td][/tr]
+[tr][td]Content[/td][td]AutoCreateContentFile[/td][td]true[/td][td]JSON 不存在时自动创建[/td][/tr]
+[tr][td]StartingLoadout[/td][td]MinItems / MaxItems[/td][td]1 / 3[/td][td]随机医疗物品数量范围（固定发放的5件不占用此配额）[/td][/tr]
+[tr][td]WorldLoot[/td][td]MinItems / MaxItems[/td][td]1 / 4[/td][td]世界战利品数量范围[/td][/tr]
+[tr][td]Distribution[/td][td]AllowDuplicateItems[/td][td]true[/td][td]允许重复物品[/td][/tr]
+[tr][td]Distribution[/td][td]Seed[/td][td]0[/td][td]随机种子（0 = 随机）[/td][/tr]
+[tr][td]Debug[/td][td]LogGeneratedPlans[/td][td]true[/td][td]日志输出发放计划[/td][/tr]
+[/table]
+
+---
+
+[size=4][b]操作说明[/b][/size]
+
+[table]
+[tr][th]按键[/th][th]功能[/th][/tr]
+[tr][td]左键点击（物品栏中的物品）[/td][td]使用针剂 / 饮用液体药品[/td][/tr]
+[tr][td]左键点击（身体部位上）[/td][td]使用医疗包 / 手术包 / 药膏[/td][/tr]
+[tr][td]按住 SHIFT[/td][td]展开悬停描述，显示完整效果详情[/td][/tr]
+[tr][td]F7 / 小键盘7[/td][td]调试：输出运行时状态（模组初始化、模式、KrokMP、手持物品）[/td][/tr]
+[/table]
+
+---
+
+[size=4][b]控制台命令[/b][/size]
+
+所有自定义物品均可通过开发者控制台生成：
+[code]spawn etg_c
+spawn cu_morphine
+spawn grizzlykit
+spawn cms
+...[/code]
+
+使用 spawn + 上表中的任意 ItemKey。
+
+---
+
+[size=4][b]容器掉落概率[/b][/size]
+
+[table]
+[tr][th]容器类型[/th][th]针剂掉落[/th][th]药品掉落[/th][/tr]
+[tr][td]医疗箱（medcrate）[/td][td]17% 掉 1-2 根[/td][td]20% 掉 1-2 件[/td][/tr]
+[tr][td]物资箱（containercrate）[/td][td]-[/td][td]15% 掉 1-3 件[/td][/tr]
+[tr][td]尸体（corpse）[/td][td]-[/td][td]10% 掉 1 件[/td][/tr]
+[/table]
+
+---
+
+[size=4][b]兼容性[/b][/size]
+
+[list]
+[*][b]KrokMP（多人模组）：[/b]自动检测。安全模式下仅启用开局发放，防止不同步。
+[*][b]其他 BepInEx 模组：[/b]应兼容。模组使用唯一 GUID com.yourname.cu.tarkovmedicalmod 的 Harmony 补丁。
+[/list]
+
+---
+
+[size=4][b]卸载[/b][/size]
+
+删除 BepInEx/plugins/CUTarkovMedicalMod/ 文件夹即可。
+
+---
+
+[size=4][b]源代码 & GitHub[/b][/size]
+
+本模组完全开源，源代码托管在 GitHub：
+
+[url=https://github.com/hmm1313133/CUTarkovMedicalMod]https://github.com/hmm1313133/CUTarkovMedicalMod[/url]
+
+---
+
+[size=4][b]Bug 反馈 & 建议[/b][/size]
+
+发现 Bug？有建议？请在 GitHub Issues 中反馈：
+
+[url=https://github.com/hmm1313133/CUTarkovMedicalMod/issues]https://github.com/hmm1313133/CUTarkovMedicalMod/issues[/url]
+
+提交 Bug 报告时，请包含以下信息：
+
+1. [b]模组版本[/b]（当前 0.1.0）
+2. [b]游戏版本[/b]（查看游戏主菜单）
+3. [b]BepInEx 版本[/b]
+4. [b]其他已安装模组[/b]（如有）
+5. [b]复现步骤[/b] - 如何触发 Bug
+6. [b]日志文件[/b] - 附上 BepInEx/LogOutput.log（或粘贴相关错误行）
+7. [b]截图[/b]（如有）
+
+[i]提交前请先查看已有 Issues，避免重复报告。[/i]
+
+---
+
+[size=4][b]致谢[/b][/size]
+
+[list]
+[*][b]Escape from Tarkov[/b] (Battlestate Games) - 原始物品设计、描述和机制灵感
+[*][b]Casualties: Unknown[/b] - 基础游戏
+[*][b]BepInEx[/b] - 模组框架
+[*][b]Harmony[/b] - 运行时补丁库
+[/list]
+
+---
+
+[size=4][b]许可证[/b][/size]
+
+本项目使用仓库中包含的 LICENSE 文件所述的许可证。
+
+[i]本模组与 Battlestate Games 或 Casualties: Unknown 开发者无关，也未获得其认可。所有商标归其各自所有者所有。[/i]

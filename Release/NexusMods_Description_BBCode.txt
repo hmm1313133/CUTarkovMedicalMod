@@ -1,0 +1,294 @@
+[size=5][b]Casualties: Unknown - Tarkov-Style Medical Mod[/b][/size]
+
+[b]Version: 0.1.0[/b]
+
+A BepInEx mod for [b]Casualties: Unknown Demo[/b] that brings the complete Escape from Tarkov medical system into the game - 16 combat stimulant injectors, 12 medical items, and a fully integrated medical framework.
+
+Each stimulant has its own unique buff/side-effect mechanics, registered into the game's native item table via reflection. Medical kits hook into native minigame systems (BandageMinigame, SyringeMinigame, ShrapnelMinigame, DislocationMinigame).
+
+---
+
+[size=4][b]Requirements[/b][/size]
+
+[list]
+[*][b]Game:[/b] Casualties: Unknown Demo (Steam)
+[*][b]Mod Loader:[/b] BepInEx 5.x (BEPUEx or BepInExPack)
+[/list]
+
+[b]Installing BepInEx[/b]
+
+If you haven't installed BepInEx yet:
+1. Download [url=https://github.com/BepInEx/BepInEx/releases]BepInEx 5.x stable[/url] (x64)
+2. Extract the contents into your game root folder (Steam/steamapps/common/Casualties Unknown Demo/)
+3. Launch the game once to generate the BepInEx/ folder structure
+4. Close the game
+
+---
+
+[size=4][b]Installation[/b][/size]
+
+1. Download the mod archive (CUTarkovMedicalMod_v0.1.0.zip)
+2. Extract the [b]contents[/b] of the zip into your game root folder
+   - The zip contains: BepInEx/plugins/CUTarkovMedicalMod/...
+   - After extraction, the structure should look like:
+[code][Game Root]/
+└── BepInEx/
+    └── plugins/
+        └── CUTarkovMedicalMod/
+            ├── CUTarkovMedicalMod.dll
+            ├── Framework/
+            │   └── Assets/        (icons + sound effects)
+            └── Lang/              (EN.json, zh_CN.json)[/code]
+3. Launch the game
+
+[b]Verifying Installation[/b]
+
+Check BepInEx/LogOutput.log for:
+[code]Casualties: Unknown - Tarkov-Style Medical Mod loaded. Enabled=True
+Medical content source: ...
+Catalog item count: 38[/code]
+
+If you see errors in the log, see the [b]Bug Reports[/b] section below.
+
+---
+
+[size=4][b]Features[/b][/size]
+
+[list]
+[*][b]16 custom stimulants[/b] - each with unique ItemKey, ItemInfo, useAction delegate, and effect controller
+[*][b]12 medical items[/b] - first aid kits (BandageMinigame), surgical kits (auto-detection), balms/pills (liquid system)
+[*][b]Starting loadout[/b] - fixed 5 medical items (Grizzly/AFAK/IFAK/Salewa/AI-2) + random medical items
+[*][b]World loot[/b] - random medical items (including stims and drugs) spawn in the world
+[*][b]Container drops[/b] - medical crates, supply crates, and corpses drop stims/drugs by probability
+[*][b]Buff indicator[/b] - native MoodleManager displays stim effect icons and countdown timers
+[*][b]Tunnel vision[/b] - URP Vignette post-processing for dark vignette overlay (triggered by some stim side effects)
+[*][b]Injector sound[/b] - custom med_stimulator_use.wav sound effect on injection
+[*][b]Hover descriptions[/b] - hold SHIFT to expand item effect details; release to show only brief lore text
+[*][b]Console spawn[/b] - console spawn command supports all custom item IDs
+[*][b]Multiplayer compatible[/b] - auto-detects KrokMP, enters safe mode (starting loadout only) when detected
+[*][b]Bilingual support[/b] - English and Simplified Chinese
+[/list]
+
+---
+
+[size=4][b]16 Stimulants[/b][/size]
+
+[table]
+[tr]
+[th]#[/th][th]Stimulant[/th][th]ItemKey[/th][th]Role[/th][th]Buff[/th][th]Side Effect[/th][th]Duration[/th]
+[/tr]
+[tr]
+[td]1[/td][td]eTG-c[/td][td]etg_c[/td][td]Regenerative[/td][td]+2 muscle/s per limb, blood volume +50ml/s to 5L[/td][td]20s: -1 hunger/hydration/s, chest pain +40[/td][td]60s + 20s debuff[/td]
+[/tr]
+[tr]
+[td]2[/td][td]Zagustin[/td][td]zagustin[/td][td]Hemostatic[/td][td]Long bleeding prevention[/td][td]Hydration drain, tremors[/td][td]150s[/td]
+[/tr]
+[tr]
+[td]3[/td][td]Morphine[/td][td]cu_morphine[/td][td]Painkiller[/td][td]Native Painkillers (opiateAmount=35)[/td][td]One-time -10 hunger / -15 hydration; extreme opioid - fatal if untreated![/td][td]~300s[/td]
+[/tr]
+[tr]
+[td]4[/td][td]SJ12[/td][td]sj12[/td][td]Thermoregulation[/td][td]Body temp -> 31.5°C, +2 resilience, +0.2 hunger/hydration/s[/td][td]Body temp -> 40.5°C overheating[/td][td]600s buff + 180s debuff[/td]
+[/tr]
+[tr]
+[td]5[/td][td]M.U.L.E.[/td][td]mule[/td][td]Carry weight[/td][td]+50% carry capacity[/td][td]-0.1 muscle/s per limb, consciousness capped at 90%[/td][td]900s[/td]
+[/tr]
+[tr]
+[td]6[/td][td]Propital[/td][td]propital[/td][td]Regenerative[/td][td]+0.1 muscle/s +0.1 skin/s, opiate +20[/td][td]+10 sickness, delayed STR/RES -2, tunnel vision + tremors[/td][td]900s + 300s debuff[/td]
+[/tr]
+[tr]
+[td]7[/td][td]SJ1[/td][td]sj1[/td][td]Attribute boost[/td][td]STR +5, RES +3, +30% stamina recovery[/td][td]+10 sickness, -0.1 hunger/hydration/s[/td][td]300s[/td]
+[/tr]
+[tr]
+[td]8[/td][td]SJ6[/td][td]sj6[/td][td]Stamina boost[/td][td]+20% stamina cap, +120% stamina recovery[/td][td]+25 sickness, delayed tunnel vision + tremors[/td][td]900s + 300s debuff[/td]
+[/tr]
+[tr]
+[td]9[/td][td]SJ9[/td][td]sj9[/td][td]Temp suppressant[/td][td]Body temp locked at 31°C[/td][td]RES -2, delayed chest pain + muscle damage[/td][td]1200s + 600s debuff[/td]
+[/tr]
+[tr]
+[td]10[/td][td]PNB[/td][td]pnb[/td][td]Muscle repair[/td][td]+0.2 muscle/s per limb (2min), RES +3 (5min)[/td][td]Delayed STR -1, tremors 60s[/td][td]120s + 300s[/td]
+[/tr]
+[tr]
+[td]11[/td][td]Obdolbos[/td][td]obdolbos[/td][td]Gamble cocktail[/td][td]Random one of 8 effects (including instant death)[/td][td]Varies each time[/td][td]Random[/td]
+[/tr]
+[tr]
+[td]12[/td][td]Obdolbos 2[/td][td]obdolbos2[/td][td]Permanent boost[/td][td]Permanent STR/RES/INT +6, carry weight +3u[/td][td]-30% stamina recovery, -20% stamina cap for 40min[/td][td]Permanent + 300s debuff[/td]
+[/tr]
+[tr]
+[td]13[/td][td]Blue Blood[/td][td]blueblood[/td][td]Artificial blood / Antidote[/td][td]Stop bleeding 120s, toxin -70%, radiation -10Gy[/td][td]Delayed immunity -40%, 33% vomiting[/td][td]120s + 60s debuff[/td]
+[/tr]
+[tr]
+[td]14[/td][td]xTG-12[/td][td]xtg12[/td][td]Antidote[/td][td]+70% resistance, toxin -100%[/td][td]20% vomiting, delayed tremors[/td][td]300s + 60s debuff[/td]
+[/tr]
+[tr]
+[td]15[/td][td]Mildronate[/td][td]mildronate[/td][td]Cardiac protection[/td][td]Fibrillation -20%, +10% stamina cap, +50% recovery[/td][td]-0.1 hunger/hydration/s[/td][td]1500s + 900s debuff[/td]
+[/tr]
+[tr]
+[td]16[/td][td]2A2-(b-TG)[/td][td]2a2btg[/td][td]Carry weight[/td][td]+7u carry capacity, mood +5[/td][td]-0.1 hydration/s[/td][td]1200s + 900s debuff[/td]
+[/tr]
+[/table]
+
+---
+
+[size=4][b]12 Medical Items[/b][/size]
+
+[table]
+[tr]
+[th]#[/th][th]Item[/th][th]ItemKey[/th][th]Usage[/th][th]Effect[/th][th]Side Effect[/th]
+[/tr]
+[tr]
+[td]1[/td][td]AI-2[/td][td]ai2[/td][td]SyringeMinigame (100ml, 10ml/use)[/td][td]Radiation -1Gy, opiate +0.2, internal bleeding -8% (per 10ml)[/td][td]+3 sickness, -10% immunity, -1 hunger/hydration[/td]
+[/tr]
+[tr]
+[td]2[/td][td]Grizzly[/td][td]grizzlykit[/td][td]BandageMinigame[/td][td]Major hemostasis + fracture/dislocation recovery + skin/muscle recovery + disinfection. Very high durability[/td][td]Heavy (3u)[/td]
+[/tr]
+[tr]
+[td]3[/td][td]AFAK[/td][td]afak[/td][td]BandageMinigame[/td][td]Moderate hemostasis + fracture/dislocation/skin recovery. High durability[/td][td]-[/td]
+[/tr]
+[tr]
+[td]4[/td][td]IFAK[/td][td]ifak[/td][td]BandageMinigame[/td][td]Moderate hemostasis + fracture/dislocation/skin recovery. Medium durability[/td][td]-[/td]
+[/tr]
+[tr]
+[td]5[/td][td]Salewa[/td][td]salewa[/td][td]BandageMinigame[/td][td]Moderate hemostasis. Very high durability[/td][td]-[/td]
+[/tr]
+[tr]
+[td]6[/td][td]Salewa (Thermal)[/td][td]salewa[/td][td]Auto-trigger on chest when temp < 30°C[/td][td]Bandage turns khaki, body temp rises to 36°C[/td][td]-[/td]
+[/tr]
+[tr]
+[td]7[/td][td]CMS Kit[/td][td]cms[/td][td]Auto-detect on limb[/td][td]Shrapnel removal / dislocation reduction / 50% fracture recovery (+50 pain)[/td][td]-[/td]
+[/tr]
+[tr]
+[td]8[/td][td]Surv12 Kit[/td][td]multitool[/td][td]Auto-detect on limb[/td][td]Shrapnel removal / dislocation reduction / 90% fracture recovery (+30 pain). Very high durability[/td][td]Slightly heavy[/td]
+[/tr]
+[tr]
+[td]9[/td][td]Golden Star[/td][td]goldenstar[/td][td]Apply to limb (10ml, 2ml/use)[/td][td]Disinfect 30s, delayed pain relief 15s (pain to 10%)[/td][td]Skin -5, mood -5, consciousness reduced 10s[/td]
+[/tr]
+[tr]
+[td]10[/td][td]Vaseline[/td][td]vaseline[/td][td]Apply to limb (10ml, 2ml/use)[/td][td]Dirt -2, skin +5. On hands: claw +10[/td][td]-[/td]
+[/tr]
+[tr]
+[td]11[/td][td]Augmentin[/td][td]libatine[/td][td]Drink from inventory (2ml, 1 use)[/td][td]+80% resistance 5min, infection to 60% in 1min[/td][td]Mood -3, 5/7/10min 5% vomiting each[/td]
+[/tr]
+[tr]
+[td]12[/td][td]Ibuprofen[/td][td]ibuprofen[/td][td]Drink from inventory (10ml, 2ml/use)[/td][td]+50% resistance / infection to 15% / temp -2°C / pain relief / +20% stamina recovery 7min[/td][td]Mood -3, 7/10min 10% vomiting; second dose within 10min triggers overdose - can be fatal![/td]
+[/tr]
+[/table]
+
+---
+
+[size=4][b]Configuration[/b][/size]
+
+The mod auto-generates a config file at BepInEx/config/com.yourname.cu.tarkovmedicalmod.cfg.
+
+[table]
+[tr]
+[th]Category[/th][th]Option[/th][th]Default[/th][th]Description[/th]
+[/tr]
+[tr][td]General[/td][td]EnableMod[/td][td]true[/td][td]Master toggle[/td][/tr]
+[tr][td]General[/td][td]FeatureMode[/td][td]Both[/td][td]Disabled / StartingLoadoutOnly / WorldLootOnly / Both[/td][/tr]
+[tr][td]Compatibility[/td][td]CompatibilityMode[/td][td]AutoSafe[/td][td]KrokMP detection strategy[/td][/tr]
+[tr][td]Content[/td][td]UseExternalContentFile[/td][td]true[/td][td]Load item definitions from JSON[/td][/tr]
+[tr][td]Content[/td][td]AutoCreateContentFile[/td][td]true[/td][td]Auto-create JSON if missing[/td][/tr]
+[tr][td]StartingLoadout[/td][td]MinItems / MaxItems[/td][td]1 / 3[/td][td]Random medical item count range (fixed 5 items excluded)[/td][/tr]
+[tr][td]WorldLoot[/td][td]MinItems / MaxItems[/td][td]1 / 4[/td][td]World loot item count range[/td][/tr]
+[tr][td]Distribution[/td][td]AllowDuplicateItems[/td][td]true[/td][td]Allow duplicate items[/td][/tr]
+[tr][td]Distribution[/td][td]Seed[/td][td]0[/td][td]Random seed (0 = random)[/td][/tr]
+[tr][td]Debug[/td][td]LogGeneratedPlans[/td][td]true[/td][td]Log distribution plans[/td][/tr]
+[/table]
+
+---
+
+[size=4][b]Controls[/b][/size]
+
+[table]
+[tr][th]Key[/th][th]Function[/th][/tr]
+[tr][td]Left Click (item in inventory)[/td][td]Use stimulant / drink liquid medicine[/td][/tr]
+[tr][td]Left Click (on body limb)[/td][td]Use medical kit / surgical kit / balm[/td][/tr]
+[tr][td]Hold SHIFT[/td][td]Expand hover description to show full effect details[/td][/tr]
+[tr][td]F7 / Numpad 7[/td][td]Debug: output runtime status (mod init, mode, KrokMP, held item)[/td][/tr]
+[/table]
+
+---
+
+[size=4][b]Console Commands[/b][/size]
+
+All custom items can be spawned via the developer console:
+[code]spawn etg_c
+spawn cu_morphine
+spawn grizzlykit
+spawn cms
+...[/code]
+
+Use spawn followed by any ItemKey from the tables above.
+
+---
+
+[size=4][b]Container Drop Rates[/b][/size]
+
+[table]
+[tr][th]Container Type[/th][th]Stim Drop[/th][th]Medical Item Drop[/th][/tr]
+[tr][td]Medical Crate (medcrate)[/td][td]17% -> 1-2 stims[/td][td]20% -> 1-2 items[/td][/tr]
+[tr][td]Supply Crate (containercrate)[/td][td]-[/td][td]15% -> 1-3 items[/td][/tr]
+[tr][td]Corpse (corpse)[/td][td]-[/td][td]10% -> 1 item[/td][/tr]
+[/table]
+
+---
+
+[size=4][b]Compatibility[/b][/size]
+
+[list]
+[*][b]KrokMP (Multiplayer):[/b] Auto-detected. In safe mode, only starting loadout is enabled to prevent desync.
+[*][b]Other BepInEx mods:[/b] Should be compatible. The mod uses Harmony patches with unique GUID com.yourname.cu.tarkovmedicalmod.
+[/list]
+
+---
+
+[size=4][b]Uninstallation[/b][/size]
+
+Delete the BepInEx/plugins/CUTarkovMedicalMod/ folder.
+
+---
+
+[size=4][b]Source Code & GitHub[/b][/size]
+
+This mod is open source! The full source code is available on GitHub:
+
+[url=https://github.com/hmm1313133/CUTarkovMedicalMod]https://github.com/hmm1313133/CUTarkovMedicalMod[/url]
+
+---
+
+[size=4][b]Bug Reports & Feedback[/b][/size]
+
+Found a bug? Have a suggestion? Please report it on GitHub Issues:
+
+[url=https://github.com/hmm1313133/CUTarkovMedicalMod/issues]https://github.com/hmm1313133/CUTarkovMedicalMod/issues[/url]
+
+When filing a bug report, please include:
+
+1. [b]Mod version[/b] (currently 0.1.0)
+2. [b]Game version[/b] (check the game's main menu)
+3. [b]BepInEx version[/b]
+4. [b]Other installed mods[/b] (if any)
+5. [b]Steps to reproduce[/b] the bug
+6. [b]The log file[/b] - attach BepInEx/LogOutput.log (or paste relevant error lines)
+7. [b]Screenshots[/b] (if applicable)
+
+[i]Before reporting, please check existing issues to avoid duplicates.[/i]
+
+---
+
+[size=4][b]Credits[/b][/size]
+
+[list]
+[*][b]Escape from Tarkov[/b] by Battlestate Games - original item designs, descriptions, and mechanics inspiration
+[*][b]Casualties: Unknown[/b] - the base game
+[*][b]BepInEx[/b] - modding framework
+[*][b]Harmony[/b] - runtime patching library
+[/list]
+
+---
+
+[size=4][b]License[/b][/size]
+
+This project is licensed under the terms of the LICENSE file included in the repository.
+
+[i]This mod is not affiliated with or endorsed by Battlestate Games or the developers of Casualties: Unknown. All trademarks belong to their respective owners.[/i]

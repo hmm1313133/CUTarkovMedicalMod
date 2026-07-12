@@ -1,0 +1,12 @@
+<Project>
+  <!--
+    本地游戏路径覆盖文件。
+    用法：复制本文件为 vars.local.targets，修改下面的路径。
+    vars.local.targets 已在 .gitignore 中忽略，不会提交到仓库。
+
+    路径指向游戏的根目录（包含 CasualtiesUnknown_Data 文件夹的那个目录）。
+  -->
+  <PropertyGroup>
+    <BaseGamePath>O:/SteamLibrary/steamapps/common/Casualties Unknown Demo</BaseGamePath>
+  </PropertyGroup>
+</Project>
