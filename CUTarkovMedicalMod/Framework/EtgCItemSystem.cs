@@ -338,6 +338,9 @@ public static class EtgStimRegistryPatch
         IbuprofenItemSystem.EnsureRegisteredInItemTable();
         MultiToolItemSystem.EnsureRegisteredInItemTable();
         CmsKitItemSystem.EnsureRegisteredInItemTable();
+
+        // 通知集成模式物品已注册到 GlobalItems
+        Plugin.IntegrationMode?.OnItemsSetup();
     }
 }
 

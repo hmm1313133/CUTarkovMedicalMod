@@ -11,6 +11,14 @@
 # 构建路径配置（csproj 引用，构建/部署所需）
 !vars.targets
 
+# 打包脚本
+!scripts/
+!scripts/**
+
+# Release 描述与更新日志（不含 zip 二进制文件）
+!Release/
+!Release/NexusMods_*.txt
+
 # 模组源码与资产
 !CUTarkovMedicalMod/
 !CUTarkovMedicalMod/**

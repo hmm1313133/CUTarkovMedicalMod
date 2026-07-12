@@ -6,7 +6,7 @@
     <AssemblyName>CUTarkovMedicalMod</AssemblyName>
     <RootNamespace>CUTarkovMedicalMod</RootNamespace>
     <Product>Casualties: Unknown - Tarkov-Style Medical Mod</Product>
-    <Version>0.2.4</Version>
+    <Version>0.2.5</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>$(NoWarn);0649</NoWarn>
     <Platforms>AnyCPU;x64;x86</Platforms>
@@ -46,6 +46,12 @@
     </Reference>
     <Reference Include="System.Net.Http" />
     <Reference Include="System.IO.Compression" />
+
+    <!-- CUCoreLib 引用程序集（桩），运行时由真实 CUCoreLib.dll 替代。Private=false 不复制到输出。 -->
+    <ProjectReference Include="../CUCoreLibRef/CUCoreLibRef.csproj">
+      <Private>false</Private>
+      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+    </ProjectReference>
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">

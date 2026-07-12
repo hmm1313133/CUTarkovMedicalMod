@@ -336,7 +336,8 @@ public static class StimBuffIndicator
                 }
 
                 // 使用统一的 intensity，通过 NormalizeMoodleIcon 覆盖背景颜色
-                const int sharedIntensity = 1;
+                // Clamp 到 _maxValidIntensity 以防 backgroundIcons 数组越界
+                var sharedIntensity = Mathf.Clamp(1, 0, _maxValidIntensity);
                 var moodleKey = $"stim_{buff.Key}";
 
                 _addMoodleMethod.Invoke(manager, new object[]

@@ -3,18 +3,22 @@ using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
 using CUTarkovMedicalMod.Framework;
+using CUTarkovMedicalMod.Integration;
 using UnityEngine;
 
 namespace CUTarkovMedicalMod;
 
 [BepInPlugin(ModGuid, ModName, ModVersion)]
+[BepInDependency("net.cucorelib", BepInDependency.DependencyFlags.SoftDependency)]
+[BepInDependency("org.bepinex.plugins.qol_unknown", BepInDependency.DependencyFlags.SoftDependency)]
 public sealed class Plugin : BaseUnityPlugin
 {
     public const string ModGuid = "com.yourname.cu.tarkovmedicalmod";
     public const string ModName = "Casualties: Unknown - Tarkov-Style Medical Mod";
-    public const string ModVersion = "0.2.4";
+    public const string ModVersion = "0.2.5";
 
     internal static ManualLogSource Log = null!;
+    internal static IIntegrationMode IntegrationMode = null!;
 
     private MedicalFramework _framework = null!;
     private MedicalDebugHotkeys _debugHotkeys = null!;
@@ -34,19 +38,27 @@ public sealed class Plugin : BaseUnityPlugin
 
         try
         {
-            var harmony = new Harmony(ModGuid);
             MedicalInjectionBridge.RegisterSink(new DefaultMedicalItemGrantSink());
             MedicalSpawnHooks.SetLog(Logger);
             MedicalWorldLootHooks.SetLog(Logger);
-            harmony.PatchAll();
-
-            if (QoLSaveFix.HasQoL())
-                QoLSaveFix.Register(harmony);
         }
         catch (Exception ex)
         {
-            Log.LogError($"PatchAll() threw: {ex}");
+            Log.LogError($"Setup threw: {ex}");
         }
+
+        var harmony = new Harmony(ModGuid);
+        try { harmony.PatchAll(); }
+        catch (Exception ex) { Log.LogError($"PatchAll() threw: {ex}"); }
+
+        // Initialize integration mode now. QoL loads before us (verified in logs),
+        // so Chainloader.PluginInfos will contain QoL's GUID.
+        try
+        {
+            IntegrationMode = IntegrationModeFactory.Create();
+            IntegrationMode.Initialize(harmony);
+        }
+        catch (Exception ex) { Log.LogError($"IntegrationMode.Initialize() threw: {ex}"); }
 
         Log.LogInfo($"{ModName} loaded. Enabled={_framework.EffectiveMode != MedicalFeatureMode.Disabled}, KrokMP={_framework.KrokMpDetected}");
         Log.LogInfo($"Medical content source: {_framework.ContentSource}");

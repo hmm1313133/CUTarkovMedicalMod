@@ -1,0 +1,78 @@
+Version: 1.0.2.0
+Author: hmm1313133
+Mod GUID: com.yourname.cu.tarkovweaponmod
+GitHub: https://github.com/hmm1313133/CUTarkovWeaponMod
+
+===========================================================
+DESCRIPTION
+===========================================================
+
+A BepInEx mod for Casualties: Unknown Demo that adds Tarkov-style firearms, ammunition, magazines, and melee weapons.
+
+Features:
+- 13 custom firearms (AKM, M4A1, AXMC, DVL-10, SKS, Deagle, Glock-17, P90, UMP-45, RPD, MP-133, MP-153, USP)
+- 2 melee weapons (Red Rebel ice axe, M2 sword)
+- 10 custom magazines with realistic ammo capacities
+- 9 custom ammunition types with distinct damage/penetration
+- World loot spawning (containers, corpses, lifepods, collapsed pods)
+- Crafting recipes for all ammo and magazines
+- Vanilla weapon/ammo/magazine block system (toggleable via console)
+- Trader inventory filtering
+- CUCoreLib integration (ItemRegistry registration for save compatibility)
+- QoL Unknown save compatibility (handled by MedicalMod)
+- Scope zoom for AXMC sniper rifle
+- Custom fire/reload sounds per weapon
+- Multi-language support (EN/zh_CN)
+
+===========================================================
+REQUIREMENTS
+===========================================================
+
+- BepInEx 5.x
+- Casualties: Unknown Demo
+- CUTarkovMedicalMod v0.2.5 or later (hard dependency)
+- Optional: CUCoreLib (for non-destructive save coordination)
+- Optional: QoL Unknown (save compatibility handled by MedicalMod)
+
+===========================================================
+INSTALLATION
+===================================================
+
+1. Download CUTarkovWeaponMod_v1.0.2.0.zip
+2. Extract the contents directly into BepInEx/plugins/CUTarkovWeaponMod/
+   (DLL, Framework/, and Lang/ should be at the top level)
+3. Ensure CUTarkovMedicalMod is also installed
+4. Launch the game
+
+===========================================================
+CHANGELOG
+===========================================================
+
+v1.0.2.0 - 2026-07-13
+- New: Integration layer (IWeaponIntegrationMode / WeaponCUCoreLibMode / WeaponLegacyMode / Factory)
+  - CUCoreLib mode: registers 34 weapon items to ItemRegistry for save compatibility
+  - Legacy mode: no-op (QoL save fix handled by MedicalMod)
+  - Factory uses NoInlining to isolate CUCoreLib type references
+- New: Added [BepInDependency(SoftDependency)] for CUCoreLib and QoL Unknown
+- New: WeaponItemIds HashSet (34 IDs) and IsWeaponItem() method for external queries
+- Fix: Corrected ProjectReference path (was pointing to non-existent -test1 directory)
+- Fix: Added CUCoreLibRef project reference for compilation
+- Refactor: WeaponItemRegistryPatch.Postfix now calls IntegrationMode.OnItemsSetup()
+
+v1.0.1.0
+- Feature: USP pistol + magazine + 9mm ammo
+- Feature: Scope zoom for AXMC
+- Feature: Auto-update notifier
+- Fix: Various spawning and crafting fixes
+
+v1.0.0.0
+- Initial release: 13 firearms, 2 melee, 10 magazines, 9 ammo types
+- World loot, crafting recipes, vanilla block system
+
+===========================================================
+BUG REPORTS
+===========================================================
+
+Please report bugs at: https://github.com/hmm1313133/CUTarkovWeaponMod/issues
+Include your BepInEx/LogOutput.log file.
+Current version: v1.0.2.0
