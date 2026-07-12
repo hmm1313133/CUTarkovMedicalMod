@@ -99,7 +99,18 @@ public static class QoLSaveFix
         return false;
     }
 
-    public static void Register(Harmony harmony)
+    public static void Register(Harmony harmony) => Register(harmony, includeTranspiler: true);
+
+    /// <summary>
+    /// 注册 QoL 兼容存档补丁。
+    /// 
+    /// 当 CUCoreLib 同时安装时，应传入 includeTranspiler=false：
+    /// CUCoreLib 已有相同的 Transpiler（拦截 Resources.Load + Object.Instantiate），
+    /// 重复注册会导致 Harmony transpiler 链冲突。QoLSaveFix 的 Prefix 已将自定义物品 ID
+    /// 替换为原版基础预制体 ID，CUCoreLib 的 Transpiler 会直接 Resources.Load 原版预制体成功，
+    /// 无需 QoLSaveFix 的 Transpiler 兜底。
+    /// </summary>
+    public static void Register(Harmony harmony, bool includeTranspiler)
     {
         var mSave = typeof(SaveSystem).GetMethod("SaveGame");
         var mLoad = typeof(SaveSystem).GetMethod("TryLoadGame");
@@ -114,12 +125,16 @@ public static class QoLSaveFix
             after = new[] { "org.bepinex.plugins.qol.savesystem" }
         };
 
+        var transpiler = includeTranspiler
+            ? new HarmonyMethod(typeof(QoLSaveFix_Transpiler), "Transpiler")
+            : null;
+
         harmony.Patch(mLoad,
             prefix: loadPrefix,
             postfix: new HarmonyMethod(typeof(QoLSaveFix_Load), "Postfix"),
-            transpiler: new HarmonyMethod(typeof(QoLSaveFix_Transpiler), "Transpiler"));
+            transpiler: transpiler);
 
-        Plugin.Log.LogInfo("[QoLSaveFix] Registered Save/Load + transpiler patches (Prefix after QoL).");
+        Plugin.Log.LogInfo($"[QoLSaveFix] Registered Save/Load patches (Prefix after QoL, transpiler={includeTranspiler}).");
     }
 }
 

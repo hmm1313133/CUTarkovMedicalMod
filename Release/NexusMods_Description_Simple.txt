@@ -1,4 +1,4 @@
-Version: 0.2.5
+Version: 0.2.6
 Author: hmm1313133
 Mod GUID: com.yourname.cu.tarkovmedicalmod
 GitHub: https://github.com/hmm1313133/CUTarkovMedicalMod
@@ -35,7 +35,7 @@ REQUIREMENTS
 INSTALLATION
 ===========================================================
 
-1. Download CUTarkovMedicalMod_v0.2.5.zip
+1. Download CUTarkovMedicalMod_v0.2.6.zip
 2. Extract the contents directly into BepInEx/plugins/CUTarkovMedicalMod/
    (DLL, Framework/, and Lang/ should be at the top level)
 3. Launch the game
@@ -43,6 +43,17 @@ INSTALLATION
 ===========================================================
 CHANGELOG
 ===========================================================
+
+v0.2.6 - 2026-07-13
+- Fix: "Error occured during loading item 'propital(Clone) (Item)'" when both QoL Unknown
+  and CUCoreLib are installed simultaneously
+  - Root cause: CUCoreLib's CustomInstantiate.ChooseTemplateId returns "bandage" instead of
+    "syringe" for our items (plain ItemInfo with capacity=0), missing WaterContainerItem
+  - Fix: CUCoreLibMode now activates QoLSaveFix (Prefix+Postfix only, no Transpiler) when QoL
+    is also present. QoLSaveFix Prefix replaces custom IDs with vanilla prefab IDs before load,
+    Postfix converts them back after load. Transpiler skipped to avoid conflict with CUCoreLib's
+    own Transpiler on the same Resources.Load call site
+- QoLSaveFix.Register() now accepts includeTranspiler parameter for selective registration
 
 v0.2.5 - 2026-07-13
 - Fix: StimBuffIndicator IndexOutOfRangeException when backgroundIcons array is too short
@@ -80,4 +91,4 @@ BUG REPORTS
 
 Please report bugs at: https://github.com/hmm1313133/CUTarkovMedicalMod/issues
 Include your BepInEx/LogOutput.log file.
-Current version: v0.2.5
+Current version: v0.2.6

@@ -15,7 +15,7 @@ public sealed class Plugin : BaseUnityPlugin
 {
     public const string ModGuid = "com.yourname.cu.tarkovmedicalmod";
     public const string ModName = "Casualties: Unknown - Tarkov-Style Medical Mod";
-    public const string ModVersion = "0.2.5";
+    public const string ModVersion = "0.2.6";
 
     internal static ManualLogSource Log = null!;
     internal static IIntegrationMode IntegrationMode = null!;

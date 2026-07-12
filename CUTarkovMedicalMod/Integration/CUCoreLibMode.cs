@@ -56,8 +56,22 @@ public sealed class CUCoreLibMode : IIntegrationMode
             StringComparer.OrdinalIgnoreCase);
         Plugin.Log.LogInfo($"[CUCoreLib] Snapshot {_medicalItemIds.Count} medical item IDs.");
 
-        // 跳过 QoLSaveFix - CUCoreLib 通过非破坏性 SaveCoordinator 接管存档读写，
-        // QoLSaveFix 的破坏性修改（Load Prefix 删除 save.sv 键）与 CUCoreLib 冲突。
+        // 当 QoL 也安装时，额外注册 QoLSaveFix（仅 Prefix+Postfix，不含 Transpiler）。
+        //
+        // 原因：CUCoreLib 的 CustomInstantiate.GetOrCreateTemplate 通过 ChooseTemplateId 选择基础预制体，
+        // 但我们的 CloneItemInfo 创建的是 plain ItemInfo（非 LiquidItemInfo），导致 capacity=0、
+        // category="ModStim"，ChooseTemplateId 返回 "bandage" 而非 "syringe"。
+        // "bandage" 没有 WaterContainerItem 组件，存档加载时恢复组件数据会报
+        // "Error occured during loading item 'propital(Clone) (Item)'"。
+        //
+        // QoLSaveFix 的 Prefix 将自定义物品 ID 替换为原版基础预制体 ID（如 propital->syringe），
+        // 使游戏直接加载原版 syringe 预制体（含 WaterContainerItem），Postfix 再转换回自定义物品。
+        // Transpiler 跳过以避免与 CUCoreLib 的 Transpiler 冲突（两者都拦截同一处 Resources.Load）。
+        if (QoLSaveFix.HasQoL())
+        {
+            QoLSaveFix.Register(harmony, includeTranspiler: false);
+            Plugin.Log.LogInfo("[CUCoreLib] QoL detected - registered QoLSaveFix (Prefix+Postfix only) for item save/load.");
+        }
 
         try
         {
