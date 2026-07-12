@@ -398,6 +398,8 @@ public sealed class BluebloodEffectController : MonoBehaviour
             if (_timer <= TotalDuration - BleedingPreventionDuration)
             {
                 _bleedingPhase = false;
+                // 重置 blockedBleeding 恢复正常的出血减血机制
+                ClearBlockedBleeding();
                 Plugin.Log.LogInfo("[Blueblood] Bleeding prevention phase ended.");
             }
         }
@@ -525,6 +527,23 @@ public sealed class BluebloodEffectController : MonoBehaviour
         var method = typeof(BluebloodItemSystem).GetMethod("TryLoadIcon",
             BindingFlags.Static | BindingFlags.NonPublic);
         return method?.Invoke(null, null) as Sprite;
+    }
+
+    /// <summary>
+    /// 解除所有肢体上的出血封锁标记，恢复正常的出血减血机制。
+    /// </summary>
+    private void ClearBlockedBleeding()
+    {
+        if (_body == null) return;
+        var limbs = _body.limbs;
+        if (limbs != null)
+        {
+            foreach (var limb in limbs)
+            {
+                if (limb == null || limb.dismembered) continue;
+                limb.blockedBleeding = false;
+            }
+        }
     }
 }
 

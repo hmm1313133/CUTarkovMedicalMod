@@ -12,7 +12,7 @@ public sealed class Plugin : BaseUnityPlugin
 {
     public const string ModGuid = "com.yourname.cu.tarkovmedicalmod";
     public const string ModName = "Casualties: Unknown - Tarkov-Style Medical Mod";
-    public const string ModVersion = "0.2.2";
+    public const string ModVersion = "0.2.4";
 
     internal static ManualLogSource Log = null!;
 
@@ -39,6 +39,9 @@ public sealed class Plugin : BaseUnityPlugin
             MedicalSpawnHooks.SetLog(Logger);
             MedicalWorldLootHooks.SetLog(Logger);
             harmony.PatchAll();
+
+            if (QoLSaveFix.HasQoL())
+                QoLSaveFix.Register(harmony);
         }
         catch (Exception ex)
         {

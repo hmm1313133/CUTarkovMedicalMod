@@ -445,6 +445,25 @@ public sealed class ZagustinEffectController : MonoBehaviour
             _body!.Drink(-ThirstDrainPerSecond);
         }
     }
+
+    /// <summary>
+    /// 效果结束时解除止血封锁，恢复正常出血机制。
+    /// </summary>
+    private void OnDisable()
+    {
+        if (_body == null) return;
+
+        var limbs = _body.limbs;
+        if (limbs != null)
+        {
+            foreach (var limb in limbs)
+            {
+                if (limb == null || limb.dismembered) continue;
+                limb.blockedBleeding = false;
+            }
+        }
+        Plugin.Log.LogInfo("[Zagustin] Effect ended, blockedBleeding released.");
+    }
 }
 
 /// <summary>
