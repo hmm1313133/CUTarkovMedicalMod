@@ -6,7 +6,7 @@
     <AssemblyName>CUTarkovMedicalMod</AssemblyName>
     <RootNamespace>CUTarkovMedicalMod</RootNamespace>
     <Product>Casualties: Unknown - Tarkov-Style Medical Mod</Product>
-    <Version>0.2.6</Version>
+    <Version>0.2.7</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>$(NoWarn);0649</NoWarn>
     <Platforms>AnyCPU;x64;x86</Platforms>

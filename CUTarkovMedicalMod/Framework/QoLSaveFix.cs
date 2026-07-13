@@ -33,6 +33,17 @@ public static class QoLSaveFix
     private static bool? _qolCached;
 
     /// <summary>
+    /// 当设置时，只有匹配此过滤器的自定义物品 ID 会被 QoLSaveFix 处理。
+    /// 用于 CUCoreLib 模式下 WeaponMod 只处理武器物品，
+    /// 让 CUCoreLib 的 CustomInstantiate 处理医疗物品。
+    /// null = 处理所有自定义物品（Legacy 模式）。
+    /// </summary>
+    public static Func<string, bool>? IdFilter = null;
+
+    /// <summary>IdFilter 是否已设置（CUCoreLib 模式下为 true，跳过医疗效果持久化）</summary>
+    public static bool HasIdFilter => IdFilter != null;
+
+    /// <summary>
     /// 多层检测 QoL Unknown mod 是否已加载并激活。
     /// 
     /// 问题：Chainloader.PluginInfos.ContainsKey 可能在以下情况误判：
@@ -147,7 +158,7 @@ public static class QoLSaveFix_ItemMap
     {
         "etg_c","zagustin","cu_morphine","sj12","mule","propital","sj6","sj1","pnb","sj9","obdolbos","obdolbos2",
         "blueblood","xtg12","mildronate","2a2btg","ai2","goldenstar","vaseline","libatine","ibuprofen",
-        "grizzlykit","afakkit","ifakkit","salewa","multitool","cms",
+        "grizzlykit","afak","ifak","salewa","multitool","cms",
         "axmc","dvl10","sks","akm","deagle","glock17","m4a1","p90","mp133","ump45","rpd","mp153","usp",
         "axmc_mag","dvl10_mag","akm_mag","deagle_mag","glock17_mag","m4a1_mag","p90_mag","ump45_mag","rpd_mag","usp_mag",
         "338ucw","76251bpz","76239sp","12g85","50copper","45fmj","919pso","55645fmj","5728sb193","redrebel","m2sword",
@@ -186,7 +197,7 @@ public static class QoLSaveFix_Save
     static void SR(Item it, List<SD> l, int s, int ps = -1)
     {
         if (it == null || string.IsNullOrEmpty(it.id)) return;
-        if (QoLSaveFix_ItemMap.IsCustom(it.id))
+        if (QoLSaveFix_ItemMap.IsCustom(it.id) && (QoLSaveFix.IdFilter == null || QoLSaveFix.IdFilter(it.id)))
         {
             int a = -1; var am = it.GetComponent<AmmoScript>(); if (am != null) a = am.rounds;
             l.Add(new SD { uid = _qid++, id = it.id, cd = it.condition, sl = s, ps = ps, am = a });
@@ -201,7 +212,7 @@ public static class QoLSaveFix_Save
         try
         {
             var items = Collect();
-            var eff = Eff.Ser();
+            var eff = QoLSaveFix.HasIdFilter ? "" : Eff.Ser();
             var p = Application.persistentDataPath + "\\save.sv";
             if (!File.Exists(p)) return;
             var r = JObject.Parse(UZ(File.ReadAllBytes(p)));
@@ -228,17 +239,17 @@ public static class QoLSaveFix_Load
     public static void Prefix()
     {
         Plugin.Log.LogInfo($"[QoLSave] Prefix called. loadedRun={SaveSystem.loadedRun}");
-        _items = ""; _eff = "";
-        _slotCustomIds.Clear();
-        _wearCustomIds.Clear();
-        if (!SaveSystem.loadedRun) return;
-        var p = Application.persistentDataPath + "\\save.sv";
-        if (!File.Exists(p)) { Plugin.Log.LogInfo("[QoLSave] Prefix: save.sv not found."); return; }
-        try
-        {
-            var r = JObject.Parse(UZ(File.ReadAllBytes(p)));
-            _items = r["_customItems"]?.ToString(Formatting.None) ?? "";
-            _eff = r["_customEffects"]?.ToString(Formatting.None) ?? "";
+            _items = ""; _eff = "";
+            _slotCustomIds.Clear();
+            _wearCustomIds.Clear();
+            if (!SaveSystem.loadedRun) return;
+            var p = Application.persistentDataPath + "\\save.sv";
+            if (!File.Exists(p)) { Plugin.Log.LogInfo("[QoLSave] Prefix: save.sv not found."); return; }
+            try
+            {
+                var r = JObject.Parse(UZ(File.ReadAllBytes(p)));
+                _items = r["_customItems"]?.ToString(Formatting.None) ?? "";
+                _eff = QoLSaveFix.HasIdFilter ? "" : (r["_customEffects"]?.ToString(Formatting.None) ?? "");
             r.Remove("_customItems");
             r.Remove("_customEffects");
 
@@ -257,7 +268,8 @@ public static class QoLSaveFix_Load
                     var idTok = itemObj["id"];
                     if (idTok == null || idTok.Type != JTokenType.String) continue;
                     var id = idTok.Value<string>() ?? "";
-                    if (id.Length > 0 && QoLSaveFix_ItemMap.IsCustom(id))
+                    if (id.Length > 0 && QoLSaveFix_ItemMap.IsCustom(id)
+                        && (QoLSaveFix.IdFilter == null || QoLSaveFix.IdFilter(id)))
                     {
                         var baseId = QoLSaveFix_ItemMap.GetBasePrefab(id);
                         itemObj["id"] = baseId;
@@ -343,7 +355,11 @@ public static class QoLSaveFix_Load
             }
         }
 
-        // Phase 2: Restore condition and ammo from _customItems data
+        // Phase 2: Restore condition and ammo from _customItems data.
+        // Container items (sl=-1, ps>=0) were loaded by the game as base prefab items
+        // (e.g. "syringe") into their parent container. Phase 1 only converts items
+        // directly in body slots, so container items still have base prefab ID.
+        // Here we search by base prefab ID, convert to custom, and restore condition.
         if (!string.IsNullOrEmpty(_items))
         {
             Body? b = null; try { b = PlayerCamera.main?.body; } catch { }
@@ -355,6 +371,7 @@ public static class QoLSaveFix_Load
                     if (all != null && all.Count > 0)
                     {
                         int n = 0;
+                        var used = new HashSet<Item>();
                         foreach (var s in all)
                         {
                             if (s.gm)
@@ -364,13 +381,33 @@ public static class QoLSaveFix_Load
                                 continue;
                             }
 
-                            // Find the item by custom ID in slots or containers
-                            Item? found = FindItemById(b, s.id);
+                            // Try to find by custom ID first (Phase 1 may have already converted it)
+                            Item? found = FindItemByIdExcluding(b, s.id, used);
+
+                            // If not found by custom ID, search by base prefab ID and convert.
+                            // This handles container items that were loaded as base prefab
+                            // (e.g. "syringe") and never converted back by Phase 1.
+                            if (found == null)
+                            {
+                                var baseId = QoLSaveFix_ItemMap.GetBasePrefab(s.id);
+                                found = FindItemByIdExcluding(b, baseId, used);
+                                if (found != null)
+                                {
+                                    ConvertToCustom(found, s.id);
+                                    Plugin.Log.LogInfo($"[QoLSave] Converted container item '{baseId}' -> '{s.id}' and restored state.");
+                                }
+                            }
+
                             if (found != null)
                             {
+                                used.Add(found);
                                 found.condition = s.cd;
                                 if (s.am >= 0) { var a = found.GetComponent<AmmoScript>(); if (a != null) a.rounds = s.am; }
                                 n++;
+                            }
+                            else
+                            {
+                                Plugin.Log.LogWarning($"[QoLSave] Could not find item '{s.id}' (base='{QoLSaveFix_ItemMap.GetBasePrefab(s.id)}') for state restore.");
                             }
                         }
                         Plugin.Log.LogInfo($"[QoLSave] Restored state for {n}/{all.Count} items.");
@@ -380,8 +417,8 @@ public static class QoLSaveFix_Load
             }
         }
 
-        // Phase 3: Restore effects
-        if (!string.IsNullOrEmpty(_eff)) { try { Eff.Res(_eff); } catch { } Plugin.Log.LogInfo("[QoLSave] Effects restored."); }
+        // Phase 3: Restore effects (skip when IdFilter is set - CUCoreLib handles effects)
+        if (!QoLSaveFix.HasIdFilter && !string.IsNullOrEmpty(_eff)) { try { Eff.Res(_eff); } catch { } Plugin.Log.LogInfo("[QoLSave] Effects restored."); }
 
         _items = ""; _eff = "";
         _slotCustomIds.Clear();
@@ -416,6 +453,33 @@ public static class QoLSaveFix_Load
         return null;
     }
 
+    /// <summary>
+    /// Like FindItemById but skips items already in the <paramref name="used"/> set.
+    /// Used during Phase 2 restore to avoid matching the same base-prefab item twice
+    /// when multiple custom items share the same base prefab (e.g. multiple syringes).
+    /// </summary>
+    static Item? FindItemByIdExcluding(Body b, string id, HashSet<Item> used)
+    {
+        // Search slots
+        if (b.slots != null)
+            for (int i = 0; i < b.slots.Length; i++)
+                if (b.HoldingItem(i))
+                {
+                    var item = b.GetItem(i);
+                    var found = SearchItemExcluding(item, id, used);
+                    if (found != null) return found;
+                }
+        // Search wearables
+        if (b.GetAllWearables() != null)
+            foreach (var w in b.GetAllWearables())
+                if (w != null)
+                {
+                    var found = SearchItemExcluding(w, id, used);
+                    if (found != null) return found;
+                }
+        return null;
+    }
+
     static Item? SearchItem(Item? item, string id)
     {
         if (item == null) return null;
@@ -426,6 +490,21 @@ public static class QoLSaveFix_Load
             if (t.TryGetComponent<Item>(out var ch))
             {
                 var found = SearchItem(ch, id);
+                if (found != null) return found;
+            }
+        return null;
+    }
+
+    static Item? SearchItemExcluding(Item? item, string id, HashSet<Item> used)
+    {
+        if (item == null) return null;
+        if (!used.Contains(item) && string.Equals(item.id, id, StringComparison.OrdinalIgnoreCase)) return item;
+        var c = item.GetComponent<Container>();
+        if (c == null) return null;
+        foreach (Transform t in c.transform)
+            if (t.TryGetComponent<Item>(out var ch))
+            {
+                var found = SearchItemExcluding(ch, id, used);
                 if (found != null) return found;
             }
         return null;

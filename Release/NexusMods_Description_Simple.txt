@@ -1,4 +1,4 @@
-Version: 0.2.6
+Version: 0.2.7
 Author: hmm1313133
 Mod GUID: com.yourname.cu.tarkovmedicalmod
 GitHub: https://github.com/hmm1313133/CUTarkovMedicalMod
@@ -35,7 +35,7 @@ REQUIREMENTS
 INSTALLATION
 ===========================================================
 
-1. Download CUTarkovMedicalMod_v0.2.6.zip
+1. Download CUTarkovMedicalMod_v0.2.7.zip
 2. Extract the contents directly into BepInEx/plugins/CUTarkovMedicalMod/
    (DLL, Framework/, and Lang/ should be at the top level)
 3. Launch the game
@@ -43,6 +43,24 @@ INSTALLATION
 ===========================================================
 CHANGELOG
 ===========================================================
+
+v0.2.7 - 2026-07-14
+- Fix: Injectors stored inside containers (medkit) reverted to base "syringe" when
+  transitioning to the next floor
+  - Root cause: QoLSaveFix Phase 2 only searched by custom ID, but container items
+    still had base prefab ID ("syringe") after Prefix replacement. Phase 1 only
+    converted items directly in body slots, not container children.
+  - Fix: Phase 2 now falls back to searching by base prefab ID when custom ID search
+    fails, then converts the found item back to custom. Uses HashSet to avoid
+    duplicate matches when multiple injectors share the same base prefab.
+- Fix: Custom injectors disappeared when held in main hand with CUCoreLib installed
+  - Root cause: CUCoreLib ApplyCustomItemComponents recalculates condition as
+    liquidAmount/capacity. With capacity=1 and no liquid contents, condition=0,
+    causing the item to vanish even with destroyAtZeroCondition=false.
+  - Fix: Set capacity=0 (skips condition recalculation) + defaultContents=[{water,0}]
+    (triggers "waterbottle" template in ChooseTemplateId, avoiding "bandage" which
+    caused IndexOutOfRangeException). condition stays at 1.0 as set by ConfigureSpawnedItem.
+- Refactor: Centralized item definitions in MedicalItemDefinitions (shared by both modes)
 
 v0.2.6 - 2026-07-13
 - Fix: "Error occured during loading item 'propital(Clone) (Item)'" when both QoL Unknown
@@ -91,4 +109,4 @@ BUG REPORTS
 
 Please report bugs at: https://github.com/hmm1313133/CUTarkovMedicalMod/issues
 Include your BepInEx/LogOutput.log file.
-Current version: v0.2.6
+Current version: v0.2.7

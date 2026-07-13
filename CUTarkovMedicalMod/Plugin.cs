@@ -15,7 +15,7 @@ public sealed class Plugin : BaseUnityPlugin
 {
     public const string ModGuid = "com.yourname.cu.tarkovmedicalmod";
     public const string ModName = "Casualties: Unknown - Tarkov-Style Medical Mod";
-    public const string ModVersion = "0.2.6";
+    public const string ModVersion = "0.2.7";
 
     internal static ManualLogSource Log = null!;
     internal static IIntegrationMode IntegrationMode = null!;
@@ -78,15 +78,23 @@ public sealed class Plugin : BaseUnityPlugin
         if (_tickCounter < 300) return;
         _tickCounter = 0;
 
-        EtgCItemSystem.EnsureRegisteredInItemTable();
-        ZagustinItemSystem.EnsureRegisteredInItemTable();
-        PropitalItemSystem.EnsureRegisteredInItemTable();
-        SJ6ItemSystem.EnsureRegisteredInItemTable();
-        Sj1ItemSystem.EnsureRegisteredInItemTable();
-        PnbItemSystem.EnsureRegisteredInItemTable();
-        ObdolbosItemSystem.EnsureRegisteredInItemTable();
-        Sj9ItemSystem.EnsureRegisteredInItemTable();
-        BluebloodItemSystem.EnsureRegisteredInItemTable();
+        // CUCoreLib 模式下跳过周期重注册：
+        // CUCoreLib 通过 ItemRegistry.Register + InjectSingleItem 管理 GlobalItems，
+        // 周期调用 EnsureRegisteredInItemTable 会注册 plain ItemInfo（无 capacity），
+        // 可能覆盖 CUCoreLib 注册的 CustomItemInfo，导致存档 NRE。
+        if (IntegrationMode is not CUCoreLibMode)
+        {
+            EtgCItemSystem.EnsureRegisteredInItemTable();
+            ZagustinItemSystem.EnsureRegisteredInItemTable();
+            PropitalItemSystem.EnsureRegisteredInItemTable();
+            SJ6ItemSystem.EnsureRegisteredInItemTable();
+            Sj1ItemSystem.EnsureRegisteredInItemTable();
+            PnbItemSystem.EnsureRegisteredInItemTable();
+            ObdolbosItemSystem.EnsureRegisteredInItemTable();
+            Sj9ItemSystem.EnsureRegisteredInItemTable();
+            BluebloodItemSystem.EnsureRegisteredInItemTable();
+        }
+
         MedicalSpawnHooks.TickGlobalGrantFallback();
     }
 
