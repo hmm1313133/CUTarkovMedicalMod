@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using BepInEx;
@@ -119,6 +118,7 @@ public static class BluebloodItemSystem
 
     private static void BluebloodUseAction(Body body, Item item)
     {
+
         InjectorSound.Play();
         Plugin.Log.LogInfo("Blueblood useAction invoked.");
 

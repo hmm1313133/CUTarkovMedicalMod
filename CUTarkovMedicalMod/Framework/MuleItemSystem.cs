@@ -140,6 +140,7 @@ public static class MuleItemSystem
     /// </summary>
     private static void MuleUseAction(Body body, Item item)
     {
+
         InjectorSound.Play();
         Plugin.Log.LogInfo("M.U.L.E. useAction invoked by game native system.");
 
@@ -344,11 +345,6 @@ public sealed class MuleEffectController : MonoBehaviour
     /// <summary>
     /// 当前活跃的 M.U.L.E. 控制器实例（静态），供 Harmony 补丁读取。
     /// </summary>
-    internal static MuleEffectController? ActiveInstance;
-
-    /// <summary>
-    /// 负重加成是否生效（延迟期已过且效果仍在持续）。
-    /// </summary>
     internal bool IsEncumberanceActive => _active && _delayTimer <= 0f && _buffRemaining > 0f;
 
     public static MuleEffectController Attach(Body body)
@@ -375,7 +371,6 @@ public sealed class MuleEffectController : MonoBehaviour
         _debuffRemaining = DebuffDuration;
         _drainAccumulator = 0f;
         _active = true;
-        ActiveInstance = this;
         enabled = true;
 
         // 立即 +10 患病（每次注射都触发）
@@ -457,7 +452,6 @@ public sealed class MuleEffectController : MonoBehaviour
         if (_buffRemaining <= 0f)
         {
             _active = false;
-            ActiveInstance = null;
             StimBuffIndicator.HideBuff(MuleItemSystem.ItemKey);
             enabled = false;
             Plugin.Log.LogInfo("[M.U.L.E.] Effect ended. Encumberance bonus removed.");
@@ -503,14 +497,10 @@ public sealed class MuleEffectController : MonoBehaviour
 
     private void OnDisable()
     {
-        if (ActiveInstance == this)
-            ActiveInstance = null;
     }
 
     private void OnDestroy()
     {
-        if (ActiveInstance == this)
-            ActiveInstance = null;
     }
 
     private static Sprite? TryGetMuleIcon()
@@ -542,19 +532,20 @@ public sealed class MuleEffectController : MonoBehaviour
 public static class MuleEncumberancePatch
 {
     /// <summary>
-    /// 返回当前 M.U.L.E. 负重加成值：生效时为 +15，否则为 0。
+    /// 返回指定 Body 的负重加成值。通过 GetComponent 查找控制器，避免 static 字段在多人模式中跨玩家覆盖。
     /// </summary>
-    public static float GetEncumberanceBonus()
+    public static float GetEncumberanceBonus(Body body)
     {
+        if (body == null) return 0f;
         var bonus = 0f;
-        var muleController = MuleEffectController.ActiveInstance;
-        if (muleController != null && muleController.IsEncumberanceActive)
+        var mule = body.GetComponent<MuleEffectController>();
+        if (mule != null && mule.IsEncumberanceActive)
             bonus += MuleEffectController.CarryWeightBonus;
-        var twoAController = TwoATwoBTGEffectController.ActiveInstance;
-        if (twoAController != null && twoAController.IsCarryWeightActive)
+        var twoA = body.GetComponent<TwoATwoBTGEffectController>();
+        if (twoA != null && twoA.IsCarryWeightActive)
             bonus += TwoATwoBTGEffectController.CarryWeightBonus;
-        var obd2Controller = Obdolbos2EffectController.ActiveInstance;
-        if (obd2Controller != null && obd2Controller.IsCarryWeightActive)
+        var obd2 = body.GetComponent<Obdolbos2EffectController>();
+        if (obd2 != null && obd2.IsCarryWeightActive)
             bonus += Obdolbos2EffectController.CarryWeightBonus;
         return bonus;
     }
@@ -569,6 +560,7 @@ public static class MuleEncumberancePatch
             .MatchForward(false, new CodeMatch(OpCodes.Stfld, maxEncumberanceField))
             .ThrowIfInvalid("Could not find maxEncumberance assignment in Body.HandlePeriodicChecks")
             .InsertAndAdvance(
+                new CodeInstruction(OpCodes.Ldarg_0),
                 new CodeInstruction(OpCodes.Call, bonusMethod),
                 new CodeInstruction(OpCodes.Add))
             .InstructionEnumeration();

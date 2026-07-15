@@ -83,6 +83,9 @@ public static class WorldContainerLootSpawner
     [HarmonyPrefix]
     private static void Prefix(BuildingEntity __instance)
     {
+        // 多人模式下仅主机执行容器战利品生成
+        if (!KrokMpHelper.ShouldSpawnLoot) return;
+
         if (__instance.health >= 0.5f) return;
 
         int instanceId = __instance.GetInstanceID();
@@ -170,14 +173,15 @@ public static class WorldContainerLootSpawner
             Vector2 pos = position + new Vector3(Random.Range(-1.5f, 1.5f), Random.Range(1f, 3f));
             float rot = Random.Range(0f, 360f);
 
-            var prefab = Resources.Load(prefabName) as GameObject;
-            if (prefab == null)
+            // 使用 Utils.Create 代替 Resources.Load + Instantiate，
+            // 使 CUCoreLib 拦截创建自定义物品，并触发 KrokMP 网络注册
+            var go = Utils.Create(itemKey, pos, rot);
+            if (go == null)
             {
-                Plugin.Log.LogWarning($"[WorldLoot] Prefab '{prefabName}' not found for '{itemKey}'");
+                Plugin.Log.LogWarning($"[WorldLoot] Utils.Create failed for '{itemKey}'");
                 return;
             }
 
-            var go = Object.Instantiate(prefab, pos, Quaternion.Euler(0f, 0f, rot));
             var item = go.GetComponent<Item>();
             if (item == null)
             {
@@ -329,6 +333,9 @@ public static class CorpseLootSpawner
     [HarmonyPostfix]
     private static void Postfix(CorpseScript __instance)
     {
+        // 多人模式下仅主机执行尸体战利品生成
+        if (!KrokMpHelper.ShouldSpawnLoot) return;
+
         try
         {
             // 尸体：10% 掉 1 药品
@@ -371,14 +378,15 @@ public static class CorpseLootSpawner
             Vector2 pos = position + new Vector3(Random.Range(-1f, 1f), Random.Range(0.5f, 2f));
             float rot = Random.Range(0f, 360f);
 
-            var prefab = Resources.Load("bruisekit") as GameObject;
-            if (prefab == null)
+            // 使用 Utils.Create 代替 Resources.Load + Instantiate，
+            // 使 CUCoreLib 拦截创建自定义物品，并触发 KrokMP 网络注册
+            var go = Utils.Create(itemKey, pos, rot);
+            if (go == null)
             {
-                Plugin.Log.LogWarning($"[WorldLoot] bruisekit prefab not found for '{itemKey}'");
+                Plugin.Log.LogWarning($"[WorldLoot] Utils.Create failed for '{itemKey}'");
                 return;
             }
 
-            var go = Object.Instantiate(prefab, pos, Quaternion.Euler(0f, 0f, rot));
             var item = go.GetComponent<Item>();
             if (item == null)
             {

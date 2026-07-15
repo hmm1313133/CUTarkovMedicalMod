@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using BepInEx;
+using CUCoreLib.Data;
+using CUCoreLib.Registries;
 using HarmonyLib;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -39,6 +41,8 @@ public static class IbuprofenItemSystem
     internal const float PainTargetRatio = 0.3f;        // 疼痛减少到 30%
     internal const float StaminaRecoveryDuration = 420f; // 7 分钟
     internal const float StaminaRecoveryBonus = 0.2f;   // +20% 耐力恢复
+    internal const float SepsisReduceDuration = 60f;     // 1 分钟线性
+    internal const float SepsisReduceAmount = 20f;
 
     // 副作用常量
     private const float HappinessCost = 3f;
@@ -182,6 +186,7 @@ public static class IbuprofenItemSystem
 
     private static void IbuprofenUseAction(Body body, Item item)
     {
+
         try
         {
             EnsureLiquidRegistered();
@@ -236,17 +241,25 @@ public static class IbuprofenItemSystem
 
     private static void EnsureLiquidRegistered()
     {
-        if (Liquids.Registry.ContainsKey(LiquidId)) return;
-
-        Liquids.Registry[LiquidId] = new LiquidType
+        // 注册液体数据（通过 CUCoreLib 支持多人网络同步）
+        if (!Liquids.Registry.ContainsKey(LiquidId))
         {
-            localeName = LiquidId,
-            color = SilverColor,
-            valuePerLiter = 80f,
-            injectable = false,
-            injectionSickness = 0f,
-            healthUsable = false,
-            onDrink = delegate(float ml, Body body)
+            LiquidRegistry.Register(LiquidId, new CustomLiquidInfo
+            {
+                name = "Ibuprofen",
+                color = SilverColor,
+                valuePerLiter = 80f,
+                injectable = false,
+                injectionSickness = 0f,
+                healthUsable = false,
+            });
+            Plugin.Log.LogInfo($"[Ibuprofen] Registered custom liquid '{LiquidId}' in Liquids.Registry.");
+        }
+
+        // 每次都重设回调——CUCoreLib 的 ApplyNetworkSnapshot 会在网络同步时
+        // 用无回调的 LiquidType 覆盖 Liquids.Registry，导致 onDrink 变空。
+        var lt = Liquids.Registry[LiquidId];
+        lt.onDrink = delegate(float ml, Body body)
             {
                 if (body == null) return;
 
@@ -263,11 +276,8 @@ public static class IbuprofenItemSystem
                 // === 延迟效果（通过效果控制器处理）===
                 IbuprofenEffectController.Attach(body).Activate();
 
-                Plugin.Log.LogInfo($"[Ibuprofen] Effects applied: immunity+50 for {ImmunityDuration}s, temp-{TempReduce}, happiness-{HappinessCost}.");
-            }
-        };
-
-        Plugin.Log.LogInfo($"[Ibuprofen] Registered custom liquid '{LiquidId}' in Liquids.Registry.");
+                Plugin.Log.LogInfo($"[Ibuprofen] Effects applied: immunity+50 for {ImmunityDuration}s, sepsis-20, happiness-{HappinessCost}.");
+            };
     }
 
     #endregion
@@ -484,6 +494,10 @@ public sealed class IbuprofenEffectController : MonoBehaviour
     private static readonly float[] VomitTimes = { 420f, 600f }; // 7min, 10min
     private bool[] _vomitChecked = { false, false };
 
+    // 败血症线性减少
+    private bool _sepsisReduceActive;
+    private float _sepsisReduceRemaining;
+
     // 过量效果
     private bool _overdoseTriggered;
     private bool _overdosePainActive;
@@ -500,10 +514,10 @@ public sealed class IbuprofenEffectController : MonoBehaviour
     private float _tripleBrainTimer;
     private float _tripleBrainLossAccumulator;
 
-    // 上次使用时间（静态，跨实例共享）
-    private static float _lastUseTime = -9999f;
-    // 上次过量触发时间（静态，跨实例共享）
-    private static float _lastOverdoseTime = -9999f;
+    // 上次使用时间（实例字段，每个 Body 独立跟踪）
+    private float _lastUseTime = -9999f;
+    // 上次过量触发时间（实例字段，每个 Body 独立跟踪）
+    private float _lastOverdoseTime = -9999f;
 
     // 总持续时间
     private const float NormalDuration = 620f; // 10min + 余量
@@ -555,6 +569,10 @@ public sealed class IbuprofenEffectController : MonoBehaviour
         _vomitChecked[0] = false;
         _vomitChecked[1] = false;
 
+        // 败血症线性减少
+        _sepsisReduceActive = true;
+        _sepsisReduceRemaining = IbuprofenItemSystem.SepsisReduceDuration;
+
         // 过量效果
         _overdoseTriggered = overdose;
         _overdosePainActive = false;
@@ -582,15 +600,9 @@ public sealed class IbuprofenEffectController : MonoBehaviour
         if (tripleOverdose)
         {
             StimBuffIndicator.ShowOneTimeEffect(IbuprofenItemSystem.ItemKey, I18n.Tr("ibuprofen.ot.0"), isNegative: true);
-            StimBuffIndicator.ShowBuff(
-                IbuprofenItemSystem.ItemKey,
-                I18n.Tr("ibuprofen.buff"),
-                IbuprofenItemSystem.TryGetIbuprofenIcon(),
-                TripleOverdoseDuration,
-                TripleOverdoseDuration,
-                new Color(0.6f, 0f, 0f),
-                positiveDescs: null,
-                negativeDescs: I18n.TrAll("ibuprofen.neg.0", "ibuprofen.neg.1", "ibuprofen.neg.2", "ibuprofen.neg.3"));
+            StimBuffIndicator.ShowOneTimeEffect(IbuprofenItemSystem.ItemKey, 
+                string.Join("\n", I18n.TrAll("ibuprofen.neg.0", "ibuprofen.neg.1", "ibuprofen.neg.2", "ibuprofen.neg.3")), 
+                isNegative: true);
             Plugin.Log.LogWarning("[Ibuprofen] TRIPLE OVERDOSE TRIGGERED! Third dose within overdose window.");
         }
         else if (overdose)
@@ -673,6 +685,20 @@ public sealed class IbuprofenEffectController : MonoBehaviour
             }
         }
 
+        // 败血症线性减少（1分钟-20）
+        if (_sepsisReduceActive && _body != null)
+        {
+            _sepsisReduceRemaining -= Time.deltaTime;
+            float reducePerSec = IbuprofenItemSystem.SepsisReduceAmount / IbuprofenItemSystem.SepsisReduceDuration;
+            _body.septicShock = Mathf.Max(0f, _body.septicShock - reducePerSec * Time.deltaTime);
+
+            if (_sepsisReduceRemaining <= 0f)
+            {
+                _sepsisReduceActive = false;
+                Plugin.Log.LogInfo("[Ibuprofen] Sepsis reduce complete (60s -> -20).");
+            }
+        }
+
         // 呕吐检查
         for (int i = 0; i < VomitTimes.Length; i++)
         {
@@ -683,7 +709,7 @@ public sealed class IbuprofenEffectController : MonoBehaviour
                 Plugin.Log.LogInfo($"[Ibuprofen] Vomit check at {VomitTimes[i] / 60f:F0}min: roll={roll:F3}, threshold={IbuprofenItemSystem.VomitChance}");
                 if (roll < IbuprofenItemSystem.VomitChance)
                 {
-                    try { _body.vomiter?.Vomit(); }
+                    try { _body?.vomiter?.Vomit(); }
                     catch (Exception ex) { Plugin.Log.LogWarning($"[Ibuprofen] Vomit failed: {ex.Message}"); }
                 }
             }

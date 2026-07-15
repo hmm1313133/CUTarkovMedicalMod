@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using BepInEx;
@@ -11,7 +10,7 @@ namespace CUTarkovMedicalMod.Framework;
 
 /// <summary>
 /// SJ1 兴奋剂注射器系统。
-/// 效果：临时力量等级 +5、韧性等级 +3（耐力恢复 +30%），持续 5 分钟；一次性阿片药物作用 +5。
+/// 效果：耐力上限 +10%、耐力恢复 +50%，持续 5 分钟；一次性阿片药物作用 +5。
 /// 副作用：立即 +10 患病；每秒 -0.1 饱食/水分。
 /// </summary>
 public static class Sj1ItemSystem
@@ -128,6 +127,7 @@ public static class Sj1ItemSystem
     /// </summary>
     private static void Sj1UseAction(Body body, Item item)
     {
+
         InjectorSound.Play();
         Plugin.Log.LogInfo("SJ1 useAction invoked by game native system.");
 
@@ -297,7 +297,7 @@ public sealed class Sj1ItemMarker : MonoBehaviour
 
 /// <summary>
 /// SJ1 效果控制器：
-/// 增益期（300s / 5min）：STR +5、RES +3（耐力恢复 +30%）；每秒 -0.1 饱食/水分。
+/// 增益期（300s / 5min）：耐力上限 +10%、耐力恢复 +50%（直接操作 Body.stamina）；每秒 -0.1 饱食/水分。
 /// 使用瞬间：患病 +10；阿片镇痛 dose +5。
 /// </summary>
 public sealed class Sj1EffectController : MonoBehaviour
@@ -311,8 +311,8 @@ public sealed class Sj1EffectController : MonoBehaviour
 
     internal const float ActivationDelay = 1f;
     internal const float BuffDuration = 300f;                // 5 分钟
-    internal const int StrengthLevelBoost = 5;               // 力量等级临时 +5
-    internal const int ResilienceLevelBoost = 3;             // 韧性等级临时 +3（≈ 耐力恢复 +30%）
+    internal const float StaminaCapBonus = 1.10f;           // 耐力上限 +10%
+    internal const float StaminaRecoveryBoost = 0.50f;      // 耐力恢复 +50%（额外恢复比例）
     internal const float SicknessOnUse = 10f;                // 立即患病 +10
     internal const float OpiateDose = 5f;                    // 一次性阿片药物作用
     internal const float FoodWaterDrainPerSec = 0.1f;        // 每秒消耗饱食/水分
@@ -321,7 +321,8 @@ public sealed class Sj1EffectController : MonoBehaviour
     private Phase _phase = Phase.Idle;
     private float _phaseTimer;
     private float _drainAccumulator;           // 吃喝消耗累积器
-    private bool _statsApplied;                // 属性增益是否已应用
+    private float _elapsed;                    // 已生效时间（不含延迟）
+    private float _staminaCapBaseline;         // 追踪峰值耐力，用于计算 +10% 上限
 
     public static Sj1EffectController Attach(Body body)
     {
@@ -350,8 +351,7 @@ public sealed class Sj1EffectController : MonoBehaviour
         _phase = Phase.Delay;
         _phaseTimer = ActivationDelay;
         _drainAccumulator = 0f;
-        if (!isRefresh)
-            _statsApplied = false;
+        _elapsed = 0f;
         enabled = true;
 
         StimBuffIndicator.ShowBuff(
@@ -361,7 +361,7 @@ public sealed class Sj1EffectController : MonoBehaviour
             BuffDuration + ActivationDelay,
             BuffDuration + ActivationDelay,
             new Color(0.3f, 0.7f, 0.9f), // 蓝青色（轻型战斗兴奋剂）
-            positiveDescs: I18n.TrAll("sj1.pos.0", "sj1.pos.1", "sj1.pos.2"),
+            positiveDescs: I18n.TrAll("sj1.pos.0", "sj1.pos.1"),
             negativeDescs: I18n.TrAll("sj1.neg.0"));
     }
 
@@ -372,7 +372,7 @@ public sealed class Sj1EffectController : MonoBehaviour
         if (_body == null || _phase == Phase.Idle)
         {
             StimBuffIndicator.HideBuff(Sj1ItemSystem.ItemKey);
-            RestoreStats();
+            ClearStaminaBonuses();
             enabled = false;
             return;
         }
@@ -399,7 +399,7 @@ public sealed class Sj1EffectController : MonoBehaviour
             _phaseTimer + BuffDuration,
             BuffDuration + ActivationDelay,
             new Color(0.3f, 0.7f, 0.9f),
-            positiveDescs: I18n.TrAll("sj1.pos.0", "sj1.pos.1", "sj1.pos.2"),
+            positiveDescs: I18n.TrAll("sj1.pos.0", "sj1.pos.1"),
             negativeDescs: I18n.TrAll("sj1.neg.0"));
 
         if (_phaseTimer <= 0f)
@@ -407,12 +407,16 @@ public sealed class Sj1EffectController : MonoBehaviour
             _phase = Phase.Buff;
             _phaseTimer = BuffDuration;
             _drainAccumulator = 0f;
+            _elapsed = 0f;
 
-            // 应用属性增益
-            ApplyStatBoosts();
-            _statsApplied = true;
+            // 以当前耐力值为基准
+            _staminaCapBaseline = _body!.stamina;
 
-            Plugin.Log.LogInfo($"[SJ1] Buff phase: STR +{StrengthLevelBoost}, RES +{ResilienceLevelBoost} for {BuffDuration}s, "
+            // 注册耐力恢复和耐力上限加成到多来源叠加管理器
+            StaminaBonusManager.AddBonus(_body, StaminaRecoveryBoost, BuffDuration, Sj1ItemSystem.ItemKey);
+            StaminaCapBonusManager.AddBonus(_body, StaminaCapBonus - 1f, BuffDuration, Sj1ItemSystem.ItemKey);
+
+            Plugin.Log.LogInfo($"[SJ1] Buff phase: stamina cap +{(StaminaCapBonus-1f)*100}%, recovery +{StaminaRecoveryBoost*100}% for {BuffDuration}s, "
                 + $"food/water drain {FoodWaterDrainPerSec}/s");
         }
     }
@@ -421,6 +425,7 @@ public sealed class Sj1EffectController : MonoBehaviour
     {
         var dt = Time.deltaTime;
         _phaseTimer -= dt;
+        _elapsed += dt;
 
         // 每秒消耗饱食/水分
         _drainAccumulator += dt;
@@ -428,6 +433,44 @@ public sealed class Sj1EffectController : MonoBehaviour
         {
             _drainAccumulator -= 1f;
             DrainFoodWater();
+        }
+
+        // ===== 耐力操纵：直接操作 Body.stamina =====
+        // 仅当本物品是当前最强来源时才执行，避免多来源重复追加
+
+        // 1. 耐力上限 +10%
+        if (StaminaCapBonusManager.IsTopSource(_body!, Sj1ItemSystem.ItemKey))
+        {
+            try
+            {
+                if (_body!.stamina > _staminaCapBaseline)
+                    _staminaCapBaseline = _body.stamina;
+
+                var effectiveCap = _staminaCapBaseline * StaminaCapBonus;
+                if (_body.stamina > effectiveCap)
+                    _body.stamina = effectiveCap;
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogWarning($"[SJ1] Stamina cap clamp failed: {ex.Message}");
+            }
+        }
+
+        // 2. 耐力恢复 +50%
+        if (StaminaBonusManager.IsTopSource(_body!, Sj1ItemSystem.ItemKey))
+        {
+            try
+            {
+                if (_body!.staminaStrength != null)
+                {
+                    var extraRecovery = _body.staminaStrength.Evaluate(_body.energy * 0.01f) * dt * StaminaRecoveryBoost;
+                    _body.stamina += extraRecovery;
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogWarning($"[SJ1] Stamina recovery boost failed: {ex.Message}");
+            }
         }
 
         // 更新 buff 显示
@@ -438,45 +481,30 @@ public sealed class Sj1EffectController : MonoBehaviour
             _phaseTimer,
             BuffDuration,
             new Color(0.3f, 0.7f, 0.9f),
-            positiveDescs: I18n.TrAll("sj1.pos.0", "sj1.pos.1", "sj1.pos.2"),
+            positiveDescs: I18n.TrAll("sj1.pos.0", "sj1.pos.1"),
             negativeDescs: I18n.TrAll("sj1.neg.0"));
 
         if (_phaseTimer <= 0f)
         {
             _phase = Phase.Idle;
-            RestoreStats();
+            ClearStaminaBonuses();
             StimBuffIndicator.HideBuff(Sj1ItemSystem.ItemKey);
             enabled = false;
-            Plugin.Log.LogInfo("[SJ1] Effect ended. Stats restored.");
+            Plugin.Log.LogInfo("[SJ1] Effect ended. Stamina bonuses cleared.");
         }
     }
 
     /// <summary>
-    /// 应用临时属性增益：STR +5、RES +3。
+    /// 清除耐力加成（从 StaminaBonusManager 和 StaminaCapBonusManager 中移除）。
     /// </summary>
-    private void ApplyStatBoosts()
+    private void ClearStaminaBonuses()
     {
         if (_body == null) return;
 
-        SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatSTR, StrengthLevelBoost);
-        SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatRES, ResilienceLevelBoost);
+        StaminaBonusManager.ClearBonus(_body, Sj1ItemSystem.ItemKey);
+        StaminaCapBonusManager.ClearBonus(_body, Sj1ItemSystem.ItemKey);
 
-        Plugin.Log.LogInfo($"[SJ1] Stat boosts: STR +{StrengthLevelBoost} (now {SkillEffectHelper.GetLevel(_body, SkillEffectHelper.StatSTR)}), "
-            + $"RES +{ResilienceLevelBoost} (now {SkillEffectHelper.GetLevel(_body, SkillEffectHelper.StatRES)}).");
-    }
-
-    /// <summary>
-    /// 恢复属性增益。
-    /// </summary>
-    private void RestoreStats()
-    {
-        if (!_statsApplied || _body == null) return;
-
-        SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatSTR, -StrengthLevelBoost);
-        SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatRES, -ResilienceLevelBoost);
-
-        _statsApplied = false;
-        Plugin.Log.LogInfo($"[SJ1] Stats restored: STR -{StrengthLevelBoost}, RES -{ResilienceLevelBoost}.");
+        Plugin.Log.LogInfo("[SJ1] Stamina bonuses cleared from managers.");
     }
 
     /// <summary>
@@ -522,7 +550,7 @@ public sealed class Sj1EffectController : MonoBehaviour
 
     private void OnDisable()
     {
-        RestoreStats();
+        ClearStaminaBonuses();
     }
 
     private static Sprite? TryGetSj1Icon()

@@ -120,6 +120,7 @@ public static class ObdolbosItemSystem
 
     private static void ObdolbosUseAction(Body body, Item item)
     {
+
         InjectorSound.Play();
         Plugin.Log.LogInfo("Obdolbos useAction invoked.");
 

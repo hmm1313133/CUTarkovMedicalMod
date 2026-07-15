@@ -119,6 +119,7 @@ public static class Obdolbos2ItemSystem
 
     private static void Obdolbos2UseAction(Body body, Item item)
     {
+
         InjectorSound.Play();
         Plugin.Log.LogInfo("Obdolbos 2 useAction invoked by game native system.");
         Obdolbos2EffectController.Attach(body).ActivateOrRefresh();
@@ -256,7 +257,6 @@ public sealed class Obdolbos2EffectController : MonoBehaviour
     private bool _sideEffectActive;
     private int _injectionCount;
 
-    internal static Obdolbos2EffectController? ActiveInstance;
     internal bool IsCarryWeightActive => _injectionCount == 1 && _buffStarted && _phaseTimer > 0f;
 
     public static Obdolbos2EffectController Attach(Body body)
@@ -321,7 +321,6 @@ public sealed class Obdolbos2EffectController : MonoBehaviour
         {
             _buffStarted = true;
             _staminaCapBaseline = _body.stamina;
-            ActiveInstance = this;
             Plugin.Log.LogInfo($"[Obdolbos 2] Stamina debuff active: recovery -{StaminaRecoveryPenalty*100}%, max -{(1f-StaminaMaxRatio)*100}% for {BuffDuration}s.");
         }
 
@@ -447,7 +446,6 @@ public sealed class Obdolbos2EffectController : MonoBehaviour
 
     private void Cleanup()
     {
-        ActiveInstance = null;
         StimBuffIndicator.HideBuff(Obdolbos2ItemSystem.ItemKey);
         enabled = false;
         Plugin.Log.LogInfo("[Obdolbos 2] Effect ended.");

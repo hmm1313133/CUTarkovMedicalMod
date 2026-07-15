@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using BepInEx;
+using CUCoreLib.Data;
+using CUCoreLib.Registries;
 using HarmonyLib;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -225,17 +227,25 @@ public static class GoldenStarItemSystem
     /// </summary>
     private static void EnsureLiquidRegistered()
     {
-        if (Liquids.Registry.ContainsKey(LiquidId)) return;
-
-        Liquids.Registry[LiquidId] = new LiquidType
+        // 注册液体数据（通过 CUCoreLib 支持多人网络同步）
+        if (!Liquids.Registry.ContainsKey(LiquidId))
         {
-            localeName = LiquidId,
-            color = WhiteColor,
-            valuePerLiter = 80f,
-            injectable = false,
-            injectionSickness = 0f,
-            healthUsable = true,
-            onHealthUse = delegate(float ml, Limb limb)
+            LiquidRegistry.Register(LiquidId, new CustomLiquidInfo
+            {
+                name = "Golden Star",
+                color = WhiteColor,
+                valuePerLiter = 80f,
+                injectable = false,
+                injectionSickness = 0f,
+                healthUsable = true,
+            });
+            Plugin.Log.LogInfo($"[GoldenStar] Registered custom liquid '{LiquidId}' in Liquids.Registry.");
+        }
+
+        // 每次都重设回调——CUCoreLib 的 ApplyNetworkSnapshot 会在网络同步时
+        // 用无回调的 LiquidType 覆盖 Liquids.Registry，导致 onHealthUse 变空。
+        var lt = Liquids.Registry[LiquidId];
+        lt.onHealthUse = delegate(float ml, Limb limb)
             {
                 if (limb == null) return;
 
@@ -252,10 +262,7 @@ public static class GoldenStarItemSystem
 
                 // === 延迟副作用（通过效果控制器处理）===
                 GoldenStarEffectController.Attach(limb).Activate();
-            }
-        };
-
-        Plugin.Log.LogInfo($"[GoldenStar] Registered custom liquid '{LiquidId}' in Liquids.Registry.");
+            };
     }
 
     #endregion

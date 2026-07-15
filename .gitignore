@@ -15,9 +15,8 @@
 !scripts/
 !scripts/**
 
-# Release 描述与更新日志（不含 zip 二进制文件）
+# Release 目录（不含 zip 二进制文件）
 !Release/
-!Release/NexusMods_*.txt
 
 # 模组源码与资产
 !CUTarkovMedicalMod/
@@ -26,3 +25,5 @@
 # 仍然排除构建产物
 CUTarkovMedicalMod/bin/
 CUTarkovMedicalMod/obj/
+scripts/bin/
+scripts/obj/

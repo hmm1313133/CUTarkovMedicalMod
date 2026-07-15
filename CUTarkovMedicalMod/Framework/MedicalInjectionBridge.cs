@@ -637,8 +637,8 @@ public static class MedicalWorldLootHooks
         if (!MedicalFrameworkApi.IsInitialized || MedicalFrameworkApi.EffectiveMode == MedicalFeatureMode.Disabled)
             return;
 
-        // World loot（KrokMP 安全模式下跳过）
-        if (MedicalFrameworkApi.IsKrokMpDetected && MedicalFrameworkApi.EffectiveMode == MedicalFeatureMode.StartingLoadoutOnly)
+        // 多人模式下仅主机执行世界掉落生成，客户端通过 KrokMP 同步接收物品
+        if (!KrokMpHelper.ShouldSpawnLoot)
             return;
 
         var plan = MedicalFrameworkApi.BuildWorldLoot();

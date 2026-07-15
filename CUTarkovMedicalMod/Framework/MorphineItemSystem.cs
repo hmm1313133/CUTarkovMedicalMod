@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using BepInEx;
@@ -134,6 +133,7 @@ public static class MorphineItemSystem
     /// </summary>
     private static void MorphineUseAction(Body body, Item item)
     {
+
         InjectorSound.Play();
         Plugin.Log.LogInfo("Morphine useAction invoked by game native system.");
 

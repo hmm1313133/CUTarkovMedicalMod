@@ -127,6 +127,7 @@ public static class MildronateItemSystem
     /// </summary>
     private static void MildronateUseAction(Body body, Item item)
     {
+
         InjectorSound.Play();
         Plugin.Log.LogInfo("Mildronate useAction invoked by game native system.");
 

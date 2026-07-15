@@ -4,21 +4,19 @@ using BepInEx.Logging;
 using HarmonyLib;
 using CUTarkovMedicalMod.Framework;
 using CUTarkovMedicalMod.Integration;
-using UnityEngine;
 
 namespace CUTarkovMedicalMod;
 
 [BepInPlugin(ModGuid, ModName, ModVersion)]
-[BepInDependency("net.cucorelib", BepInDependency.DependencyFlags.SoftDependency)]
-[BepInDependency("org.bepinex.plugins.qol_unknown", BepInDependency.DependencyFlags.SoftDependency)]
+[BepInDependency("net.cucorelib")]
 public sealed class Plugin : BaseUnityPlugin
 {
     public const string ModGuid = "com.yourname.cu.tarkovmedicalmod";
     public const string ModName = "Casualties: Unknown - Tarkov-Style Medical Mod";
-    public const string ModVersion = "0.2.7";
+    public const string ModVersion = "0.2.9";
 
     internal static ManualLogSource Log = null!;
-    internal static IIntegrationMode IntegrationMode = null!;
+    internal static CUCoreLibMode IntegrationMode = null!;
 
     private MedicalFramework _framework = null!;
     private MedicalDebugHotkeys _debugHotkeys = null!;
@@ -30,11 +28,18 @@ public sealed class Plugin : BaseUnityPlugin
         Log = Logger;
 
         // 初始化管视遮罩系统（全屏黑色径向渐变叠加层）
-        SkillEffectHelper.InitializeTunnelVision();
+        try { SkillEffectHelper.InitializeTunnelVision(); }
+        catch (Exception ex) { Log.LogError($"InitializeTunnelVision threw: {ex}"); }
 
-        _framework = new MedicalFramework(Config, Logger);
-        _framework.Initialize();
-        _debugHotkeys = new MedicalDebugHotkeys(Logger);
+        try
+        {
+            _framework = new MedicalFramework(Config, Logger);
+            _framework.Initialize();
+        }
+        catch (Exception ex) { Log.LogError($"MedicalFramework init threw: {ex}"); }
+
+        try { _debugHotkeys = new MedicalDebugHotkeys(Logger); }
+        catch (Exception ex) { Log.LogError($"MedicalDebugHotkeys init threw: {ex}"); }
 
         try
         {
@@ -51,14 +56,48 @@ public sealed class Plugin : BaseUnityPlugin
         try { harmony.PatchAll(); }
         catch (Exception ex) { Log.LogError($"PatchAll() threw: {ex}"); }
 
-        // Initialize integration mode now. QoL loads before us (verified in logs),
-        // so Chainloader.PluginInfos will contain QoL's GUID.
+        // Initialize CUCoreLib integration mode.
         try
         {
-            IntegrationMode = IntegrationModeFactory.Create();
+            IntegrationMode = new CUCoreLibMode();
             IntegrationMode.Initialize(harmony);
         }
         catch (Exception ex) { Log.LogError($"IntegrationMode.Initialize() threw: {ex}"); }
+
+        // 安装 KrokMP PlayerSavedState 桥接（仅 KrokMP 已安装时生效）
+        try
+        {
+            KrokMpStateBridge.Install(harmony);
+        }
+        catch (Exception ex) { Log.LogError($"KrokMpStateBridge.Install() threw: {ex}"); }
+
+        // 安装 KrokMP 健康同步保护补丁（防止主机同步覆盖客户端本地医疗效果）
+        try
+        {
+            KrokMpHealthSyncPatch.Install(harmony);
+        }
+        catch (Exception ex) { Log.LogError($"KrokMpHealthSyncPatch.Install() threw: {ex}"); }
+
+        // 安装 QoL 多人存档兼容补丁（仅 QoL Unknown 已安装时生效）
+        try
+        {
+            QolMpSaveCompat.Install(harmony);
+        }
+        catch (Exception ex) { Log.LogError($"QolMpSaveCompat.Install() threw: {ex}"); }
+
+        // 安装 KrokMP 液体同步补丁（捕获 PackData2 的 KeyNotFoundException）
+        try
+        {
+            KrokMpLiquidSyncPatch.Install(harmony);
+        }
+        catch (Exception ex) { Log.LogError($"KrokMpLiquidSyncPatch.Install() threw: {ex}"); }
+
+        // 安装效果网络同步（主机广播存档效果到客户端）
+        try
+        {
+            EffectSyncNetwork.Install();
+        }
+        catch (Exception ex) { Log.LogError($"EffectSyncNetwork.Install() threw: {ex}"); }
 
         Log.LogInfo($"{ModName} loaded. Enabled={_framework.EffectiveMode != MedicalFeatureMode.Disabled}, KrokMP={_framework.KrokMpDetected}");
         Log.LogInfo($"Medical content source: {_framework.ContentSource}");
@@ -77,23 +116,6 @@ public sealed class Plugin : BaseUnityPlugin
         _tickCounter++;
         if (_tickCounter < 300) return;
         _tickCounter = 0;
-
-        // CUCoreLib 模式下跳过周期重注册：
-        // CUCoreLib 通过 ItemRegistry.Register + InjectSingleItem 管理 GlobalItems，
-        // 周期调用 EnsureRegisteredInItemTable 会注册 plain ItemInfo（无 capacity），
-        // 可能覆盖 CUCoreLib 注册的 CustomItemInfo，导致存档 NRE。
-        if (IntegrationMode is not CUCoreLibMode)
-        {
-            EtgCItemSystem.EnsureRegisteredInItemTable();
-            ZagustinItemSystem.EnsureRegisteredInItemTable();
-            PropitalItemSystem.EnsureRegisteredInItemTable();
-            SJ6ItemSystem.EnsureRegisteredInItemTable();
-            Sj1ItemSystem.EnsureRegisteredInItemTable();
-            PnbItemSystem.EnsureRegisteredInItemTable();
-            ObdolbosItemSystem.EnsureRegisteredInItemTable();
-            Sj9ItemSystem.EnsureRegisteredInItemTable();
-            BluebloodItemSystem.EnsureRegisteredInItemTable();
-        }
 
         MedicalSpawnHooks.TickGlobalGrantFallback();
     }

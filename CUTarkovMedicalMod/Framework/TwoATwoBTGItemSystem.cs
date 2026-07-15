@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using BepInEx;
@@ -119,6 +118,7 @@ public static class TwoATwoBTGItemSystem
 
     private static void TwoATwoBTGUseAction(Body body, Item item)
     {
+
         InjectorSound.Play();
         Plugin.Log.LogInfo("2A2-(b-TG) useAction invoked by game native system.");
 
@@ -314,7 +314,6 @@ public sealed class TwoATwoBTGEffectController : MonoBehaviour
     private float _drainAccumulator;
     private bool _drainActive;
 
-    internal static TwoATwoBTGEffectController? ActiveInstance;
     internal bool IsCarryWeightActive => _phase == Phase.Buff;
 
     public static TwoATwoBTGEffectController Attach(Body body)
@@ -386,8 +385,6 @@ public sealed class TwoATwoBTGEffectController : MonoBehaviour
             _drainTimer = DrainDuration;
             _drainAccumulator = 0f;
             _drainActive = true;
-            ActiveInstance = this;
-
             Plugin.Log.LogInfo($"[2A2-(b-TG)] Buff phase: carry weight +{CarryWeightBonus}u for {BuffDuration}s, " 
                 + $"water drain {WaterDrainPerSec}/s for {DrainDuration}s");
         }
@@ -436,7 +433,6 @@ public sealed class TwoATwoBTGEffectController : MonoBehaviour
         if (_phaseTimer <= 0f)
         {
             _phase = Phase.Idle;
-            ActiveInstance = null;
             StimBuffIndicator.HideBuff(TwoATwoBTGItemSystem.ItemKey);
             enabled = false;
             Plugin.Log.LogInfo("[2A2-(b-TG)] Effect ended.");

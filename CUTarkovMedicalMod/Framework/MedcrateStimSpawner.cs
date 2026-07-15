@@ -46,6 +46,9 @@ public static class MedcrateStimSpawner
     [HarmonyPrefix]
     private static void Prefix(BuildingEntity __instance)
     {
+        // 多人模式下仅主机执行医疗箱针剂生成
+        if (!KrokMpHelper.ShouldSpawnLoot) return;
+
         if (__instance.health >= 0.5f) return;
 
         string goName = __instance.gameObject.name.ToLowerInvariant();
@@ -92,14 +95,15 @@ public static class MedcrateStimSpawner
             Vector2 pos = position + new Vector3(Random.Range(-1.5f, 1.5f), Random.Range(1f, 3f));
             float rot = Random.Range(0f, 360f);
 
-            var prefab = Resources.Load("syringe") as GameObject;
-            if (prefab == null)
+            // 使用 Utils.Create 代替 Resources.Load + Instantiate，
+            // 使 CUCoreLib 拦截创建自定义物品，并触发 KrokMP 网络注册
+            var go = Utils.Create(itemKey, pos, rot);
+            if (go == null)
             {
-                Plugin.Log.LogWarning("[MedcrateStimSpawner] syringe prefab not found");
+                Plugin.Log.LogWarning($"[MedcrateStimSpawner] Utils.Create failed for '{itemKey}'");
                 return;
             }
 
-            var go = Object.Instantiate(prefab, pos, Quaternion.Euler(0f, 0f, rot));
             var item = go.GetComponent<Item>();
             if (item == null)
             {

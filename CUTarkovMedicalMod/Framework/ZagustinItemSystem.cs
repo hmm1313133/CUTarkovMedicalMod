@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using BepInEx;
@@ -128,6 +127,7 @@ public static class ZagustinItemSystem
     /// </summary>
     private static void ZagustinUseAction(Body body, Item item)
     {
+
         InjectorSound.Play();
         Plugin.Log.LogInfo("Zagustin useAction invoked by game native system.");
 
@@ -440,9 +440,10 @@ public sealed class ZagustinEffectController : MonoBehaviour
     private void TickEffect()
     {
         // 副作用：前 120 秒每秒扣除水分
+        // 直接修改字段，不使用 Drink()，避免 KrokMP 拦截方法调用导致本地修改被覆盖
         if (_sideEffectRemaining > 0f)
         {
-            _body!.Drink(-ThirstDrainPerSecond);
+            _body!.thirst = Mathf.Max(0f, _body.thirst - ThirstDrainPerSecond);
         }
     }
 

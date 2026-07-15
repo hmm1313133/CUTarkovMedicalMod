@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using BepInEx;
@@ -129,6 +128,7 @@ public static class SJ6ItemSystem
     /// </summary>
     private static void SJ6UseAction(Body body, Item item)
     {
+
         InjectorSound.Play();
         Plugin.Log.LogInfo("SJ6 useAction invoked by game native system.");
 

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using BepInEx;
@@ -140,6 +139,7 @@ public static class SJ12ItemSystem
     /// </summary>
     private static void SJ12UseAction(Body body, Item item)
     {
+
         InjectorSound.Play();
         Plugin.Log.LogInfo("SJ12 useAction invoked by game native system.");
 
@@ -310,12 +310,16 @@ public sealed class SJ12ItemMarker : MonoBehaviour
 
 /// <summary>
 /// SJ12 效果控制器：
-/// 增益期（600s）：体温 lerp 向 33°C，每秒恢复能量0.2和水分0.2（最高105），+2 韧性。
-/// 减益期（120s）：体温 lerp 向 41°C，结束后韧性恢复。
+/// 增益期（600s）：体温偏移 -4°C（相对于环境温度），每秒恢复能量0.2和水分0.2（最高105）。
+/// 减益期（120s）：体温偏移 +4°C（相对于环境温度）。
 /// 使用瞬间 +4 患病、体重 -2kg。
 ///
-/// 体温 lerp 在 LateUpdate 中执行（原生 HandleBody 在 Update 中运行后），
-/// 以 Lerp 向目标温度的方式施加药物影响，同时不完全覆盖环境温度的自然变化。
+/// 体温系统：
+/// - SJ12TemperaturePatch（Harmony Prefix/Postfix on HandleBodyTemperature）
+///   临时偏移 ambientTemperature，使游戏原生 lerp 自然向 (ambient + offset) 进行。
+///   其他体温机制（建筑加热、衣物隔热等）正常工作，不被覆盖。
+/// - LateUpdate 仅做补充性加速推进（TempLerpStrength），加速偏移生效。
+///   一旦体温接近偏移目标，补充推进为零，完全由原生系统维护。
 /// </summary>
 public sealed class SJ12EffectController : MonoBehaviour
 {
@@ -323,7 +327,7 @@ public sealed class SJ12EffectController : MonoBehaviour
     {
         Idle,
         Delay,       // 1s 生效延迟
-        Buff,        // 600s 降温 + 能量/水分恢复 + 韧性提升
+        Buff,        // 600s 降温 + 能量/水分恢复
         Debuff       // 120s 反向升温
     }
 
@@ -336,7 +340,6 @@ public sealed class SJ12EffectController : MonoBehaviour
     internal const float EnergyRestorePerSecond = 0.2f;
     internal const float WaterRestorePerSecond = 0.2f;
     internal const float MaxEnergyWater = 105f;
-    internal const float ToughnessBoost = 2f;           // 韧性等级 +2
     internal const float SicknessOnUse = 4f;
 
     internal const float WeightLossOnUse = 6f;           // weightOffset 3:1 比例，6f = 实际 -2kg
@@ -345,7 +348,6 @@ public sealed class SJ12EffectController : MonoBehaviour
     private Phase _phase = Phase.Idle;
     private float _phaseTimer;
     private float _tickAccumulator;
-    private bool _toughnessApplied;
     private float _initialTemp;        // 注射时的体温，Buff/Debuff 都相对此值偏移
 
     public static SJ12EffectController Attach(Body body)
@@ -381,8 +383,6 @@ public sealed class SJ12EffectController : MonoBehaviour
         _phase = Phase.Delay;
         _phaseTimer = ActivationDelay;
         _tickAccumulator = 0f;
-        if (!isRefresh)
-            _toughnessApplied = false;  // 正面韧性提升不重复应用
         enabled = true;
 
         StimBuffIndicator.ShowBuff(
@@ -401,7 +401,6 @@ public sealed class SJ12EffectController : MonoBehaviour
         if (_body == null || _phase == Phase.Idle)
         {
             StimBuffIndicator.HideBuff(SJ12ItemSystem.ItemKey);
-            RestoreToughness();
             enabled = false;
             return;
         }
@@ -422,25 +421,44 @@ public sealed class SJ12EffectController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 返回当前体温偏移量（供 SJ12TemperaturePatch 使用）。
+    /// Buff: -BuffTempOffset, Debuff: +DebuffTempOffset, 其他: 0
+    /// </summary>
+    public float GetCurrentTempOffset()
+    {
+        if (_phase == Phase.Buff) return -BuffTempOffset;
+        if (_phase == Phase.Debuff) return DebuffTempOffset;
+        return 0f;
+    }
+
     private void LateUpdate()
     {
         if (_body == null || _phase == Phase.Idle || _phase == Phase.Delay) return;
 
-        var dt = Time.deltaTime;
+        var offset = GetCurrentTempOffset();
+        if (offset == 0f) return;
 
-        if (_phase == Phase.Buff)
+        // 补充性体温推进：加速偏移生效速度
+        // 主体温控制由 SJ12TemperaturePatch 在 HandleBodyTemperature 中处理（偏移 ambientTemperature）
+        // 这里仅加速初始过渡，不锁定体温
+        var dt = Time.deltaTime;
+        var ambient = SJ12TemperaturePatch.GetAmbientTemperature(_body);
+        var desired = ambient + offset;
+
+        if (offset < 0f) // Buff: cooling
         {
-            // 降低体温，最多降 BuffTempOffset（4°C），相对于注射时体温
-            var target = _initialTemp - BuffTempOffset;
-            if (_body.temperature > target)
-                _body.temperature -= Mathf.Min(_body.temperature - target, dt * TempLerpStrength);
+            // 体温高于目标时加速降温
+            var remaining = _body.temperature - desired;
+            if (remaining > 0f)
+                _body.temperature -= Mathf.Min(remaining, dt * TempLerpStrength);
         }
-        else // Debuff
+        else // Debuff: heating
         {
-            // 升高体温，最多升 DebuffTempOffset（4°C），相对于注射时体温
-            var target = _initialTemp + DebuffTempOffset;
-            if (_body.temperature < target)
-                _body.temperature += Mathf.Min(target - _body.temperature, dt * TempLerpStrength);
+            // 体温低于目标时加速升温
+            var remaining = desired - _body.temperature;
+            if (remaining > 0f)
+                _body.temperature += Mathf.Min(remaining, dt * TempLerpStrength);
         }
     }
 
@@ -453,7 +471,7 @@ public sealed class SJ12EffectController : MonoBehaviour
             _phaseTimer + BuffDuration,
             BuffDuration + ActivationDelay,
             new Color(0.4f, 0.85f, 1f),
-            positiveDescs: I18n.TrAll("sj12.pos.0", "sj12.pos.1", "sj12.pos.2"),
+            positiveDescs: I18n.TrAll("sj12.pos.0", "sj12.pos.1"),
             negativeDescs: I18n.TrAll("sj12.neg.0"));
 
         if (_phaseTimer <= 0f)
@@ -462,10 +480,7 @@ public sealed class SJ12EffectController : MonoBehaviour
             _phaseTimer = BuffDuration;
             _tickAccumulator = 0f;
 
-            // 增益期开始时 +2 韧性等级（Skills.RES）
-            SkillEffectHelper.AdjustLevel(_body!, SkillEffectHelper.StatRES, (int)ToughnessBoost);
-            _toughnessApplied = true;
-            Plugin.Log.LogInfo($"[SJ12] Buff phase: cooling by {BuffTempOffset}°C from {_initialTemp:F1}, RES +{ToughnessBoost} for {BuffDuration}s");
+            Plugin.Log.LogInfo($"[SJ12] Buff phase: cooling by {BuffTempOffset}°C from {_initialTemp:F1} for {BuffDuration}s");
         }
     }
 
@@ -490,7 +505,7 @@ public sealed class SJ12EffectController : MonoBehaviour
             _phaseTimer,
             BuffDuration,
             new Color(0.4f, 0.85f, 1f),
-            positiveDescs: I18n.TrAll("sj12.pos.0", "sj12.pos.1", "sj12.pos.2"),
+            positiveDescs: I18n.TrAll("sj12.pos.0", "sj12.pos.1"),
             negativeDescs: I18n.TrAll("sj12.neg.0"));
 
         if (_phaseTimer <= 0f)
@@ -516,27 +531,14 @@ public sealed class SJ12EffectController : MonoBehaviour
         if (_phaseTimer <= 0f)
         {
             _phase = Phase.Idle;
-            RestoreToughness();
             StimBuffIndicator.HideBuff(SJ12ItemSystem.ItemKey);
             enabled = false;
-            Plugin.Log.LogInfo("[SJ12] Effect ended. Toughness restored, temperature returning to normal.");
+            Plugin.Log.LogInfo("[SJ12] Effect ended. Temperature returning to normal.");
         }
-    }
-
-    /// <summary>
-    /// 恢复韧性等级（debuff 结束时调用，或效果被中断时调用）。
-    /// </summary>
-    private void RestoreToughness()
-    {
-        if (!_toughnessApplied || _body == null) return;
-        SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatRES, -(int)ToughnessBoost);
-        _toughnessApplied = false;
-        Plugin.Log.LogInfo($"[SJ12] RES -{ToughnessBoost} restored.");
     }
 
     private void OnDisable()
     {
-        RestoreToughness();
     }
 
     private static Sprite? TryGetSJ12Icon()
@@ -565,5 +567,85 @@ public static class SJ12HoverPatch
 
         __result.Item1 = marker.displayName;
         HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);
+    }
+}
+
+/// <summary>
+/// Harmony 补丁：修改 HandleBodyTemperature 的 lerp 目标，使 SJ12 效果动态影响体温而不锁定。
+///
+/// 机制：Prefix 临时偏移 ambientTemperature（±SJ12Offset），使原生 lerp 自然向偏移后目标进行；
+/// Postfix 立即恢复 ambientTemperature，避免影响其他读取。
+/// SJ12 不再在 LateUpdate 中强制覆写体温（仅做补充性加速推进）。
+/// 其他体温机制（建筑加热、衣物隔热等）正常工作。
+/// </summary>
+[HarmonyPatch(typeof(Body), "HandleBodyTemperature")]
+public static class SJ12TemperaturePatch
+{
+    // ambientTemperature 是 Body 的非公开字段/属性，需要反射访问
+    private static readonly FieldInfo? _ambientTempField = AccessTools.Field(typeof(Body), "ambientTemperature");
+    private static readonly PropertyInfo? _ambientTempProp = AccessTools.Property(typeof(Body), "ambientTemperature");
+
+    private static float? _originalAmbient;
+
+    /// <summary>读取 Body.ambientTemperature（字段或属性）</summary>
+    public static float GetAmbientTemperature(Body body)
+    {
+        if (_ambientTempField != null)
+            return (float)_ambientTempField.GetValue(body);
+        if (_ambientTempProp != null)
+            return (float)_ambientTempProp.GetValue(body);
+        // 回退：无法访问时返回当前体温（近似环境温度）
+        Plugin.Log.LogWarning("[SJ12TempPatch] Cannot access Body.ambientTemperature, using body.temperature as fallback.");
+        return body.temperature;
+    }
+
+    /// <summary>写入 Body.ambientTemperature（字段或可写属性）</summary>
+    private static bool SetAmbientTemperature(Body body, float value)
+    {
+        if (_ambientTempField != null)
+        {
+            _ambientTempField.SetValue(body, value);
+            return true;
+        }
+        if (_ambientTempProp != null && _ambientTempProp.CanWrite)
+        {
+            _ambientTempProp.SetValue(body, value);
+            return true;
+        }
+        return false;
+    }
+
+    [HarmonyPrefix]
+    public static void Prefix(Body __instance)
+    {
+        var sj12 = __instance.GetComponent<SJ12EffectController>();
+        if (sj12 == null || !sj12.enabled) return;
+
+        float offset = sj12.GetCurrentTempOffset();
+        if (offset == 0f) return; // Delay/Idle phase, no offset
+
+        // 临时偏移 ambientTemperature，使 HandleBodyTemperature lerp 向 (ambient + offset)
+        var original = GetAmbientTemperature(__instance);
+        if (SetAmbientTemperature(__instance, original + offset))
+        {
+            _originalAmbient = original;
+            Plugin.Log.LogDebug($"[SJ12TempPatch] Prefix: shifted ambient from {original:F1} to {original + offset:F1} (offset={offset:F1})");
+        }
+        else
+        {
+            // ambientTemperature 不可写（只读属性），无法通过 Prefix 偏移
+            // LateUpdate 将独立处理体温推进
+            Plugin.Log.LogDebug("[SJ12TempPatch] ambientTemperature is read-only, Prefix shift skipped. LateUpdate will handle temperature.");
+        }
+    }
+
+    [HarmonyPostfix]
+    public static void Postfix(Body __instance)
+    {
+        if (!_originalAmbient.HasValue) return;
+
+        // 恢复 ambientTemperature，避免影响同一帧中其他读取
+        SetAmbientTemperature(__instance, _originalAmbient.Value);
+        _originalAmbient = null;
     }
 }

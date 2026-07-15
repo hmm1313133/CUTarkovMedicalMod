@@ -278,8 +278,16 @@ public sealed class MedicalFramework
         _config = new MedicalModConfig(config);
         _krokMpDetected = DetectKrokMp();
 
-        var catalog = LoadCatalog();
-        _catalog = catalog;
+        try
+        {
+            var catalog = LoadCatalog();
+            _catalog = catalog;
+        }
+        catch (Exception ex)
+        {
+            _log.LogError($"LoadCatalog threw: {ex}. Falling back to default catalog.");
+            _catalog = MedicalCatalog.DefaultItems;
+        }
         _contentSource = ResolveContentSource();
         _effectiveMode = ResolveEffectiveMode();
         _random = CreateRandom();
@@ -386,9 +394,7 @@ public sealed class MedicalFramework
     {
         if (KrokMpDetected)
         {
-            return _config.CompatibilityMode.Value == MultiplayerCompatibilityMode.AutoSafe
-                ? "KrokMP detected; world loot injection is suppressed to stay safe by default."
-                : "KrokMP detected; compatibility mode is forcing the configured feature set.";
+            return "KrokMP detected; world loot spawns only on host, items sync to clients via KrokMP.";
         }
 
         return "KrokMP not detected; full configured feature set is available.";
@@ -462,24 +468,11 @@ public sealed class MedicalFramework
             return MedicalFeatureMode.Disabled;
         }
 
-        if (!_krokMpDetected)
-        {
-            return configured;
-        }
-
-        switch (_config.CompatibilityMode.Value)
-        {
-            case MultiplayerCompatibilityMode.PreferStartingLoadoutOnly:
-                return MedicalFeatureMode.StartingLoadoutOnly;
-            case MultiplayerCompatibilityMode.ForceConfiguredMode:
-                return configured;
-            default:
-                return configured == MedicalFeatureMode.WorldLootOnly
-                    ? MedicalFeatureMode.Disabled
-                    : configured == MedicalFeatureMode.Both
-                        ? MedicalFeatureMode.StartingLoadoutOnly
-                        : configured;
-        }
+        // KrokMP 多人模式下不再降级功能模式。
+        // 世界掉落生成由各生成系统的 KrokMpHelper.ShouldSpawnLoot 检查保证仅主机执行，
+        // 客户端通过 KrokMP 的物品同步机制接收主机生成的物品。
+        // 兼容模式配置保留向后兼容，但不再抑制世界掉落。
+        return configured;
     }
 
     private Random CreateRandom()

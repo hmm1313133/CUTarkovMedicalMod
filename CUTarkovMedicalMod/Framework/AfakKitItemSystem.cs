@@ -28,6 +28,9 @@ public static class AfakKitItemSystem
     private const float SkinHealFactor = 60f;           // 每圈表皮恢复 2
     private const float BoneHealReduction = 39f;        // 每圈骨折恢复 1.3
     private const float DislocationHealReduction = 39f; // 每圈脱臼恢复 1.3
+    private const float DisinfectFactor = 150f;         // 每圈消毒 5s（累加）
+    private const float DisinfectCap = 150f;            // 消毒上限 150s
+    private const float OpiateFactor = 30f;             // 每圈阿片+1
 
     private static Sprite? _cachedIcon;
 
@@ -173,6 +176,18 @@ public static class AfakKitItemSystem
 
                     // 5) 止血
                     limb.bandageSlowAmount += perf * BleedingStopFactor;
+
+                    // 6) 消毒（累加，上限封顶）
+                    limb.disinfectionTime = Mathf.Min(DisinfectCap, limb.disinfectionTime + perf * DisinfectFactor);
+
+                    // 7) 阿片影响
+                    var body = limb.body;
+                    if (body != null)
+                    {
+                        var pk = body.GetComponent<Painkillers>();
+                        if (pk == null) pk = body.gameObject.AddComponent<Painkillers>();
+                        pk.opiateAmount += perf * OpiateFactor;
+                    }
                 },
                 new Color(0.75f, 0.75f, 0.78f), limb),
                 item);

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using BepInEx;
@@ -120,6 +119,7 @@ public static class Sj9ItemSystem
 
     private static void Sj9UseAction(Body body, Item item)
     {
+
         InjectorSound.Play();
         Plugin.Log.LogInfo("SJ9 useAction invoked.");
 
@@ -425,6 +425,10 @@ public sealed class Sj9EffectController : MonoBehaviour
             new Color(0.9f, 0.4f, 0.2f), // 橙红色（副作用阶段）
             positiveDescs: Array.Empty<string>(),
             negativeDescs: I18n.TrAll("sj9.neg.0", "sj9.neg.1"));
+
+        // 延迟初始化 _chestLimb（Eff.Res 恢复后可能为 null）
+        if (_chestLimb == null && _body != null)
+            _chestLimb = FindChestLimb(_body);
 
         // 每秒胸口肌肉 -0.2 + 持续疼痛维持在 15
         _tickAccumulator += Time.deltaTime;

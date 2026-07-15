@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using BepInEx;
@@ -128,6 +127,7 @@ public static class PnbItemSystem
     /// </summary>
     private static void PnbUseAction(Body body, Item item)
     {
+
         InjectorSound.Play();
         Plugin.Log.LogInfo("PNB useAction invoked by game native system.");
 
@@ -297,8 +297,7 @@ public sealed class PnbItemMarker : MonoBehaviour
 
 /// <summary>
 /// PNB 效果控制器。
-/// 增益期（300s / 5min）：立即修复指甲（clawHealth = 100）；前 120s 每秒所有肢体 +0.2 肌肉健康；
-/// 全程 RES +3（耐力恢复 +30%）。
+/// 增益期（300s / 5min）：立即修复指甲（clawHealth = 100）；前 120s 每秒所有肢体 +0.2 肌肉健康。
 /// 副作用（300s 后）：永久 STR -1；兴奋剂震颤 60s。
 /// </summary>
 public sealed class PnbEffectController : MonoBehaviour
@@ -313,10 +312,9 @@ public sealed class PnbEffectController : MonoBehaviour
 
     internal const float ActivationDelay = 1f;
     internal const float HealDuration = 120f;               // 肌肉愈合持续 2 分钟
-    internal const float BuffDuration = 300f;               // 耐力恢复持续 5 分钟
+    internal const float BuffDuration = 300f;               // 肌肉愈合持续 5 分钟
     internal const float TremorDuration = 60f;              // 震颤持续 60 秒
     internal const float HealPerSecond = 0.2f;              // 每秒每个肢体肌肉恢复
-    internal const int ResilienceBoost = 3;                  // 韧性等级临时 +3（耐力恢复 +30%）
     internal const int StrengthPenalty = 1;                  // 力量等级永久 -1
     internal const float StimulantTremorIntensity = 4f;     // 兴奋剂震颤强度
 
@@ -328,7 +326,6 @@ public sealed class PnbEffectController : MonoBehaviour
     private float _phaseTimer;
     private float _tickAccumulator;
     private float _elapsed;                    // 已生效时间（不含延迟）
-    private bool _resBoostApplied;             // RES 提升是否已应用
     private bool _strengthPenaltyApplied;      // STR 惩罚是否已触发
 
     public static PnbEffectController Attach(Body body)
@@ -354,8 +351,6 @@ public sealed class PnbEffectController : MonoBehaviour
         _phaseTimer = ActivationDelay;
         _elapsed = 0f;
         _tickAccumulator = 0f;
-        if (!isRefresh)
-            _resBoostApplied = false;   // 正面RES提升不重复应用
         _strengthPenaltyApplied = false; // 负面STR惩罚每次都触发
         enabled = true;
 
@@ -366,7 +361,7 @@ public sealed class PnbEffectController : MonoBehaviour
             BuffDuration + TremorDuration + ActivationDelay,
             BuffDuration + TremorDuration + ActivationDelay,
             new Color(0.4f, 0.8f, 0.5f), // 嫩绿色（再生+恢复）
-            positiveDescs: I18n.TrAll("pnb.pos.0", "pnb.pos.1", "pnb.pos.2", "pnb.pos.3", "pnb.pos.4"),
+            positiveDescs: I18n.TrAll("pnb.pos.0", "pnb.pos.1"),
             negativeDescs: I18n.TrAll("pnb.neg.0"));
     }
 
@@ -377,7 +372,6 @@ public sealed class PnbEffectController : MonoBehaviour
         if (_body == null || _phase == Phase.Idle)
         {
             StimBuffIndicator.HideBuff(PnbItemSystem.ItemKey);
-            RestoreResilienceBoost();
             enabled = false;
             return;
         }
@@ -418,12 +412,7 @@ public sealed class PnbEffectController : MonoBehaviour
             // 修复指甲损伤（角蛋白生长素效果 → clawHealth = 100）
             RestoreClawHealth();
 
-            // 应用耐力恢复提升：RES +3（与 SJ6 的耐力恢复方式相同）
-            ApplyResilienceBoost();
-            _resBoostApplied = true;
-
-            Plugin.Log.LogInfo($"[PNB] Buff phase: claw restored, muscle heal {HealPerSecond}/s for {HealDuration}s, "
-                + $"RES +{ResilienceBoost} for {BuffDuration}s");
+            Plugin.Log.LogInfo($"[PNB] Buff phase: claw restored, muscle heal {HealPerSecond}/s for {HealDuration}s");
         }
     }
 
@@ -460,9 +449,6 @@ public sealed class PnbEffectController : MonoBehaviour
 
         if (_phaseTimer <= 0f)
         {
-            // 增益期结束 → 恢复 RES 提升
-            RestoreResilienceBoost();
-
             // 触发副作用：STR -1（永久）+ 震颤 60s
             ApplyStrengthPenaltyPermanent();
             ApplyStimulantTremor();
@@ -552,27 +538,6 @@ public sealed class PnbEffectController : MonoBehaviour
     }
 
     /// <summary>
-    /// 应用耐力恢复提升：RES +3（韧性直接提升耐力恢复速度）。
-    /// </summary>
-    private void ApplyResilienceBoost()
-    {
-        if (_body == null) return;
-        SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatRES, ResilienceBoost);
-        Plugin.Log.LogInfo($"[PNB] RES +{ResilienceBoost} applied (now {SkillEffectHelper.GetLevel(_body, SkillEffectHelper.StatRES)}).");
-    }
-
-    /// <summary>
-    /// 增益期结束时恢复 RES 提升。
-    /// </summary>
-    private void RestoreResilienceBoost()
-    {
-        if (!_resBoostApplied || _body == null) return;
-        SkillEffectHelper.AdjustLevel(_body, SkillEffectHelper.StatRES, -ResilienceBoost);
-        _resBoostApplied = false;
-        Plugin.Log.LogInfo($"[PNB] RES -{ResilienceBoost} restored (now {SkillEffectHelper.GetLevel(_body, SkillEffectHelper.StatRES)}).");
-    }
-
-    /// <summary>
     /// 延迟 5 分钟后触发：STR -1（永久，不恢复）。
     /// </summary>
     private void ApplyStrengthPenaltyPermanent()
@@ -608,7 +573,6 @@ public sealed class PnbEffectController : MonoBehaviour
 
     private void OnDisable()
     {
-        RestoreResilienceBoost();
     }
 
     private static Sprite? TryGetPnbIcon()

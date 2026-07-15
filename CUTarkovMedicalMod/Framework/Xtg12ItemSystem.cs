@@ -119,6 +119,7 @@ public static class Xtg12ItemSystem
 
     private static void Xtg12UseAction(Body body, Item item)
     {
+
         InjectorSound.Play();
         Plugin.Log.LogInfo("xTG-12 useAction invoked.");
 
@@ -305,10 +306,10 @@ public sealed class Xtg12EffectController : MonoBehaviour
     private const float TremorDurationSeconds = 60f;
     // 颤栗强度（游戏内 miscShakeIntensity 每秒衰减 1.0，设 60 则约 60s 归零）
     private const float TremorIntensity = 60f;
-    // 感染清除：2分钟内线性降低80%感染度，败血症 -20%
+    // 感染清除：2分钟内线性降低80%感染度，败血症 -70
     private const float InfectionClearDuration = 120f;
     private const float InfectionClearRatio = 0.8f;
-    private const float SicknessClearRatio = 0.2f;
+    private const float SepsisReduceAmount = 70f;
 
     private Body? _body;
     private float _remaining;
@@ -499,7 +500,7 @@ public sealed class Xtg12EffectController : MonoBehaviour
             }
 
             // 败血症线性降低20%
-            float septicReduce = _initialSepticShock * (SicknessClearRatio / InfectionClearDuration);
+            float septicReduce = SepsisReduceAmount / InfectionClearDuration;
             _body.septicShock = Mathf.Max(0f, _body.septicShock - septicReduce);
         }
     }

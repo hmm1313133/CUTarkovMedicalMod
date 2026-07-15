@@ -287,9 +287,51 @@ public static class StimBuffIndicator
                 if (_addMoodleMethod == null) return;
             }
 
+            // 多人模式过滤：仅显示本地 body 上有活跃效果控制器的 buff。
+            // 远程 body 的控制器也会调用 ShowBuff（因为守卫已禁用），
+            // 但其 buff 不应在本地屏幕显示。
+            Body? localBody = null;
+            if (KrokMpHelper.IsMultiplayer)
+            {
+                try { localBody = PlayerCamera.main?.body; } catch { }
+            }
+
             foreach (var buff in _activeBuffs.Values)
             {
                 if (!buff.IsActive || buff.Remaining <= 0f) continue;
+
+                // 多人模式：如果 buff key 对应已知效果控制器类型，
+                // 检查本地 body 是否有该控制器的活跃实例。没有则跳过（来自远程 body）。
+                if (localBody != null)
+                {
+                    Type? ctrlType = null;
+                    if (Eff.ControllerTypes.TryGetValue(buff.Key, out var exactType))
+                        ctrlType = exactType;
+                    else
+                    {
+                        // 动态 key 前缀匹配（如 "obdolbos_0" -> "obdolbos"）
+                        foreach (var kv in Eff.ControllerTypes)
+                        {
+                            if (buff.Key.StartsWith(kv.Key + "_"))
+                            {
+                                ctrlType = kv.Value;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (ctrlType != null)
+                    {
+                        var ctrls = localBody.GetComponents(ctrlType);
+                        bool anyEnabled = false;
+                        foreach (var c in ctrls)
+                        {
+                            if (c is MonoBehaviour mc && mc.enabled) { anyEnabled = true; break; }
+                        }
+                        if (!anyEnabled)
+                            continue;
+                    }
+                }
 
                 // 递减 BuffEntry 剩余时间（ShowBuff 每帧覆写不会受影响；临时条目会正常过期）
                 buff.Remaining -= Time.deltaTime;
@@ -434,6 +476,7 @@ public static class StimBuffPatch_UpdateMoodles
     public static void Postfix()
     {
         StimBuffIndicator.AddBuffs();
+        EffectBackup.Tick();
     }
 }
 

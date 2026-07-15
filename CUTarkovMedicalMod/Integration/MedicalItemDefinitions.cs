@@ -19,7 +19,6 @@ public enum BasePrefabType
 
 /// <summary>
 /// 单个医疗物品的注册元数据。
-/// CUCoreLib 模式和 Legacy 模式共用此定义。
 /// </summary>
 public sealed class MedicalItemDef
 {
@@ -65,7 +64,6 @@ public sealed class MedicalItemDef
 
 /// <summary>
 /// 所有医疗物品的中央定义注册表。
-/// CUCoreLib 模式和 Legacy 模式共用此注册表，确保物品元数据的一致性。
 /// </summary>
 public static class MedicalItemDefinitions
 {

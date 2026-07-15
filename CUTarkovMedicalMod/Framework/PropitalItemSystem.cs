@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using BepInEx;
@@ -129,6 +128,7 @@ public static class PropitalItemSystem
     /// </summary>
     private static void PropitalUseAction(Body body, Item item)
     {
+
         InjectorSound.Play();
         Plugin.Log.LogInfo("Propital useAction invoked by game native system.");
 

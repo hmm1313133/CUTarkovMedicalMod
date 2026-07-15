@@ -28,6 +28,8 @@ public static class SalewaKitItemSystem
     private const float SkinHealFactor = 80f;            // 每圈表皮恢复 2
     private const float BoneHealReduction = 52f;         // 每圈骨折恢复 1.3
     private const float DislocationHealReduction = 52f;  // 每圈脱臼恢复 1.3
+    private const float DisinfectFactor = 120f;          // 每圈消毒 3s（累加）
+    private const float DisinfectCap = 120f;             // 消毒上限 120s
 
     // 保温机制常量
     private const float ColdThreshold = 30f;       // 体温低于此值触发保温
@@ -60,10 +62,12 @@ public static class SalewaKitItemSystem
             {
                 var baseSpr = sr.sprite;
                 var baseRect = baseSpr.rect;
-                // 以原始精灵宽高比创建5倍放大贴图
-                int targetW = Mathf.RoundToInt(baseRect.width * 2.5f);
-                int targetH = Mathf.RoundToInt(baseRect.height * 2.5f);
-                var scaledTex = StretchTextureToSize(icon.texture, targetW, targetH);
+                var iconTex = icon.texture;
+                // 以图标原始宽高比缩放，基于基础预制体的高度确定缩放大小
+                float scale = baseRect.height * 2.5f / iconTex.height;
+                int targetW = Mathf.RoundToInt(iconTex.width * scale);
+                int targetH = Mathf.RoundToInt(iconTex.height * scale);
+                var scaledTex = StretchTextureToSize(iconTex, targetW, targetH);
                 var scaledSprite = Sprite.Create(scaledTex,
                     new Rect(0, 0, scaledTex.width, scaledTex.height),
                     new Vector2(0.5f, 0.5f), baseSpr.pixelsPerUnit > 0f ? baseSpr.pixelsPerUnit : 32f);
@@ -204,6 +208,9 @@ public static class SalewaKitItemSystem
                         if (body.temperature < before) // 防止超上限回退
                             body.temperature = before;
                     }
+
+                    // 7) 消毒（累加，上限封顶）
+                    limb.disinfectionTime = Mathf.Min(DisinfectCap, limb.disinfectionTime + perf * DisinfectFactor);
                 },
                 bandageColor, limb),
                 item);

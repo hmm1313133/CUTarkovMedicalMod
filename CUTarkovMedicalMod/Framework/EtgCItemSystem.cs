@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using BepInEx;
@@ -147,6 +146,7 @@ public static class EtgCItemSystem
     /// </summary>
     private static void EtgUseAction(Body body, Item item)
     {
+
         InjectorSound.Play();
         Plugin.Log.LogInfo("ETG-c useAction invoked by game native system.");
 
@@ -312,35 +312,45 @@ public static class EtgStimRegistryPatch
     [HarmonyPostfix]
     public static void Postfix()
     {
-        EtgCItemSystem.EnsureRegisteredInItemTable();
-        ZagustinItemSystem.EnsureRegisteredInItemTable();
-        MorphineItemSystem.EnsureRegisteredInItemTable();
-        SJ12ItemSystem.EnsureRegisteredInItemTable();
-        MuleItemSystem.EnsureRegisteredInItemTable();
-        PropitalItemSystem.EnsureRegisteredInItemTable();
-        PnbItemSystem.EnsureRegisteredInItemTable();
-        Sj1ItemSystem.EnsureRegisteredInItemTable();
-        ObdolbosItemSystem.EnsureRegisteredInItemTable();
-        Sj9ItemSystem.EnsureRegisteredInItemTable();
-        BluebloodItemSystem.EnsureRegisteredInItemTable();
-        Xtg12ItemSystem.EnsureRegisteredInItemTable();
-        MildronateItemSystem.EnsureRegisteredInItemTable();
-        TwoATwoBTGItemSystem.EnsureRegisteredInItemTable();
-        Obdolbos2ItemSystem.EnsureRegisteredInItemTable();
-        GrizzlyKitItemSystem.EnsureRegisteredInItemTable();
-        AfakKitItemSystem.EnsureRegisteredInItemTable();
-        IfakKitItemSystem.EnsureRegisteredInItemTable();
-        SalewaKitItemSystem.EnsureRegisteredInItemTable();
-        AI2ItemSystem.EnsureRegisteredInItemTable();
-        GoldenStarItemSystem.EnsureRegisteredInItemTable();
-        VaselineItemSystem.EnsureRegisteredInItemTable();
-        LibatineItemSystem.EnsureRegisteredInItemTable();
-        IbuprofenItemSystem.EnsureRegisteredInItemTable();
-        MultiToolItemSystem.EnsureRegisteredInItemTable();
-        CmsKitItemSystem.EnsureRegisteredInItemTable();
+        System.Action<System.Func<bool>, string> safeCall = (action, name) =>
+        {
+            try { action(); }
+            catch (System.Exception ex) { Plugin.Log.LogWarning($"[EtgStimRegistry] EnsureRegisteredInItemTable failed for '{name}': {ex.Message}"); }
+        };
 
-        // 通知集成模式物品已注册到 GlobalItems
-        Plugin.IntegrationMode?.OnItemsSetup();
+        safeCall(EtgCItemSystem.EnsureRegisteredInItemTable, "etg_c");
+        safeCall(ZagustinItemSystem.EnsureRegisteredInItemTable, "zagustin");
+        safeCall(MorphineItemSystem.EnsureRegisteredInItemTable, "morphine");
+        safeCall(SJ12ItemSystem.EnsureRegisteredInItemTable, "sj12");
+        safeCall(MuleItemSystem.EnsureRegisteredInItemTable, "mule");
+        safeCall(PropitalItemSystem.EnsureRegisteredInItemTable, "propital");
+        safeCall(PnbItemSystem.EnsureRegisteredInItemTable, "pnb");
+        safeCall(Sj1ItemSystem.EnsureRegisteredInItemTable, "sj1");
+        safeCall(SJ6ItemSystem.EnsureRegisteredInItemTable, "sj6");
+        safeCall(ObdolbosItemSystem.EnsureRegisteredInItemTable, "obdolbos");
+        safeCall(Sj9ItemSystem.EnsureRegisteredInItemTable, "sj9");
+        safeCall(BluebloodItemSystem.EnsureRegisteredInItemTable, "blueblood");
+        safeCall(Xtg12ItemSystem.EnsureRegisteredInItemTable, "xtg12");
+        safeCall(MildronateItemSystem.EnsureRegisteredInItemTable, "mildronate");
+        safeCall(TwoATwoBTGItemSystem.EnsureRegisteredInItemTable, "2a2btg");
+        safeCall(Obdolbos2ItemSystem.EnsureRegisteredInItemTable, "obdolbos2");
+        safeCall(GrizzlyKitItemSystem.EnsureRegisteredInItemTable, "grizzly");
+        safeCall(AfakKitItemSystem.EnsureRegisteredInItemTable, "afak");
+        safeCall(IfakKitItemSystem.EnsureRegisteredInItemTable, "ifak");
+        safeCall(SalewaKitItemSystem.EnsureRegisteredInItemTable, "salewa");
+        safeCall(AI2ItemSystem.EnsureRegisteredInItemTable, "ai2");
+        safeCall(GoldenStarItemSystem.EnsureRegisteredInItemTable, "goldenstar");
+        safeCall(VaselineItemSystem.EnsureRegisteredInItemTable, "vaseline");
+        safeCall(LibatineItemSystem.EnsureRegisteredInItemTable, "libatine");
+        safeCall(IbuprofenItemSystem.EnsureRegisteredInItemTable, "ibuprofen");
+        safeCall(MultiToolItemSystem.EnsureRegisteredInItemTable, "multitool");
+        safeCall(CmsKitItemSystem.EnsureRegisteredInItemTable, "cms");
+
+        Plugin.Log.LogInfo("[EtgStimRegistry] Item.SetupItems Postfix complete. Calling OnItemsSetup...");
+
+        // 通知 CUCoreLib 集成模式物品已注册到 GlobalItems
+        try { Plugin.IntegrationMode?.OnItemsSetup(); }
+        catch (System.Exception ex) { Plugin.Log.LogError($"[EtgStimRegistry] OnItemsSetup threw: {ex}"); }
     }
 }
 
@@ -528,8 +538,9 @@ public sealed class EtgStimEffectController : MonoBehaviour
 
     private void DebuffTick()
     {
-        _body!.Eat(-DebuffHungerDrain, 0f);
-        _body.Drink(-DebuffThirstDrain);
+        // 直接修改字段，不使用 Eat()/Drink()，避免 KrokMP 拦截方法调用导致本地修改被覆盖
+        _body!.hunger = Mathf.Max(0f, _body.hunger - DebuffHungerDrain);
+        _body.thirst = Mathf.Max(0f, _body.thirst - DebuffThirstDrain);
     }
 
     private static Sprite? TryGetEtgIcon()
