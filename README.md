@@ -2,7 +2,7 @@
 
 > `未知伤亡（Casualties: Unknown）：塔科夫医疗模组`
 >
-> **v0.2.5**
+> **v0.2.9**
 
 一个为 **Casualties: Unknown Demo** 开发的 BepInEx 模组，将《逃离塔科夫》中的 16 种战斗兴奋剂注射器、12 种医疗物品及其完整医疗系统引入游戏。
 
@@ -112,7 +112,7 @@ CasualtiesUnknownTarkovMedicalMod/
         ├── SJ12ItemSystem.cs                    # SJ12 体温调节
         ├── MuleItemSystem.cs                    # M.U.L.E. 负重针
         ├── PropitalItemSystem.cs                # Propital 再生剂
-        ├── Sj1ItemSystem.cs                     # SJ1 属性强化
+        ├── Sj1ItemSystem.cs                     # SJ1 耐力强化
         ├── SJ6ItemSystem.cs                     # SJ6 耐力强化
         ├── Sj9ItemSystem.cs                     # SJ9 体温抑制
         ├── PnbItemSystem.cs                     # PNB 肌肉修复
