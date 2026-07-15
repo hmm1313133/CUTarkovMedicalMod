@@ -1,0 +1,132 @@
+Version: 0.2.9
+Author: hmm1313133
+Mod GUID: com.yourname.cu.tarkovmedicalmod
+GitHub: https://github.com/hmm1313133/CUTarkovMedicalMod
+===========================================================
+DESCRIPTION
+===========================================================
+A BepInEx mod for Casualties: Unknown Demo that brings 16 Tarkov-style combat stimulants, 12 medical items, and a complete medical system into the game.
+
+Features:
+- 16 custom stimulant injectors with unique effects and side effects (no temporary skill level boosts)
+- 12 medical items (first aid kits, surgery kits, ointments, pills)
+- Starting item grants + world loot spawning
+- Intelligence-based Recognition system (hide names/effects when INT too low)
+- Buff indicator via native MoodleManager
+- Tunnel vision URP Vignette post-processing
+- Multi-language support (EN/zh_CN)
+- CUCoreLib hard dependency (non-destructive save coordination)
+- Medical effect serialization system (Eff.Ser/Res) — saves/restores all active stimulant effects across floors
+- KrokMP multiplayer full support:
+  - Per-player effect controllers run independently on each client
+  - Health sync interception prevents host from overriding client stimulant effects
+  - Client inventory save/restore on reconnect (items + medical effects)
+  - Buff indicator correctly shows only local player's effects
+- Console spawn support for all custom items
+- Hover description (SHIFT to expand effect details)
+
+Stimulant Overview (v0.2.9 balance changes):
+- SJ1: Changed from STR+5/RES+3 → stamina cap +10%, stamina recovery +50% (+ mild opiate)
+- SJ12: Removed temporary RES+2 toughness boost
+- PNB: Removed temporary RES+3 resilience boost (keeps nail repair + muscle healing + permanent STR-1 penalty)
+- Obdolbos2 permanent skill boosts remain unchanged
+- All temporary skill level increases removed — only permanent changes remain (Propital/SJ9 penalties, Obdolbos/Obdolbos2 permanent boosts)
+
+===========================================================
+REQUIREMENTS
+===========================================================
+- BepInEx 5.x
+- Casualties: Unknown Demo
+- CUCoreLib (required — hard dependency for save coordination and item registration)
+- Optional: QoL Unknown (save compatibility handled automatically via CUCoreLib)
+- Optional: KrokMP (multiplayer safe mode auto-detected)
+
+===========================================================
+INSTALLATION
+===========================================================
+1. Download CUTarkovMedicalMod_v0.2.9.zip
+2. Extract the contents directly into BepInEx/plugins/CUTarkovMedicalMod/
+   (DLL, Framework/, and Lang/ should be at the top level)
+3. Ensure CUCoreLib.dll is in BepInEx/plugins/
+4. Launch the game
+
+===========================================================
+CHANGELOG
+===========================================================
+v0.2.9 - 2026-07-16
+- Balance: Removed all temporary skill level increases from stimulants
+  - SJ1: STR+5/RES+3 replaced with stamina cap +10% + stamina recovery +50% (+ mild opiate)
+  - SJ12: RES+2 temporary toughness boost removed
+  - PNB: RES+3 temporary resilience boost removed
+  - Permanent skill changes remain: Propital RES/STR -2, SJ9 RES -2, Obdolbos2 STR/RES/INT +6
+- Refactor: CUCoreLib changed from soft dependency to hard dependency
+  - Removed LegacyMode, IIntegrationMode interface; Integration layer simplified to CUCoreLibMode only
+  - BepInDependency changed from SoftDependency to HardDependency
+- Feature: Medical effect serialization system (Eff.Ser/Res)
+  - Serializes/restores all active stimulant effect controllers across floor transitions
+  - Handles side-effect timers and phase state (SJ9/Obdolbos2/Blueblood)
+  - Registered as IBodySaveProvider via CUCoreLib SaveRegistry
+- Feature: KrokMP multiplayer full support
+  - KrokMpHelper: ShouldApplyUseEffect guard on all 18 injector useAction delegates
+  - KrokMpHealthSyncPatch: Intercepts health sync packets to prevent host overriding client stimulant effects
+  - KrokMpStateBridge: Reconnect effect restoration + inventory recovery for disconnected clients
+  - KrokMpLiquidSyncPatch: Prevents container item sync from resetting custom liquid items
+  - QolMpSaveCompat: Patches QoL save system for custom item creation + effect injection into snapshots
+  - MultiPlayerStateSaveProvider: Saves/restores non-host player state (health, skills, position, inventory, effects)
+  - StimBuffIndicator: Local-body filter prevents showing remote player buff indicators
+- Fix: ETG/Zagustin debuff tick now uses direct field modification instead of body.Eat()/Drink()
+  (avoids KrokMP network sync interception on those native methods)
+- Fix: Eff.Ser() serialization check now includes debuff/side-effect remaining timers
+- Fix: KrokMpHealthSyncPatch uses __0 indexed parameters instead of named params (matches KrokMP Apply method signatures)
+- Removed: NexusMods_Description_Simple.txt and NexusMods_Weapon_Description_Simple.txt (consolidated into cu.txt)
+
+v0.2.7 - 2026-07-14
+- Fix: Injectors stored inside containers (medkit) reverted to base "syringe" when
+  transitioning to the next floor
+  - Root cause: QoLSaveFix Phase 2 only searched by custom ID, but container items
+    still had base prefab ID ("syringe") after Prefix replacement. Phase 1 only
+    converted items directly in body slots, not container children.
+  - Fix: Phase 2 now falls back to searching by base prefab ID when custom ID search
+    fails, then converts the found item back to custom. Uses HashSet to avoid
+    duplicate matches when multiple injectors share the same base prefab.
+- Fix: Custom injectors disappeared when held in main hand with CUCoreLib installed
+  - Root cause: CUCoreLib ApplyCustomItemComponents recalculates condition as
+    liquidAmount/capacity. With capacity=1 and no liquid contents, condition=0,
+    causing the item to vanish even with destroyAtZeroCondition=false.
+  - Fix: Set capacity=0 (skips condition recalculation) + defaultContents=[{water,0}]
+    (triggers "waterbottle" template in ChooseTemplateId, avoiding "bandage" which
+    caused IndexOutOfRangeException). condition stays at 1.0 as set by ConfigureSpawnedItem.
+- Refactor: Centralized item definitions in MedicalItemDefinitions (shared by both modes)
+
+v0.2.6 - 2026-07-13
+- Fix: "Error occured during loading item 'propital(Clone) (Item)'" when both QoL Unknown
+  and CUCoreLib are installed simultaneously
+- Refactor: Integration layer cleanly separates CUCoreLib vs legacy behavior
+
+v0.2.5 - 2026-07-13
+- Fix: StimBuffIndicator IndexOutOfRangeException when backgroundIcons array is too short
+- Integration: CUCoreLib compatibility layer + QoL Unknown save fix
+- Feature: 12 medical items (Grizzly/AFAK/IFAK/Salewa/CMS/MultiTool/AI-2/GoldenStar/Vaseline/Libatine/Ibuprofen)
+- Feature: StimBuffIndicator with native MoodleManager integration
+- Feature: Tunnel vision URP Vignette overlay
+
+v0.2.1
+- Feature: Starting item grant system
+- Feature: World loot spawning
+- Feature: Intelligence-based Recognition system
+- Feature: Multi-language I18n system
+
+v0.2.0
+- Feature: 16 combat stimulant injectors
+- Feature: Custom useAction delegate system
+- Feature: Effect controllers with buff/debuff phases
+
+v0.1.0
+- Initial release
+
+===========================================================
+BUG REPORTS
+===========================================================
+Please report bugs at: https://github.com/hmm1313133/CUTarkovMedicalMod/issues
+Include your BepInEx/LogOutput.log file.
+Current version: v0.2.9

@@ -17,6 +17,7 @@
 
 # Release 目录（不含 zip 二进制文件）
 !Release/
+!Release/*.txt
 
 # 模组源码与资产
 !CUTarkovMedicalMod/
