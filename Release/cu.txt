@@ -1,132 +1,157 @@
-Version: 0.2.9
-Author: hmm1313133
-Mod GUID: com.yourname.cu.tarkovmedicalmod
-GitHub: https://github.com/hmm1313133/CUTarkovMedicalMod
-===========================================================
-DESCRIPTION
-===========================================================
-A BepInEx mod for Casualties: Unknown Demo that brings 16 Tarkov-style combat stimulants, 12 medical items, and a complete medical system into the game.
-
-Features:
-- 16 custom stimulant injectors with unique effects and side effects (no temporary skill level boosts)
-- 12 medical items (first aid kits, surgery kits, ointments, pills)
-- Starting item grants + world loot spawning
-- Intelligence-based Recognition system (hide names/effects when INT too low)
-- Buff indicator via native MoodleManager
-- Tunnel vision URP Vignette post-processing
-- Multi-language support (EN/zh_CN)
-- CUCoreLib hard dependency (non-destructive save coordination)
-- Medical effect serialization system (Eff.Ser/Res) — saves/restores all active stimulant effects across floors
-- KrokMP multiplayer full support:
-  - Per-player effect controllers run independently on each client
-  - Health sync interception prevents host from overriding client stimulant effects
-  - Client inventory save/restore on reconnect (items + medical effects)
-  - Buff indicator correctly shows only local player's effects
-- Console spawn support for all custom items
-- Hover description (SHIFT to expand effect details)
-
-Stimulant Overview (v0.2.9 balance changes):
-- SJ1: Changed from STR+5/RES+3 → stamina cap +10%, stamina recovery +50% (+ mild opiate)
-- SJ12: Removed temporary RES+2 toughness boost
-- PNB: Removed temporary RES+3 resilience boost (keeps nail repair + muscle healing + permanent STR-1 penalty)
-- Obdolbos2 permanent skill boosts remain unchanged
-- All temporary skill level increases removed — only permanent changes remain (Propital/SJ9 penalties, Obdolbos/Obdolbos2 permanent boosts)
-
-===========================================================
+Casualties: Unknown - Tarkov-Style Weapon Mod
+Version: 1.0.3.0
+A BepInEx mod for Casualties: Unknown Demo that brings Escape from Tarkov-inspired weapons into the game - 13 custom firearms, 2 melee weapons, 9 ammo types, and 9 magazines with a fully integrated caliber isolation system, weighted world spawns, melee weapon drops, and KrokMP multiplayer compatibility.
+> **Requires:** CUTarkovMedicalMod and CUCoreLib must be installed first. This mod has a hard dependency on both.
+---
 REQUIREMENTS
-===========================================================
-- BepInEx 5.x
-- Casualties: Unknown Demo
-- CUCoreLib (required — hard dependency for save coordination and item registration)
-- Optional: QoL Unknown (save compatibility handled automatically via CUCoreLib)
-- Optional: KrokMP (multiplayer safe mode auto-detected)
-
-===========================================================
+- Game: Casualties: Unknown Demo (Steam)
+- Mod Loader: BepInEx 5.x
+- Required Mods: CUCoreLib + CUTarkovMedicalMod (install in this order)
+Installing BepInEx:
+1. Download BepInEx 5.x stable (x64) from https://github.com/BepInEx/BepInEx/releases
+2. Extract into your game root folder (Steam/steamapps/common/Casualties Unknown Demo/)
+3. Launch the game once to generate the BepInEx/ folder, then close it
+---
 INSTALLATION
-===========================================================
-1. Download CUTarkovMedicalMod_v0.2.9.zip
-2. Extract the contents directly into BepInEx/plugins/CUTarkovMedicalMod/
-   (DLL, Framework/, and Lang/ should be at the top level)
-3. Ensure CUCoreLib.dll is in BepInEx/plugins/
-4. Launch the game
-
-===========================================================
-CHANGELOG
-===========================================================
-v0.2.9 - 2026-07-16
-- Balance: Removed all temporary skill level increases from stimulants
-  - SJ1: STR+5/RES+3 replaced with stamina cap +10% + stamina recovery +50% (+ mild opiate)
-  - SJ12: RES+2 temporary toughness boost removed
-  - PNB: RES+3 temporary resilience boost removed
-  - Permanent skill changes remain: Propital RES/STR -2, SJ9 RES -2, Obdolbos2 STR/RES/INT +6
-- Refactor: CUCoreLib changed from soft dependency to hard dependency
-  - Removed LegacyMode, IIntegrationMode interface; Integration layer simplified to CUCoreLibMode only
-  - BepInDependency changed from SoftDependency to HardDependency
-- Feature: Medical effect serialization system (Eff.Ser/Res)
-  - Serializes/restores all active stimulant effect controllers across floor transitions
-  - Handles side-effect timers and phase state (SJ9/Obdolbos2/Blueblood)
-  - Registered as IBodySaveProvider via CUCoreLib SaveRegistry
-- Feature: KrokMP multiplayer full support
-  - KrokMpHelper: ShouldApplyUseEffect guard on all 18 injector useAction delegates
-  - KrokMpHealthSyncPatch: Intercepts health sync packets to prevent host overriding client stimulant effects
-  - KrokMpStateBridge: Reconnect effect restoration + inventory recovery for disconnected clients
-  - KrokMpLiquidSyncPatch: Prevents container item sync from resetting custom liquid items
-  - QolMpSaveCompat: Patches QoL save system for custom item creation + effect injection into snapshots
-  - MultiPlayerStateSaveProvider: Saves/restores non-host player state (health, skills, position, inventory, effects)
-  - StimBuffIndicator: Local-body filter prevents showing remote player buff indicators
-- Fix: ETG/Zagustin debuff tick now uses direct field modification instead of body.Eat()/Drink()
-  (avoids KrokMP network sync interception on those native methods)
-- Fix: Eff.Ser() serialization check now includes debuff/side-effect remaining timers
-- Fix: KrokMpHealthSyncPatch uses __0 indexed parameters instead of named params (matches KrokMP Apply method signatures)
-- Removed: NexusMods_Description_Simple.txt and NexusMods_Weapon_Description_Simple.txt (consolidated into cu.txt)
-
-v0.2.7 - 2026-07-14
-- Fix: Injectors stored inside containers (medkit) reverted to base "syringe" when
-  transitioning to the next floor
-  - Root cause: QoLSaveFix Phase 2 only searched by custom ID, but container items
-    still had base prefab ID ("syringe") after Prefix replacement. Phase 1 only
-    converted items directly in body slots, not container children.
-  - Fix: Phase 2 now falls back to searching by base prefab ID when custom ID search
-    fails, then converts the found item back to custom. Uses HashSet to avoid
-    duplicate matches when multiple injectors share the same base prefab.
-- Fix: Custom injectors disappeared when held in main hand with CUCoreLib installed
-  - Root cause: CUCoreLib ApplyCustomItemComponents recalculates condition as
-    liquidAmount/capacity. With capacity=1 and no liquid contents, condition=0,
-    causing the item to vanish even with destroyAtZeroCondition=false.
-  - Fix: Set capacity=0 (skips condition recalculation) + defaultContents=[{water,0}]
-    (triggers "waterbottle" template in ChooseTemplateId, avoiding "bandage" which
-    caused IndexOutOfRangeException). condition stays at 1.0 as set by ConfigureSpawnedItem.
-- Refactor: Centralized item definitions in MedicalItemDefinitions (shared by both modes)
-
-v0.2.6 - 2026-07-13
-- Fix: "Error occured during loading item 'propital(Clone) (Item)'" when both QoL Unknown
-  and CUCoreLib are installed simultaneously
-- Refactor: Integration layer cleanly separates CUCoreLib vs legacy behavior
-
-v0.2.5 - 2026-07-13
-- Fix: StimBuffIndicator IndexOutOfRangeException when backgroundIcons array is too short
-- Integration: CUCoreLib compatibility layer + QoL Unknown save fix
-- Feature: 12 medical items (Grizzly/AFAK/IFAK/Salewa/CMS/MultiTool/AI-2/GoldenStar/Vaseline/Libatine/Ibuprofen)
-- Feature: StimBuffIndicator with native MoodleManager integration
-- Feature: Tunnel vision URP Vignette overlay
-
-v0.2.1
-- Feature: Starting item grant system
-- Feature: World loot spawning
-- Feature: Intelligence-based Recognition system
-- Feature: Multi-language I18n system
-
-v0.2.0
-- Feature: 16 combat stimulant injectors
-- Feature: Custom useAction delegate system
-- Feature: Effect controllers with buff/debuff phases
-
-v0.1.0
-- Initial release
-
-===========================================================
-BUG REPORTS
-===========================================================
-Please report bugs at: https://github.com/hmm1313133/CUTarkovMedicalMod/issues
-Include your BepInEx/LogOutput.log file.
-Current version: v0.2.9
+1. Install CUCoreLib first
+2. Install CUTarkovMedicalMod
+3. Download CUTarkovWeaponMod_v1.0.3.0.zip
+4. Extract the contents into your game root folder
+  - After extraction:
+    [Game Root]/BepInEx/plugins/CUTarkovWeaponMod/
+      - CUTarkovWeaponMod.dll
+      - Framework/Assets/  (weapon icons + gun sound effects)
+      - Lang/              (EN.json, zh_CN.json)
+5. Launch the game
+Verify: check BepInEx/LogOutput.log for "Casualties: Unknown - Tarkov-Style Weapon Mod loaded."
+---
+WHAT'S NEW IN v1.0.3
+- CUCoreLib hard dependency: migrated from soft dependency to hard dependency, removed Legacy mode and factory pattern
+- KrokMP multiplayer compatibility:
+  - World generation (supply crates/corpses/airdrops) only runs on host, clients receive items via KrokMP sync
+  - Ammo/magazine unloading changed to world drop (FreshItemDrop) in multiplayer to prevent items going to host inventory
+  - Synced weapons/mags/ammo display correct custom sprites (template pre-creation calls ConfigureCustomItem)
+  - Inventory thumbnails show correct magazine/no-magazine state
+- Console autocomplete fix: Command.argAutofill type corrected to Dictionary<int, List<string>>
+- Melee weapon qualities:
+  - Red Rebel ice axe: cutting 12 / hammering 18 / backflip / cangetwet / tool
+  - M-2 tactical sword: cutting 30 / hammering 12 / backflip / cangetwet / tool
+  - Hover description fix: no longer overwrites native detail page
+- Magazine adjustments: all magazine values set to 2; UMP45 magazine icon resolution fixed (48x120 -> 13x32)
+---
+FEATURES
+- 13 custom firearms: bolt-action snipers, semi-auto carbines, full-auto rifles, pump/semi-auto shotguns, pistols, SMG, PDW, LMG
+- 2 melee weapons: Red Rebel ice axe (climbing + cutting + hammering) and M-2 tactical sword (cutting + hammering), with backflip tag for vertical back display
+- 9 custom ammo types with dedicated calibers
+- 9 custom magazines with correct capacity and crafting recipes
+- Caliber isolation system: three-layer Harmony patches prevent cross-caliber loading
+- Weighted world spawns: 35% pistol / 20% SKS+shotgun / 17% SMG / 13% rifle / 10% sniper / 5% LMG
+- Melee weapon drops: 13% chance in supply crates (40% ice axe / 60% M-2 sword)
+- Container drops: supply crates (6.6% gun + 10% mag), corpses (3% gun + 3% mag), airdrops (3% gun)
+- Gun sound effects: unique fire/bolt/close/mag-in/mag-out sounds per weapon
+- Preloaded melee swing sounds for instant playback without I/O lag
+- Crafting system: magazines and ammo craftable via recipes
+- Vanilla weapon replacement: original weapons/ammo/magazines blocked
+- AXMC scope zoom: extended field of view when equipped
+- UMP45 built-in suppressor: noise 0.2, muzzle flash disabled
+- Console spawn support for all custom items
+- Auto-update checker with download, progress bar, and one-click update
+- Bilingual: English and Simplified Chinese
+- KrokMP multiplayer compatible: host-only world generation, world drop for unloaded items, proper sprite sync
+---
+13 FIREARMS
+1. AXMC (axmc) - Bolt-action sniper | .338 LM | 10-round mag | 310 bio dmg | Scope zoom
+2. DVL-10 (dvl10) - Bolt-action sniper | 7.62x51 | 10-round mag | 205 bio dmg
+3. SKS (sks) - Semi-auto carbine | 7.62x39 | 10-round internal | 150 bio dmg
+4. AKM (akm) - Full-auto rifle | 7.62x39 | 30-round mag | 120 bio dmg
+5. Desert Eagle (deagle) - Semi-auto pistol | .50 AE | 7-round mag | 110 bio dmg
+6. M4A1 (m4a1) - Full-auto rifle | 5.56x45 | 30-round mag | 90 bio dmg
+7. RPD (rpd) - Full-auto LMG | 7.62x39 | 100-round belt | 87 bio dmg
+8. Glock 17 (glock17) - Semi-auto pistol | 9x19 | 17-round mag | 50 bio dmg
+9. P90 (p90) - Full-auto PDW | 5.7x28 | 50-round mag | 45 bio dmg
+10. UMP45 (ump45) - Full-auto SMG | .45 ACP | 25-round mag | 44 bio dmg | Built-in suppressor
+11. MP-153 (mp153) - Semi-auto shotgun | 12 gauge | 8-round internal | 41 bio dmg | 8 pellets
+12. MP-133 (mp133) - Pump shotgun | 12 gauge | 4-round internal | 40 bio dmg | 8 pellets
+13. HK USP (usp) - Semi-auto pistol | .45 ACP | 12-round mag | 40 bio dmg
+---
+2 MELEE WEAPONS
+1. Red Rebel Ice Axe (redrebel) - 37 bio dmg / 35 block dmg | Range 4 | Knockback 270 | INT 5 | Cutting 12 | Hammering 18 | Special: wall-climb when held in main hand, backflip
+2. M-2 Tactical Sword (m2sword) - 87 bio dmg / 31 block dmg | Range 7 | Knockback 320 | INT 5 | Cutting 30 | Hammering 12 | backflip
+---
+9 AMMO TYPES
+1. .338 LM UCW (338ucw) - For AXMC
+2. 7.62x51 BPZ (76251bpz) - For DVL-10
+3. 7.62x39 SP (76239sp) - For SKS / AKM / RPD
+4. 12/70 8.5mm (12g85) - For MP-133 / MP-153
+5. .50 AE Copper (50copper) - For Desert Eagle
+6. .45 ACP FMJ (45fmj) - For UMP45 / USP
+7. 9x19 PSO (919pso) - For Glock 17
+8. 5.56x45 FMJ (55645fmj) - For M4A1
+9. 5.7x28 SB193 (5728sb193) - For P90
+---
+9 MAGAZINES
+1. AXMC Magazine (axmc_mag) - 10 rounds | Value 2
+2. DVL-10 Magazine (dvl10_mag) - 10 rounds | Value 2
+3. AKM Magazine (akm_mag) - 30 rounds | Value 2
+4. Desert Eagle Magazine (deagle_mag) - 7 rounds | Value 2
+5. Glock 17 Magazine (glock17_mag) - 17 rounds | Value 2
+6. M4A1 Magazine (m4a1_mag) - 30 rounds | Value 2
+7. P90 Magazine (p90_mag) - 50 rounds | Value 2
+8. UMP45 Magazine (ump45_mag) - 25 rounds | Value 2
+9. USP Magazine (usp_mag) - 12 rounds | Value 2
+---
+CALIBER ISOLATION SYSTEM
+Three-layer Harmony patches ensure each firearm only accepts its designated ammo caliber:
+- GunScript.LoadMag - magazine-to-gun caliber check
+- AmmoScript.LoadRound - ammo-to-magazine caliber check
+- AmmoScript.UnloadRound - prevents incorrect ammo unloading
+Shared calibers:
+- 7.62x39: SKS / AKM / RPD
+- 12 gauge: MP-133 / MP-153
+- .45 ACP: UMP45 / USP
+---
+CONSOLE SPAWN
+All items spawnable via: spawn [itemkey]
+Examples: spawn axmc, spawn akm, spawn 338ucw, spawn akm_mag, spawn redrebel, spawn m2sword, spawn usp
+Toggle vanilla weapons: spawn vanilla_on / spawn vanilla_off
+---
+AUTO-UPDATE
+The mod includes a built-in update checker:
+- Automatically checks for new versions on startup
+- Two update options: Auto Update (download + install + restart) or Release Page
+- Download progress bar with speed indicator
+- Cancel download at any time
+- Auto-timeout on stalled downloads
+- One-click restart after update
+---
+COMPATIBILITY
+- Requires CUCoreLib + CUTarkovMedicalMod (hard dependency)
+- KrokMP: compatible (host-only world generation, world drop for unloaded items, sprite sync)
+- Other BepInEx mods: should be compatible (unique GUID, independent Harmony patches)
+---
+UNINSTALL
+Delete BepInEx/plugins/CUTarkovWeaponMod/ folder.
+---
+SOURCE CODE
+Open source on GitHub: https://github.com/hmm1313133/CUTarkovWeaponMod
+---
+BUG REPORTS & FEEDBACK
+Report bugs and suggestions on GitHub Issues: https://github.com/hmm1313133/CUTarkovWeaponMod/issues
+Please include:
+1. Mod version (1.0.3.0)
+2. Game version
+3. BepInEx version
+4. Other installed mods
+5. Steps to reproduce
+6. Log file (BepInEx/LogOutput.log)
+7. Screenshots if applicable
+Please check existing issues before posting to avoid duplicates.
+---
+CREDITS
+- Escape from Tarkov by Battlestate Games - original weapon designs and mechanics inspiration
+- Casualties: Unknown - the base game
+- BepInEx - modding framework
+- Harmony - runtime patching library
+- CUCoreLib - custom item infrastructure
+---
+This mod is not affiliated with or endorsed by Battlestate Games or the developers of Casualties: Unknown. All trademarks belong to their respective owners.

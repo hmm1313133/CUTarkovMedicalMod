@@ -478,7 +478,7 @@ public static class AI2HoverPatch
 
         var marker = item.GetComponent<AI2ItemMarker>();
         if (marker == null) return;
-        if (!item.Stats.rec.recognizable) return;
+        if (item.Stats?.rec == null || !item.Stats.rec.recognizable) return;
 
         __result.Item1 = marker.displayName;
         HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);

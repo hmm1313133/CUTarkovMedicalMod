@@ -45,6 +45,13 @@ public sealed class DefaultMedicalItemGrantSink : IMedicalItemGrantSink
     {
         if (bodyInstance is not Body body) return false;
 
+        // 空计划表示用户设置了 MaxItems=0，跳过所有起始物品（含保证针剂）
+        if (plan.Count == 0)
+        {
+            log.LogInfo("StartingLoadout plan is empty, skipping all starting items (including guaranteed injectors).");
+            return false;
+        }
+
         var bodyType = body.GetType();
         var autoPickUp = AccessTools.Method(bodyType, "AutoPickUpItem", new[] { typeof(Item) });
         var firstEmptySlot = AccessTools.Method(bodyType, "FirstEmptySlot", Type.EmptyTypes);

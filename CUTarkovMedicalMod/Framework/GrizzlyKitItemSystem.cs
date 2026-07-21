@@ -44,7 +44,7 @@ public static class GrizzlyKitItemSystem
         item.id = ItemKey;
         item.SetCondition(1f);
 
-        // 替换贴图（等比放大 2 倍）
+        // 替换贴图
         var icon = TryGetGrizzlyKitIcon();
         if (icon != null)
         {
@@ -52,7 +52,7 @@ public static class GrizzlyKitItemSystem
             if (sr != null && sr.sprite != null)
             {
                 var baseSpr = sr.sprite;
-                var scaledTex = ScaleTextureUniform(icon.texture, 0.3f);
+                var scaledTex = ScaleTextureUniform(icon.texture, 0.6f);
                 var scaledSprite = Sprite.Create(scaledTex,
                     new Rect(0, 0, scaledTex.width, scaledTex.height),
                     new Vector2(0.5f, 0.5f), baseSpr.pixelsPerUnit > 0f ? baseSpr.pixelsPerUnit : 32f);
@@ -68,13 +68,16 @@ public static class GrizzlyKitItemSystem
         // 调整碰撞箱以匹配新贴图大小
         ResizeColliderToSprite(item);
 
+        // 放大物品体积30%
+        item.transform.localScale *= 1.3f;
+
         var marker = item.gameObject.GetComponent<GrizzlyKitItemMarker>();
         if (marker == null)
             marker = item.gameObject.AddComponent<GrizzlyKitItemMarker>();
         marker.displayName = DisplayName;
         marker.description = Description;
 
-        Plugin.Log.LogInfo($"[GrizzlyKit] Configured spawned item '{ItemKey}' (id={item.id}, condition={item.condition}).");
+        Plugin.Log.LogInfo($"[GrizzlyKit] Configured spawned item '{ItemKey}' (id={item.id}, condition={item.condition}, localScale={item.transform.localScale}).");
     }
 
     public static bool EnsureRegisteredInItemTable()
@@ -214,7 +217,7 @@ public static class GrizzlyKitItemSystem
         {
             var marker = item.GetComponent<GrizzlyKitItemMarker>();
             if (marker == null) return;
-            if (!item.Stats.rec.recognizable) return;
+            if (item.Stats?.rec == null || !item.Stats.rec.recognizable) return;
             __result.Item1 = marker.displayName;
             HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);
         }

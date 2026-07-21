@@ -115,7 +115,7 @@ public sealed class CUCoreLibMode
                 // 调整图标 PPU 以匹配基础预制体的世界尺寸。
                 // 图标纹理多为 16x16 像素，原始 PPU=32 使世界尺寸仅 0.5 单位（过小）。
                 // 通过加载基础预制体的 SpriteRenderer.sprite，计算正确 PPU 使世界尺寸与基础物品一致。
-                icon = AdjustIconToWorldSize(icon, def.BasePrefab);
+                icon = AdjustIconToWorldSize(icon, def.BasePrefab, def.WorldSizeMultiplier);
 
                 if (Item.GlobalItems.ContainsKey(def.ItemId))
                 {
@@ -187,7 +187,7 @@ public sealed class CUCoreLibMode
     /// 此方法加载基础预制体（syringe/bruisekit），读取其精灵的 PPU 和尺寸，
     /// 计算使自定义图标世界尺寸匹配基础物品的 PPU。
     /// </summary>
-    private static Sprite? AdjustIconToWorldSize(Sprite? icon, BasePrefabType basePrefab)
+    private static Sprite? AdjustIconToWorldSize(Sprite? icon, BasePrefabType basePrefab, float worldSizeMultiplier)
     {
         if (icon == null || icon.texture == null) return icon;
 
@@ -207,14 +207,13 @@ public sealed class CUCoreLibMode
 
             // 计算使自定义图标世界尺寸 = 基础物品世界尺寸 * 放大倍数 的 PPU
             // world_size = texture_size / PPU => PPU = texture_size / desired_world_size
-            // desired_world_size = base_texture_size / base_PPU * WorldSizeMultiplier
-            // => PPU = texture_size * base_PPU / (base_texture_size * WorldSizeMultiplier)
-            // => PPU = base_PPU * dominantScale / WorldSizeMultiplier
-            const float WorldSizeMultiplier = 2.5f;
+            // desired_world_size = base_texture_size / base_PPU * worldSizeMultiplier
+            // => PPU = texture_size * base_PPU / (base_texture_size * worldSizeMultiplier)
+            // => PPU = base_PPU * dominantScale / worldSizeMultiplier
             var widthScale = baseRect.width > 0f ? tex.width / baseRect.width : 1f;
             var heightScale = baseRect.height > 0f ? tex.height / baseRect.height : 1f;
             var dominantScale = Mathf.Max(widthScale, heightScale);
-            var correctPpu = basePpu * dominantScale / WorldSizeMultiplier;
+            var correctPpu = basePpu * dominantScale / worldSizeMultiplier;
 
             Plugin.Log.LogInfo($"[CUCoreLib] AdjustIcon '{icon.name}': tex={tex.width}x{tex.height}, base={baseRect.width}x{baseRect.height}@{basePpu}PPU, scale={dominantScale:F3}, correctPpu={correctPpu:F1}, worldSize={tex.width / correctPpu:F2}x{tex.height / correctPpu:F2}");
 

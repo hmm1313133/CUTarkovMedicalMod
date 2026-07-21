@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -698,18 +698,17 @@ public sealed class ObdolbosEffectController : MonoBehaviour
     }
 
     /// <summary>
-    /// 生理恢复 Tick：维持体温 -2°C。
+    /// 生理恢复 Tick：渐进降温 -2°C（下限 = 初始体温 - 2）。
     /// </summary>
     private void TickPhysRecovery()
     {
-        // 持续维持低温（相对注射时 -2°C），只降温不升温
-        var targetTemp = _initialTemp - 2f;
-        if (_body!.temperature > targetTemp)
-            _body.temperature -= Mathf.Min(_body.temperature - targetTemp, Time.deltaTime * 0.5f);
+        // 渐进降温：每秒 -0.05°C，下限 = 初始体温 - 2°C
+        var minTemp = _initialTemp - 2f;
+        _body!.temperature = Mathf.Max(minTemp, _body.temperature - 0.05f * Time.deltaTime);
     }
 
     /// <summary>
-    /// 代谢紊乱 Tick：每秒 -1 吃喝、-0.1kg 体重，持续升温 +3°C。
+    /// 代谢紊乱 Tick：每秒 -1 吃喝、-0.1kg 体重，渐进升温 +3°C（上限 = 初始体温 + 3）。
     /// </summary>
     private void TickMetabolicChaos()
     {
@@ -722,10 +721,9 @@ public sealed class ObdolbosEffectController : MonoBehaviour
             _body.weightOffset -= 0.3f; // 3:1 比例，0.3f = -0.1kg 实际
         }
 
-        // 持续升温 +3°C（相对注射时体温），只升温不降温
-        var targetTemp = _initialTemp + 3f;
-        if (_body!.temperature < targetTemp)
-            _body.temperature += Mathf.Min(targetTemp - _body.temperature, Time.deltaTime * 0.5f);
+        // 渐进升温：每秒 +0.05°C，上限 = 初始体温 + 3°C
+        var maxTemp = _initialTemp + 3f;
+        _body!.temperature = Mathf.Min(maxTemp, _body.temperature + 0.05f * Time.deltaTime);
     }
 
     #endregion
@@ -847,7 +845,7 @@ public static class ObdolbosHoverPatch
 
         var marker = item.GetComponent<ObdolbosItemMarker>();
         if (marker == null) return;
-            if (!item.Stats.rec.recognizable) return;
+            if (item.Stats?.rec == null || !item.Stats.rec.recognizable) return;
 
         __result.Item1 = marker.displayName;
         HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);

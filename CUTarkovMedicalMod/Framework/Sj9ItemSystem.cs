@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.IO;
 using System.Reflection;
@@ -414,8 +414,6 @@ public sealed class Sj9EffectController : MonoBehaviour
 
     private void UpdateSideEffect()
     {
-        _sideEffectTimer -= Time.deltaTime;
-
         StimBuffIndicator.ShowBuff(
             Sj9ItemSystem.ItemKey,
             I18n.Tr("sj9.buff"),
@@ -425,6 +423,12 @@ public sealed class Sj9EffectController : MonoBehaviour
             new Color(0.9f, 0.4f, 0.2f), // 橙红色（副作用阶段）
             positiveDescs: Array.Empty<string>(),
             negativeDescs: I18n.TrAll("sj9.neg.0", "sj9.neg.1"));
+
+        // 副作用计时器到期后停止肌肉损伤，仅维持体温锁定
+        if (_sideEffectTimer <= 0f)
+            return;
+
+        _sideEffectTimer -= Time.deltaTime;
 
         // 延迟初始化 _chestLimb（Eff.Res 恢复后可能为 null）
         if (_chestLimb == null && _body != null)
@@ -505,7 +509,7 @@ public static class Sj9HoverPatch
 
         var marker = item.GetComponent<Sj9ItemMarker>();
         if (marker == null) return;
-            if (!item.Stats.rec.recognizable) return;
+            if (item.Stats?.rec == null || !item.Stats.rec.recognizable) return;
 
         __result.Item1 = marker.displayName;
         HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);

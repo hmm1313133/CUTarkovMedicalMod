@@ -27,17 +27,19 @@ public sealed class MedicalItemDef
     public float Capacity { get; }
     public string? LiquidId { get; }
     public Type ItemSystemType { get; }
+    public float WorldSizeMultiplier { get; }
 
     private Sprite? _cachedIcon;
     private bool _iconResolved;
 
-    public MedicalItemDef(string itemId, BasePrefabType basePrefab, float capacity, string? liquidId, Type itemSystemType)
+    public MedicalItemDef(string itemId, BasePrefabType basePrefab, float capacity, string? liquidId, Type itemSystemType, float worldSizeMultiplier = 2.5f)
     {
         ItemId = itemId;
         BasePrefab = basePrefab;
         Capacity = capacity;
         LiquidId = liquidId;
         ItemSystemType = itemSystemType;
+        WorldSizeMultiplier = worldSizeMultiplier;
     }
 
     /// <summary>
@@ -107,19 +109,19 @@ public static class MedicalItemDefinitions
 
         // === 绷带急救包（4个，capacity=0，无液体）===
         // capacity=0 使 ChooseTemplateId 返回 "bandage"（与 bruisekit 行为一致）
-        Add("grizzlykit", BasePrefabType.Bruisekit, 0, null, typeof(GrizzlyKitItemSystem));
+        Add("grizzlykit", BasePrefabType.Bruisekit, 0, null, typeof(GrizzlyKitItemSystem), 3.25f);
         Add("afak", BasePrefabType.Bruisekit, 0, null, typeof(AfakKitItemSystem));
         Add("ifak", BasePrefabType.Bruisekit, 0, null, typeof(IfakKitItemSystem));
-        Add("salewa", BasePrefabType.Bruisekit, 0, null, typeof(SalewaKitItemSystem));
+        Add("salewa", BasePrefabType.Bruisekit, 0, null, typeof(SalewaKitItemSystem), 1.25f);
 
         // === 手术工具（2个，capacity=0，无液体）===
         Add("multitool", BasePrefabType.Bruisekit, 0, null, typeof(MultiToolItemSystem));
         Add("cms", BasePrefabType.Bruisekit, 0, null, typeof(CmsKitItemSystem));
     }
 
-    private static void Add(string itemId, BasePrefabType basePrefab, float capacity, string? liquidId, Type itemSystemType)
+    private static void Add(string itemId, BasePrefabType basePrefab, float capacity, string? liquidId, Type itemSystemType, float worldSizeMultiplier = 2.5f)
     {
-        var def = new MedicalItemDef(itemId, basePrefab, capacity, liquidId, itemSystemType);
+        var def = new MedicalItemDef(itemId, basePrefab, capacity, liquidId, itemSystemType, worldSizeMultiplier);
         _all.Add(def);
         _byId[itemId] = def;
     }

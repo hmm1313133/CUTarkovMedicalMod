@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -255,6 +255,7 @@ public sealed class Obdolbos2EffectController : MonoBehaviour
     private float _staminaCapBaseline;
     private bool _buffStarted;
     private bool _sideEffectActive;
+    private bool _sideEffectCompleted;
     private int _injectionCount;
 
     internal bool IsCarryWeightActive => _injectionCount == 1 && _buffStarted && _phaseTimer > 0f;
@@ -296,6 +297,7 @@ public sealed class Obdolbos2EffectController : MonoBehaviour
         _tickAccumulator = 0f;
         _buffStarted = false;
         _sideEffectActive = false;
+        _sideEffectCompleted = false;
         enabled = true;
     }
 
@@ -340,8 +342,6 @@ public sealed class Obdolbos2EffectController : MonoBehaviour
             // ===== 最大耐力 -20% =====
             try
             {
-                if (_body.stamina > _staminaCapBaseline)
-                    _staminaCapBaseline = _body.stamina;
                 var cap = _staminaCapBaseline * StaminaMaxRatio;
                 if (_body.stamina > cap)
                     _body.stamina = cap;
@@ -350,7 +350,7 @@ public sealed class Obdolbos2EffectController : MonoBehaviour
         }
 
         // ===== 副作用阶段 =====
-        if (!_sideEffectActive)
+        if (!_sideEffectActive && !_sideEffectCompleted)
         {
             _sideEffectTimer -= Time.deltaTime;
             if (_sideEffectTimer <= 0f)
@@ -374,6 +374,7 @@ public sealed class Obdolbos2EffectController : MonoBehaviour
             if (_sideEffectTimer <= 0f)
             {
                 _sideEffectActive = false;
+                _sideEffectCompleted = true;
                 Plugin.Log.LogInfo("[Obdolbos 2] Side effect ended.");
             }
         }
@@ -467,7 +468,7 @@ public static class Obdolbos2HoverPatch
         if (item == null) return;
         var marker = item.GetComponent<Obdolbos2ItemMarker>();
         if (marker == null) return;
-        if (!item.Stats.rec.recognizable) return;
+        if (item.Stats?.rec == null || !item.Stats.rec.recognizable) return;
         __result.Item1 = marker.displayName;
         HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);
     }

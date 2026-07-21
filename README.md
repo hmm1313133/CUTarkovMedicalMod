@@ -2,7 +2,7 @@
 
 > `未知伤亡（Casualties: Unknown）：塔科夫医疗模组`
 >
-> **v0.2.9**
+> **v0.3.0**
 
 一个为 **Casualties: Unknown Demo** 开发的 BepInEx 模组，将《逃离塔科夫》中的 16 种战斗兴奋剂注射器、12 种医疗物品及其完整医疗系统引入游戏。
 
@@ -29,7 +29,7 @@
 |------|------|
 | 16 种自定义针剂 | 每种针剂有独立的 ItemKey、ItemInfo、useAction 委托和效果控制器；无临时技能等级增加 |
 | 12 种医疗物品 | 急救包（BandageMinigame）、手术包（自动检测）、药膏/药片（液体系统） |
-| 开局发放 | 固定发放 5 件医疗物品（Grizzly/AFAK/IFAK/Salewa/AI-2）+ 随机医疗物品 |
+| 开局发放 | 默认不发放（可通过配置 MinItems/MaxItems 开启）；MaxItems=0 时完全跳过（含保证针剂） |
 | 世界战利品 | 医疗物品在世界中刷新 |
 | 容器掉落 | 医疗箱/物资箱/尸体破坏时按概率掉落针剂、药品 |
 | 智力识别系统 | 所有物品支持原生 Recognition 系统，智力不足时隐藏名称和效果 |
@@ -49,14 +49,14 @@
 | 1 | **eTG-c** | `etg_c` | 再生兴奋剂 | 每部位 +2 肌肉/s +2 表皮/s，血容量 +50ml/s 至 5L | 60s 后：每秒 -1 饱食/水分，胸口 +40 疼痛 | 60s + 20s debuff |
 | 2 | **Zagustin** | `zagustin` | 止血剂（紫针） | 立即止血 + 180s 防出血 | 血液粘稠度 +50，前 120s 每秒 -0.3 水分 | 180s |
 | 3 | **Morphine** | `cu_morphine` | 止痛剂 | 原生 Painkillers 止疼（opiateAmount=100） | 一次性 -10 饱食 / -15 水分 | ~300s |
-| 4 | **SJ12** | `sj12` | 体温调节 | 体温 -4°C，每秒 +0.2 饱食/水分 | +4 患病，-2kg；增益后体温 +4°C 过热 | 600s + 120s debuff |
+| 4 | **SJ12** | `sj12` | 体温调节 | 体温每秒 -0.05°C（下限 -4°C），每秒 +0.2 饱食/水分 | +4 患病，-2kg；增益后体温每秒 +0.15°C（上限 +4°C） | 600s + 120s debuff |
 | 5 | **M.U.L.E.** | `mule` | 负重增强 | 负重上限 +15（Transpiler） | +10 患病，每秒 -0.2 肌肉/s（25min），意识 ≤90 | 2400s（40min） |
 | 6 | **Propital** | `propital` | 再生兴奋剂 | 每部位 +0.1 肌肉/s +0.1 表皮/s，阿片 +20 | +10 患病；3min 后 RES/STR 永久 -2；10min 后管视+震颤 5min | 900s（15min） |
 | 7 | **SJ1** | `sj1` | 耐力强化 | 耐力上限 +10%、耐力恢复 +50%，阿片镇痛 +5 | +10 患病，每秒 -0.1 饱食/水分 | 300s（5min） |
 | 8 | **SJ6** | `sj6` | 耐力强化 | +20% 耐力上限，+120% 耐力恢复 | +25 患病，10min 后管视+震颤 5min | 900s（15min） |
 | 9 | **SJ9** | `sj9` | 体温抑制 | 体温锁定 31°C | +15 患病，RES 永久 -2；10min 后胸口疼痛+肌肉损伤 10min | 1200s（20min） |
 | 10 | **PNB** | `pnb` | 肌肉修复 | 指甲恢复满值，2min 内 +0.2 肌肉/s | 增益后 STR 永久 -1，震颤 60s | 300s + 60s debuff |
-| 11 | **Obdolbos** | `obdolbos` | 赌命鸡尾酒 | 随机触发 8 种效果之一（含猝死） | 每次不同 | 随机 |
+| 11 | **Obdolbos** | `obdolbos` | 赌命鸡尾酒 | 随机触发 8 种效果之一（含猝死），体温渐进变化 0.05°C/s | 每次不同 | 随机 |
 | 12 | **Obdolbos 2** | `obdolbos2` | 永久强化 | 永久 STR/RES/INT +6，负重 +3u（40min） | -30% 耐力恢复，-20% 耐力上限（40min）；5min 后饱食/水分 -0.2/s + 肌肉 -0.3/s（5min） | 2400s（40min） |
 | 13 | **Blue Blood** | `blueblood` | 人造血/解毒 | 止血+防出血 120s，毒素 -70%，辐射 -10Gy | 延迟 3min 后免疫力 -40（60s），33% 呕吐，-0.3 饱食/s | 120s + 60s debuff |
 | 14 | **xTG-12** | `xtg12` | 解毒剂 | +70 免疫力，毒素清零，感染 -80%（2min），败血 -20%（2min） | 3min 时 20% 呕吐；5min 后颤栗 1min | 300s + 60s debuff |
@@ -223,7 +223,7 @@ Plugin.Awake()
 | 系统 | 关键字段/方法 | 模组使用方式 |
 |------|-------------|-------------|
 | **疼痛** | `Body.averagePain`、`Limb.pain`、`Painkillers` 组件 | 吗啡注入 `opiateAmount`，原生系统自动降低 `limb.pain` |
-| **体温** | `Body.temperature`、`HandleBodyTemperature()` | SJ12/SJ9 直接设置/锁定体温；Salewa 低温保温；布洛芬 -2°C |
+| **体温** | `Body.temperature`、`HandleBodyTemperature()` | SJ12 渐进降温/升温（0.05°C/s）；SJ9 锁定 31°C；Obdolbos 渐进 0.05°C/s；Salewa 低温保温；布洛芬 -2°C |
 | **负重** | `Body.maxEncumberance`、`HandlePeriodicChecks()` | M.U.L.E. 用 Transpiler 追加 +15；2A2-(b-TG) 追加 +7u；Obdolbos2 追加 +3u |
 | **耐力** | `Body.stamina`、`staminaStrength` 曲线 | SJ6/Mildronate/SJ1/Ibuprofen 通过 StaminaBonusManager 每帧操作 |
 | **技能** | `Skills.STR/RES/INT`、`AddExp()` | Propital/SJ9 永久降低等级；Obdolbos2/Obdolbos 永久提升等级 |
@@ -288,7 +288,7 @@ Casualties: Unknown - Tarkov-Style Medical Mod loaded. Enabled=True
 | Compatibility | `CompatibilityMode` | `AutoSafe` | KrokMP 检测时的兼容策略 |
 | Content | `UseExternalContentFile` | `true` | 从 JSON 文件加载物品定义 |
 | Content | `AutoCreateContentFile` | `true` | JSON 不存在时自动创建 |
-| StartingLoadout | `MinItems` / `MaxItems` | `1` / `3` | 随机医疗物品数量范围 |
+| StartingLoadout | `MinItems` / `MaxItems` | `0` / `0` | 起始医疗物品数量范围；MaxItems=0 完全禁用（含保证针剂） |
 | WorldLoot | `MinItems` / `MaxItems` | `1` / `4` | 世界战利品数量范围 |
 | Distribution | `AllowDuplicateItems` | `true` | 允许重复物品 |
 | Distribution | `Seed` | `0` | 随机种子（0 = 随机） |
@@ -328,9 +328,9 @@ AI-2、力百汀、布洛芬、金星药膏、凡士林使用原生 `LiquidItemI
 
 原生 `Body.HandlePeriodicChecks` 每 0.5 秒重算 `immunity`。直接修改会被覆盖。通过 Transpiler 在 IL 的 `stfld immunity` 前插入加成/减幅指令。
 
-### 体温操控对抗
+### 体温操控
 
-原生 `HandleBodyTemperature` 在 `Update` 中将体温 lerp 向环境温度。SJ12/SJ9 的效果控制器在 `LateUpdate` 中覆写体温，使用足够大的 LerpStrength 对抗原生 lerp。
+原生 `HandleBodyTemperature` 每 1 秒将体温 lerp 向 `WorldGeneration.world.ambientTemperature`（速率 `0.003 / insulation`）。SJ12/Obdolbos 的效果控制器在 `Update` 中直接修改 `body.temperature`（每秒 ±0.05°C），与原生 lerp 并行博弈。玩家可通过提高环境温度（火堆、加热器等）对抗降温。SJ9 仍硬锁定 31°C。
 
 ### 负重上限重算
 

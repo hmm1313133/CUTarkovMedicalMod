@@ -34,6 +34,11 @@ public static class Eff
             var pf = kv.Value.GetField("_phase", BindingFlags.NonPublic | BindingFlags.Instance); if (pf != null) d.p = (int)(pf.GetValue(mc) ?? 0);
             // 控制器无 _phase 字段时，用 p 编码 _sideEffectStarted（SJ9/Blueblood）
             if (pf == null) { var ssf = kv.Value.GetField("_sideEffectStarted", BindingFlags.NonPublic | BindingFlags.Instance); if (ssf != null) d.p = (bool)(ssf.GetValue(mc) ?? false) ? 1 : 0; }
+            // Obdolbos: 序列化 _outcome (enum->int) 和 _outcomeApplied (bool->int)
+            d.o = RI(mc, "_outcome"); d.oa = RB(mc, "_outcomeApplied");
+            // Obdolbos2: 序列化 _buffStarted, _sideEffectActive, _sideEffectCompleted, _injectionCount, _staminaCapBaseline
+            d.bs = RB(mc, "_buffStarted"); d.sa = RB(mc, "_sideEffectActive"); d.sc = RB(mc, "_sideEffectCompleted");
+            d.ic = RI(mc, "_injectionCount"); d.scb = RF(mc, "_staminaCapBaseline");
             if (d.r > 0f || d.pt > 0f || d.br > 0f || d.dr > 0f || d.sr > 0f) l.Add(d);
         }
         return l.Count == 0 ? "" : JsonConvert.SerializeObject(l);
@@ -45,6 +50,7 @@ public static class Eff
     /// </summary>
     public static void Res(string json, Body? body = null)
     {
+        if (string.IsNullOrEmpty(json)) return;
         var l = JsonConvert.DeserializeObject<List<ESD>>(json); if (l == null || l.Count == 0) return;
 
         // 优先使用传入的 body，回退到本地玩家 body（单机兼容）
@@ -70,6 +76,11 @@ public static class Eff
                 var pf = t.GetField("_phase", BindingFlags.NonPublic | BindingFlags.Instance); if (pf != null) pf.SetValue(mc, d.p);
                 // 控制器无 _phase 字段时，从 p 恢复 _sideEffectStarted（SJ9/Blueblood）
                 if (pf == null) { var ssf = t.GetField("_sideEffectStarted", BindingFlags.NonPublic | BindingFlags.Instance); if (ssf != null) ssf.SetValue(mc, d.p != 0); }
+                // Obdolbos: 恢复 _outcome, _outcomeApplied
+                WI(mc, "_outcome", d.o); WB(mc, "_outcomeApplied", d.oa);
+                // Obdolbos2: 恢复 _buffStarted, _sideEffectActive, _sideEffectCompleted, _injectionCount, _staminaCapBaseline
+                WB(mc, "_buffStarted", d.bs); WB(mc, "_sideEffectActive", d.sa); WB(mc, "_sideEffectCompleted", d.sc);
+                WI(mc, "_injectionCount", d.ic); WF(mc, "_staminaCapBaseline", d.scb);
                 var bf = t.GetField("_body", BindingFlags.NonPublic | BindingFlags.Instance); if (bf != null) bf.SetValue(mc, b);
                 var af = t.GetField("_active", BindingFlags.NonPublic | BindingFlags.Instance); if (af != null) af.SetValue(mc, true);
                 mc.enabled = true; n++;
@@ -85,7 +96,11 @@ public static class Eff
 
     static float RF(MonoBehaviour mc, string n) { var f = mc.GetType().GetField(n, BindingFlags.NonPublic | BindingFlags.Instance); return f != null ? (float)(f.GetValue(mc) ?? 0f) : 0f; }
     static void WF(MonoBehaviour mc, string n, float v) { var f = mc.GetType().GetField(n, BindingFlags.NonPublic | BindingFlags.Instance); if (f != null) f.SetValue(mc, v); }
+    static int RI(MonoBehaviour mc, string n) { var f = mc.GetType().GetField(n, BindingFlags.NonPublic | BindingFlags.Instance); return f != null ? Convert.ToInt32(f.GetValue(mc) ?? 0) : 0; }
+    static void WI(MonoBehaviour mc, string n, int v) { var f = mc.GetType().GetField(n, BindingFlags.NonPublic | BindingFlags.Instance); if (f != null) f.SetValue(mc, v); }
+    static int RB(MonoBehaviour mc, string n) { var f = mc.GetType().GetField(n, BindingFlags.NonPublic | BindingFlags.Instance); return f != null && (bool)(f.GetValue(mc) ?? false) ? 1 : 0; }
+    static void WB(MonoBehaviour mc, string n, int v) { var f = mc.GetType().GetField(n, BindingFlags.NonPublic | BindingFlags.Instance); if (f != null) f.SetValue(mc, v != 0); }
     static Type? Find(string n) { foreach (var kv in Ctrl) if (kv.Value.FullName == n) return kv.Value; return null; }
     static readonly Dictionary<string, Type> Ctrl = new() { ["etg_c"]=typeof(EtgStimEffectController),["zagustin"]=typeof(ZagustinEffectController),["cu_morphine"]=typeof(MorphineEffectController),["sj12"]=typeof(SJ12EffectController),["mule"]=typeof(MuleEffectController),["propital"]=typeof(PropitalEffectController),["sj6"]=typeof(SJ6EffectController),["sj1"]=typeof(Sj1EffectController),["pnb"]=typeof(PnbEffectController),["sj9"]=typeof(Sj9EffectController),["blueblood"]=typeof(BluebloodEffectController),["xtg12"]=typeof(Xtg12EffectController),["mildronate"]=typeof(MildronateEffectController),["2a2btg"]=typeof(TwoATwoBTGEffectController),["ibuprofen"]=typeof(IbuprofenEffectController),["obdolbos"]=typeof(ObdolbosEffectController),["obdolbos2"]=typeof(Obdolbos2EffectController),["libatine"]=typeof(LibatineEffectController),["goldenstar"]=typeof(GoldenStarEffectController), };
-    [Serializable] class ESD { public string cn = ""; public float r, pt, br, dr, el, sr, it; public int p; }
+    [Serializable] class ESD { public string cn = ""; public float r, pt, br, dr, el, sr, it, scb; public int p, o, oa, bs, sa, sc, ic; }
 }

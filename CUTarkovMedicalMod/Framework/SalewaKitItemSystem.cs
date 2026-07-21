@@ -53,7 +53,7 @@ public static class SalewaKitItemSystem
         item.id = ItemKey;
         item.SetCondition(1f);
 
-        // 替换贴图（匹配原始精灵宽高比，放大5倍）
+        // 替换贴图
         var icon = TryGetSalewaKitIcon();
         if (icon != null)
         {
@@ -64,7 +64,7 @@ public static class SalewaKitItemSystem
                 var baseRect = baseSpr.rect;
                 var iconTex = icon.texture;
                 // 以图标原始宽高比缩放，基于基础预制体的高度确定缩放大小
-                float scale = baseRect.height * 2.5f / iconTex.height;
+                float scale = baseRect.height * 0.625f / iconTex.height;
                 int targetW = Mathf.RoundToInt(iconTex.width * scale);
                 int targetH = Mathf.RoundToInt(iconTex.height * scale);
                 var scaledTex = StretchTextureToSize(iconTex, targetW, targetH);
@@ -83,13 +83,16 @@ public static class SalewaKitItemSystem
         // 调整碰撞箱以匹配新贴图大小
         ResizeColliderToSprite(item);
 
+        // 缩小物品体积至原来一半
+        item.transform.localScale *= 0.5f;
+
         var marker = item.gameObject.GetComponent<SalewaKitItemMarker>();
         if (marker == null)
             marker = item.gameObject.AddComponent<SalewaKitItemMarker>();
         marker.displayName = DisplayName;
         marker.description = Description;
 
-        Plugin.Log.LogInfo($"[Salewa] Configured spawned item '{ItemKey}' (id={item.id}, condition={item.condition}).");
+        Plugin.Log.LogInfo($"[Salewa] Configured spawned item '{ItemKey}' (id={item.id}, condition={item.condition}, localScale={item.transform.localScale}).");
     }
 
     public static bool EnsureRegisteredInItemTable()
@@ -246,7 +249,7 @@ public static class SalewaKitItemSystem
         {
             var marker = item.GetComponent<SalewaKitItemMarker>();
             if (marker == null) return;
-            if (!item.Stats.rec.recognizable) return;
+            if (item.Stats?.rec == null || !item.Stats.rec.recognizable) return;
             __result.Item1 = marker.displayName;
             HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);
         }

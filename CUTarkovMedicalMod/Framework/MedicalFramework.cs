@@ -207,14 +207,14 @@ public sealed class MedicalModConfig
         StartingLoadoutMinItems = config.Bind(
             "StartingLoadout",
             "MinItems",
-            1,
-            "Minimum number of medical items granted at run start.");
+            0,
+            "Minimum number of medical items granted at run start. Set to 0 with MaxItems=0 to disable all starting items.");
 
         StartingLoadoutMaxItems = config.Bind(
             "StartingLoadout",
             "MaxItems",
-            3,
-            "Maximum number of medical items granted at run start.");
+            0,
+            "Maximum number of medical items granted at run start. Set to 0 to disable all starting items.");
 
         WorldLootMinItems = config.Bind(
             "WorldLoot",
@@ -331,6 +331,14 @@ public sealed class MedicalFramework
 
         var min = Math.Max(0, _config.StartingLoadoutMinItems.Value);
         var max = Math.Max(min, _config.StartingLoadoutMaxItems.Value);
+
+        // MaxItems=0 表示不生成任何起始物品
+        if (max <= 0)
+        {
+            _log.LogInfo("StartingLoadout MaxItems=0, skipping all starting items.");
+            return Array.Empty<MedicalGrantRequest>();
+        }
+
         var randomGrants = BuildRandomGrantList(min, max, "StartingLoadout");
 
         // Grizzly急救包 固定发放 1 个

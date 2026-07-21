@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.IO;
 using System.Reflection;
@@ -574,7 +574,7 @@ public static class Sj1HoverPatch
 
         var marker = item.GetComponent<Sj1ItemMarker>();
         if (marker == null) return;
-            if (!item.Stats.rec.recognizable) return;
+            if (item.Stats?.rec == null || !item.Stats.rec.recognizable) return;
 
         __result.Item1 = marker.displayName;
         HoverDescriptionHelper.StripEffectsWhenNotExpanded(ref __result);
