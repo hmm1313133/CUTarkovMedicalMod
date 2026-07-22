@@ -287,7 +287,7 @@ public static class CmsKitItemSystem
 
     #region Icon
 
-    private static Sprite? TryLoadIcon()
+    internal static Sprite? TryLoadIcon()
     {
         if (_cachedIcon != null) return _cachedIcon;
 

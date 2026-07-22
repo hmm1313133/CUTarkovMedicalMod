@@ -553,11 +553,12 @@ public sealed class Sj1EffectController : MonoBehaviour
         ClearStaminaBonuses();
     }
 
-    private static Sprite? TryGetSj1Icon()
+    private static Sprite? _iconSprite;
+        private static Sprite? TryGetSj1Icon()
     {
-        var method = typeof(Sj1ItemSystem).GetMethod("TryLoadIcon",
+        if (_iconSprite != null) return _iconSprite; var method = typeof(Sj1ItemSystem).GetMethod("TryLoadIcon",
             BindingFlags.Static | BindingFlags.NonPublic);
-        return method?.Invoke(null, null) as Sprite;
+        return _iconSprite = method?.Invoke(null, null) as Sprite;
     }
 }
 

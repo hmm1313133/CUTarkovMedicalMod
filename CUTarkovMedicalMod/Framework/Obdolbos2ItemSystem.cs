@@ -11,9 +11,9 @@ namespace CUTarkovMedicalMod.Framework;
 
 /// <summary>
 /// Obdolbos 2 鸡尾酒兴奋剂注射器系统。
-/// 效果：立即永久 STR/RES/INT +6、负重上限 +3u；
-/// 耐力恢复 -30%、最大耐力 -20% 持续 40min。
-/// 副作用：延迟 5min 后每秒 -0.2 饱食/水分、头部/胸部肌肉 -0.3/秒，持续 5min。
+/// 效果：立即永久 STR/RES/INT +8、负重上限 +10u；
+/// 耐力恢复 -20%、最大耐力 -20% 持续 30min。
+/// 副作用：延迟 5min 后每秒 -0.1 饱食/水分、头部/胸部肌肉 -0.5/秒，持续 5min。
 /// </summary>
 public static class Obdolbos2ItemSystem
 {
@@ -231,22 +231,22 @@ public sealed class Obdolbos2ItemMarker : MonoBehaviour
 
 /// <summary>
 /// Obdolbos 2 效果控制器：
-/// 立即永久：STR/RES/INT +6，负重上限 +3u。
-/// 持续（2400s / 40min）：耐力恢复 -30%，最大耐力 -20%。
-/// 副作用（延迟 300s，持续 300s / 5min）：每秒 -0.2 饱食/水分，头部/胸部 -0.3 肌肉/秒。
+/// 立即永久：STR/RES/INT +8，负重上限 +10u。
+/// 持续（1800s / 30min）：耐力恢复 -20%，最大耐力 -20%。
+/// 副作用（延迟 300s，持续 300s / 5min）：每秒 -0.1 饱食/水分，头部/胸部 -0.5 肌肉/秒。
 /// </summary>
 public sealed class Obdolbos2EffectController : MonoBehaviour
 {
     internal const float ActivationDelay = 1f;
-    internal const float BuffDuration = 2400f;              // 40 分钟
+    internal const float BuffDuration = 1800f;              // 30 分钟
     internal const float SideEffectDelay = 300f;            // 5 分钟延迟
     internal const float SideEffectDuration = 300f;         // 5 分钟
-    internal const float CarryWeightBonus = 3f;             // 负重上限 +3u
-    internal const int StatBoost = 6;                       // STR/RES/INT +6
-    internal const float StaminaRecoveryPenalty = 0.30f;    // 耐力恢复 -30%
+    internal const float CarryWeightBonus = 10f;            // 负重上限 +10u
+    internal const int StatBoost = 8;                       // STR/RES/INT +8
+    internal const float StaminaRecoveryPenalty = 0.20f;    // 耐力恢复 -20%
     internal const float StaminaMaxRatio = 0.80f;           // 最大耐力 80%
-    internal const float FoodWaterDrainPerSec = 0.2f;       // 每秒消耗饱食/水分
-    internal const float MuscleDrainPerSec = 0.3f;          // 头部/胸部肌肉每秒消耗
+    internal const float FoodWaterDrainPerSec = 0.1f;       // 每秒消耗饱食/水分
+    internal const float MuscleDrainPerSec = 0.5f;          // 头部/胸部肌肉每秒消耗
 
     private Body? _body;
     private float _phaseTimer;

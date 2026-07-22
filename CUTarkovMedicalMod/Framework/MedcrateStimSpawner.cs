@@ -35,6 +35,7 @@ public static class MedcrateStimSpawner
     private static readonly int TotalWeight;
     private static Dictionary<string, System.Action<Item>>? _configurators;
     private static bool _configuratorsBuilt;
+    private static readonly HashSet<int> _processed = new();
 
     static MedcrateStimSpawner()
     {
@@ -50,6 +51,10 @@ public static class MedcrateStimSpawner
         if (!KrokMpHelper.ShouldSpawnLoot) return;
 
         if (__instance.health >= 0.5f) return;
+
+        int instanceId = __instance.GetInstanceID();
+        if (_processed.Contains(instanceId)) return;
+        _processed.Add(instanceId);
 
         string goName = __instance.gameObject.name.ToLowerInvariant();
         string buildingId = (__instance.id ?? "").ToLowerInvariant();

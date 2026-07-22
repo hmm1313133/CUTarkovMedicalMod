@@ -822,11 +822,12 @@ public sealed class ObdolbosEffectController : MonoBehaviour
         _ => new Color(1f, 0.55f, 0f)
     };
 
-    private static Sprite? TryGetObdolbosIcon()
+    private static Sprite? _iconSprite;
+        private static Sprite? TryGetObdolbosIcon()
     {
-        var method = typeof(ObdolbosItemSystem).GetMethod("TryLoadIcon",
+        if (_iconSprite != null) return _iconSprite; var method = typeof(ObdolbosItemSystem).GetMethod("TryLoadIcon",
             BindingFlags.Static | BindingFlags.NonPublic);
-        return method?.Invoke(null, null) as Sprite;
+        return _iconSprite = method?.Invoke(null, null) as Sprite;
     }
 
     #endregion

@@ -262,7 +262,7 @@ public static class GrizzlyKitItemSystem
         return result;
     }
 
-    private static Sprite? TryLoadIcon()
+    internal static Sprite? TryLoadIcon()
     {
         if (_cachedIcon != null) return _cachedIcon;
 

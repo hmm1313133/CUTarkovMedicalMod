@@ -569,11 +569,12 @@ public sealed class Xtg12EffectController : MonoBehaviour
             _body.miscShakeIntensity = 0f;
     }
 
-    private static Sprite? TryGetXtg12Icon()
+    private static Sprite? _iconSprite;
+        private static Sprite? TryGetXtg12Icon()
     {
-        var method = typeof(Xtg12ItemSystem).GetMethod("TryLoadIcon",
+        if (_iconSprite != null) return _iconSprite; var method = typeof(Xtg12ItemSystem).GetMethod("TryLoadIcon",
             BindingFlags.Static | BindingFlags.NonPublic);
-        return method?.Invoke(null, null) as Sprite;
+        return _iconSprite = method?.Invoke(null, null) as Sprite;
     }
 }
 

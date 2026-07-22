@@ -248,7 +248,7 @@ public static class EtgCItemSystem
         return merged;
     }
 
-    private static Sprite? TryLoadIcon()
+    internal static Sprite? TryLoadIcon()
     {
         if (_cachedIcon != null) return _cachedIcon;
 
@@ -543,12 +543,13 @@ public sealed class EtgStimEffectController : MonoBehaviour
         _body.thirst = Mathf.Max(0f, _body.thirst - DebuffThirstDrain);
     }
 
-    private static Sprite? TryGetEtgIcon()
+    private static Sprite? _iconSprite;
+        private static Sprite? TryGetEtgIcon()
     {
         // 通过反射调用 EtgCItemSystem 的私有 TryLoadIcon
         var method = typeof(EtgCItemSystem).GetMethod("TryLoadIcon",
             BindingFlags.Static | BindingFlags.NonPublic);
-        return method?.Invoke(null, null) as Sprite;
+        return _iconSprite = method?.Invoke(null, null) as Sprite;
     }
 
     private void TickEffect()

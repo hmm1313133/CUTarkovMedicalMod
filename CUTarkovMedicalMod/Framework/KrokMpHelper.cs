@@ -1,5 +1,6 @@
 using BepInEx.Bootstrap;
 using CUCoreLib.Networking;
+using UnityEngine;
 
 namespace CUTarkovMedicalMod.Framework;
 
@@ -12,8 +13,28 @@ public static class KrokMpHelper
 {
     private const string KrokMpGuid = "KrokoshaCasualtiesMP";
 
+    // 性能优化：IsKrokMpInstalled 启动后不变，缓存一次
+    private static bool _isKrokMpInstalledCache;
+    private static bool _isKrokMpInstalledChecked;
+
+    // 性能优化：ShouldSpawnLoot 缓存 2 秒，避免每帧对每个 BuildingEntity 重复检查
+    private static float _shouldSpawnLootCacheTime = -999f;
+    private static bool _shouldSpawnLootCache = true;
+    private const float ShouldSpawnLootCacheInterval = 2f;
+
     /// <summary>KrokMP 是否已安装（通过 BepInEx Chainloader 检测，任意时机可用）</summary>
-    public static bool IsKrokMpInstalled => Chainloader.PluginInfos.ContainsKey(KrokMpGuid);
+    public static bool IsKrokMpInstalled
+    {
+        get
+        {
+            if (!_isKrokMpInstalledChecked)
+            {
+                _isKrokMpInstalledChecked = true;
+                _isKrokMpInstalledCache = Chainloader.PluginInfos.ContainsKey(KrokMpGuid);
+            }
+            return _isKrokMpInstalledCache;
+        }
+    }
 
     /// <summary>多人模式是否正在运行（CUCoreLib MultiplayerApi.IsRunning）</summary>
     public static bool IsMultiplayer => MultiplayerApi.IsRunning;
@@ -39,9 +60,16 @@ public static class KrokMpHelper
     {
         get
         {
-            if (!IsKrokMpInstalled) return true;
-            if (!IsMultiplayer) return true;
-            return IsHost || IsServer;
+            // 性能优化：缓存 2 秒，避免每帧对每个 BuildingEntity 重复检查
+            var now = Time.time;
+            if (now - _shouldSpawnLootCacheTime < ShouldSpawnLootCacheInterval)
+                return _shouldSpawnLootCache;
+            _shouldSpawnLootCacheTime = now;
+
+            if (!IsKrokMpInstalled) { _shouldSpawnLootCache = true; return true; }
+            if (!IsMultiplayer) { _shouldSpawnLootCache = true; return true; }
+            _shouldSpawnLootCache = IsHost || IsServer;
+            return _shouldSpawnLootCache;
         }
     }
 

@@ -575,11 +575,12 @@ public sealed class PnbEffectController : MonoBehaviour
     {
     }
 
-    private static Sprite? TryGetPnbIcon()
+    private static Sprite? _iconSprite;
+        private static Sprite? TryGetPnbIcon()
     {
-        var method = typeof(PnbItemSystem).GetMethod("TryLoadIcon",
+        if (_iconSprite != null) return _iconSprite; var method = typeof(PnbItemSystem).GetMethod("TryLoadIcon",
             BindingFlags.Static | BindingFlags.NonPublic);
-        return method?.Invoke(null, null) as Sprite;
+        return _iconSprite = method?.Invoke(null, null) as Sprite;
     }
 }
 

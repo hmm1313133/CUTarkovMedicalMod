@@ -239,7 +239,7 @@ public static class MorphineItemSystem
         return merged;
     }
 
-    private static Sprite? TryLoadIcon()
+    internal static Sprite? TryLoadIcon()
     {
         if (_cachedIcon != null) return _cachedIcon;
 
@@ -405,11 +405,12 @@ public sealed class MorphineEffectController : MonoBehaviour
         }
     }
 
-    private static Sprite? TryGetMorphineIcon()
+    private static Sprite? _iconSprite;
+        private static Sprite? TryGetMorphineIcon()
     {
-        var method = typeof(MorphineItemSystem).GetMethod("TryLoadIcon",
+        if (_iconSprite != null) return _iconSprite; var method = typeof(MorphineItemSystem).GetMethod("TryLoadIcon",
             BindingFlags.Static | BindingFlags.NonPublic);
-        return method?.Invoke(null, null) as Sprite;
+        return _iconSprite = method?.Invoke(null, null) as Sprite;
     }
 }
 

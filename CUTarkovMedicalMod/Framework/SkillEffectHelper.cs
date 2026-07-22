@@ -56,6 +56,11 @@ public static class SkillEffectHelper
     /// <summary>
     /// 临时调整整数属性等级（直接修改 STR/RES/INT 字段）。
     /// 用于针剂的临时增益/惩罚，结束后用相反数值恢复。
+    /// 
+    /// 重要：修改等级后必须同步经验值到新等级的最低阈值 (exp = min)，
+    /// 否则游戏的 CheckForLevelUp / CheckForLevelDown 会立即将等级弹回原值：
+    ///   - 降低等级时 exp 过高 → CheckForLevelUp 升回去
+    ///   - 提升等级时 exp 过低 → CheckForLevelDown 降回去
     /// </summary>
     public static bool AdjustLevel(Body? body, int stat, int delta)
     {
@@ -65,18 +70,69 @@ public static class SkillEffectHelper
         {
             switch (stat)
             {
-                case StatSTR: skills.STR += delta; break;
-                case StatRES: skills.RES += delta; break;
-                case StatINT: skills.INT += delta; break;
+                case StatSTR:
+                    skills.STR += delta;
+                    skills.UpdateExpBoundaries();
+                    skills.expSTR = skills.minSTR;
+                    break;
+                case StatRES:
+                    skills.RES += delta;
+                    skills.UpdateExpBoundaries();
+                    skills.expRES = skills.minRES;
+                    break;
+                case StatINT:
+                    skills.INT += delta;
+                    skills.UpdateExpBoundaries();
+                    skills.expINT = skills.minINT;
+                    break;
                 default: return false;
             }
-            // 等级变化后更新经验边界，保证 UI 与升级检测一致
-            skills.UpdateExpBoundaries();
             return true;
         }
         catch (Exception ex)
         {
             Plugin.Log.LogWarning($"[SkillEffectHelper] AdjustLevel(stat={stat}, delta={delta}) failed: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 直接设置属性等级（绝对值），用于存档恢复/多人同步。
+    /// 同步经验值到新等级的最低阈值，防止 CheckForLevelUp/Down 弹回。
+    /// </summary>
+    public static bool SetLevel(Body? body, int stat, int level)
+    {
+        var skills = GetSkills(body);
+        if (skills == null) return false;
+        try
+        {
+            switch (stat)
+            {
+                case StatSTR:
+                    if (skills.STR == level) return true;
+                    skills.STR = level;
+                    skills.UpdateExpBoundaries();
+                    skills.expSTR = skills.minSTR;
+                    break;
+                case StatRES:
+                    if (skills.RES == level) return true;
+                    skills.RES = level;
+                    skills.UpdateExpBoundaries();
+                    skills.expRES = skills.minRES;
+                    break;
+                case StatINT:
+                    if (skills.INT == level) return true;
+                    skills.INT = level;
+                    skills.UpdateExpBoundaries();
+                    skills.expINT = skills.minINT;
+                    break;
+                default: return false;
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.LogWarning($"[SkillEffectHelper] SetLevel(stat={stat}, level={level}) failed: {ex.Message}");
             return false;
         }
     }

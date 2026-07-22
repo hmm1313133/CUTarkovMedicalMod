@@ -255,7 +255,7 @@ public static class ZagustinItemSystem
         return merged;
     }
 
-    private static Sprite? TryLoadIcon()
+    internal static Sprite? TryLoadIcon()
     {
         if (_cachedIcon != null) return _cachedIcon;
 
@@ -430,11 +430,12 @@ public sealed class ZagustinEffectController : MonoBehaviour
         }
     }
 
-    private static Sprite? TryGetZagustinIcon()
+    private static Sprite? _iconSprite;
+        private static Sprite? TryGetZagustinIcon()
     {
-        var method = typeof(ZagustinItemSystem).GetMethod("TryLoadIcon",
+        if (_iconSprite != null) return _iconSprite; var method = typeof(ZagustinItemSystem).GetMethod("TryLoadIcon",
             BindingFlags.Static | BindingFlags.NonPublic);
-        return method?.Invoke(null, null) as Sprite;
+        return _iconSprite = method?.Invoke(null, null) as Sprite;
     }
 
     private void TickEffect()

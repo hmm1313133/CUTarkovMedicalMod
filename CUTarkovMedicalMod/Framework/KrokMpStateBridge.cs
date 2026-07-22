@@ -391,9 +391,9 @@ public static class KrokMpStateBridge
                 var skills = data["skills"] as JObject;
                 if (skills != null && body.skills != null)
                 {
-                    body.skills.STR = skills["STR"]?.Value<int>() ?? body.skills.STR;
-                    body.skills.RES = skills["RES"]?.Value<int>() ?? body.skills.RES;
-                    body.skills.INT = skills["INT"]?.Value<int>() ?? body.skills.INT;
+                    SkillEffectHelper.SetLevel(body, SkillEffectHelper.StatSTR, skills["STR"]?.Value<int>() ?? body.skills.STR);
+                    SkillEffectHelper.SetLevel(body, SkillEffectHelper.StatRES, skills["RES"]?.Value<int>() ?? body.skills.RES);
+                    SkillEffectHelper.SetLevel(body, SkillEffectHelper.StatINT, skills["INT"]?.Value<int>() ?? body.skills.INT);
                     Plugin.Log.LogInfo($"[KrokMpStateBridge] Restored skills for player {pid}.");
                 }
 

@@ -242,7 +242,7 @@ public static class MuleItemSystem
         return merged;
     }
 
-    private static Sprite? TryLoadIcon()
+    internal static Sprite? TryLoadIcon()
     {
         if (_cachedIcon != null) return _cachedIcon;
 
@@ -339,6 +339,7 @@ public sealed class MuleEffectController : MonoBehaviour
     private float _debuffRemaining;
     private float _delayTimer;
     private float _drainAccumulator;
+    private float _clampTimer;
     private bool _active;
     private static FieldInfo? _consciousField;
 
@@ -434,8 +435,13 @@ public sealed class MuleEffectController : MonoBehaviour
             }
         }
 
-        // 意识清醒度限制在 90 以下（整个效果期间）
-        ClampConscious();
+        // 意识清醒度限制在 90 以下（整个效果期间）— 节流到 0.5s
+        _clampTimer += Time.deltaTime;
+        if (_clampTimer >= 0.5f)
+        {
+            _clampTimer = 0f;
+            ClampConscious();
+        }
 
         StimBuffIndicator.ShowBuff(
             MuleItemSystem.ItemKey,
@@ -503,11 +509,12 @@ public sealed class MuleEffectController : MonoBehaviour
     {
     }
 
-    private static Sprite? TryGetMuleIcon()
+    private static Sprite? _iconSprite;
+        private static Sprite? TryGetMuleIcon()
     {
-        var method = typeof(MuleItemSystem).GetMethod("TryLoadIcon",
+        if (_iconSprite != null) return _iconSprite; var method = typeof(MuleItemSystem).GetMethod("TryLoadIcon",
             BindingFlags.Static | BindingFlags.NonPublic);
-        return method?.Invoke(null, null) as Sprite;
+        return _iconSprite = method?.Invoke(null, null) as Sprite;
     }
 }
 

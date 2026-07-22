@@ -540,11 +540,12 @@ public sealed class MildronateEffectController : MonoBehaviour
         }
     }
 
-    private static Sprite? TryGetMildronateIcon()
+    private static Sprite? _iconSprite;
+        private static Sprite? TryGetMildronateIcon()
     {
-        var method = typeof(MildronateItemSystem).GetMethod("TryLoadIcon",
+        if (_iconSprite != null) return _iconSprite; var method = typeof(MildronateItemSystem).GetMethod("TryLoadIcon",
             BindingFlags.Static | BindingFlags.NonPublic);
-        return method?.Invoke(null, null) as Sprite;
+        return _iconSprite = method?.Invoke(null, null) as Sprite;
     }
 }
 

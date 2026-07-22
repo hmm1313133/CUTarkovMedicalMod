@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using HarmonyLib;
 
 namespace CUTarkovMedicalMod.Framework;
@@ -20,10 +21,24 @@ public static class StimConditionFix
         TwoATwoBTGItemSystem.ItemKey,
     };
 
+    // 性能优化：缓存 Item 组件引用，避免每帧 GetComponent
+    private static readonly ConditionalWeakTable<WaterContainerItem, Item> _itemCache = new();
+
     [HarmonyPostfix]
     public static void Postfix(WaterContainerItem __instance)
     {
-        var item = __instance.GetComponent<Item>();
+        Item item;
+        if (_itemCache.TryGetValue(__instance, out var cached))
+        {
+            item = cached;
+        }
+        else
+        {
+            item = __instance.GetComponent<Item>();
+            if (item != null)
+                _itemCache.Add(__instance, item);
+        }
+
         if (item != null && ModStimKeys.Contains(item.id))
             item.condition = 1f;
     }

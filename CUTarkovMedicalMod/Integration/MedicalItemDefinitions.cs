@@ -124,5 +124,7 @@ public static class MedicalItemDefinitions
         var def = new MedicalItemDef(itemId, basePrefab, capacity, liquidId, itemSystemType, worldSizeMultiplier);
         _all.Add(def);
         _byId[itemId] = def;
+        // 注册到 i18n 注册表，语言切换时刷新 fullName/description
+        ItemI18nRegistry.Register(itemId);
     }
 }

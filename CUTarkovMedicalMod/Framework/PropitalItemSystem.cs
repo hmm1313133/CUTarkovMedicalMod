@@ -229,7 +229,7 @@ public static class PropitalItemSystem
         return merged;
     }
 
-    private static Sprite? TryLoadIcon()
+    internal static Sprite? TryLoadIcon()
     {
         if (_cachedIcon != null) return _cachedIcon;
 
@@ -583,11 +583,12 @@ public sealed class PropitalEffectController : MonoBehaviour
         // 注意：不在此处 ClearTunnelVision，原因同 SJ6。
     }
 
-    private static Sprite? TryGetPropitalIcon()
+    private static Sprite? _iconSprite;
+        private static Sprite? TryGetPropitalIcon()
     {
-        var method = typeof(PropitalItemSystem).GetMethod("TryLoadIcon",
+        if (_iconSprite != null) return _iconSprite; var method = typeof(PropitalItemSystem).GetMethod("TryLoadIcon",
             BindingFlags.Static | BindingFlags.NonPublic);
-        return method?.Invoke(null, null) as Sprite;
+        return _iconSprite = method?.Invoke(null, null) as Sprite;
     }
 }
 

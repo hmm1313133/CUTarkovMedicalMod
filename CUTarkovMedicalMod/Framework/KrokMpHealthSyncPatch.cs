@@ -114,16 +114,28 @@ public static class KrokMpHealthSyncPatch
     /// 检查 body 上是否有活跃（enabled）的医疗效果控制器。
     /// 使用 Eff.ControllerTypes 中注册的所有效果控制器类型。
     /// </summary>
+    private static float _hasEffectsCacheTime = -1f;
+    private static bool _hasEffectsCacheResult;
+
     private static bool HasActiveMedicalEffects(Body body)
     {
         if (body == null) return false;
 
+        // 缓存 0.5s，避免每次同步事件都遍历 19 个控制器类型
+        var now = Time.time;
+        if (now - _hasEffectsCacheTime < 0.5f) return _hasEffectsCacheResult;
+        _hasEffectsCacheTime = now;
+
+        _hasEffectsCacheResult = false;
         foreach (var kv in Eff.ControllerTypes)
         {
             var comp = body.GetComponent(kv.Value);
             if (comp is MonoBehaviour mb && mb.enabled)
-                return true;
+            {
+                _hasEffectsCacheResult = true;
+                break;
+            }
         }
-        return false;
+        return _hasEffectsCacheResult;
     }
 }

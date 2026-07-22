@@ -157,6 +157,18 @@ public sealed class TunnelVisionOverlay : MonoBehaviour
 
     private void Update()
     {
+        // 性能优化：不活跃且 alpha 已归零时跳过所有每帧计算
+        if (!Active && _currentAlpha < 0.001f)
+        {
+            // 仅做轻量级 null 检查自愈
+            if (_volume == null || _vignette == null)
+            {
+                Plugin.Log.LogWarning("[TunnelVisionOverlay] Update: Volume/Vignette is null, recreating...");
+                CreateOrRecoverVolume();
+            }
+            return;
+        }
+
         // 自愈：如果 Volume 被销毁了，重建
         if (_volume == null || _vignette == null)
         {

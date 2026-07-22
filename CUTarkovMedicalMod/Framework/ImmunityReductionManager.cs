@@ -62,9 +62,19 @@ public static class ImmunityReductionManager
 
         float total = 0f;
         var now = Time.time;
-        list.RemoveAll(e => e.ExpiryTime > 0f && e.ExpiryTime <= now);
-        foreach (var entry in list)
-            total += entry.Amount;
+        // 性能优化：手动移除过期条目，避免 RemoveAll 的 lambda 闭包分配
+        int w = 0;
+        for (int r = 0; r < list.Count; r++)
+        {
+            if (list[r].ExpiryTime <= 0f || list[r].ExpiryTime > now)
+            {
+                if (w != r) list[w] = list[r];
+                w++;
+            }
+        }
+        if (w < list.Count) list.RemoveRange(w, list.Count - w);
+        for (int i = 0; i < list.Count; i++)
+            total += list[i].Amount;
         return total;
     }
 
@@ -137,14 +147,24 @@ public static class ImmunityBonusManager
             return 0f;
 
         var now = Time.time;
-        list.RemoveAll(e => e.ExpiryTime <= now);
+        // 性能优化：手动移除过期条目
+        int w = 0;
+        for (int r = 0; r < list.Count; r++)
+        {
+            if (list[r].ExpiryTime > now)
+            {
+                if (w != r) list[w] = list[r];
+                w++;
+            }
+        }
+        if (w < list.Count) list.RemoveRange(w, list.Count - w);
 
         if (list.Count == 0) return 0f;
 
         float best = 0f;
-        foreach (var entry in list)
-            if (entry.Amount > best)
-                best = entry.Amount;
+        for (int i = 0; i < list.Count; i++)
+            if (list[i].Amount > best)
+                best = list[i].Amount;
         return best;
     }
 
@@ -263,14 +283,24 @@ public static class StaminaBonusManager
             return 0f;
 
         var now = Time.time;
-        list.RemoveAll(e => e.ExpiryTime <= now);
+        // 性能优化：手动移除过期条目
+        int w = 0;
+        for (int r = 0; r < list.Count; r++)
+        {
+            if (list[r].ExpiryTime > now)
+            {
+                if (w != r) list[w] = list[r];
+                w++;
+            }
+        }
+        if (w < list.Count) list.RemoveRange(w, list.Count - w);
 
         if (list.Count == 0) return 0f;
 
         float best = 0f;
-        foreach (var entry in list)
-            if (entry.Bonus > best)
-                best = entry.Bonus;
+        for (int i = 0; i < list.Count; i++)
+            if (list[i].Bonus > best)
+                best = list[i].Bonus;
         return best;
     }
 
@@ -286,18 +316,28 @@ public static class StaminaBonusManager
             return false;
 
         var now = Time.time;
-        list.RemoveAll(e => e.ExpiryTime <= now);
+        // 性能优化：手动移除过期条目
+        int w = 0;
+        for (int r = 0; r < list.Count; r++)
+        {
+            if (list[r].ExpiryTime > now)
+            {
+                if (w != r) list[w] = list[r];
+                w++;
+            }
+        }
+        if (w < list.Count) list.RemoveRange(w, list.Count - w);
 
         if (list.Count == 0) return false;
 
         float best = 0f;
         string? bestSource = null;
-        foreach (var entry in list)
+        for (int i = 0; i < list.Count; i++)
         {
-            if (entry.Bonus > best)
+            if (list[i].Bonus > best)
             {
-                best = entry.Bonus;
-                bestSource = entry.Source;
+                best = list[i].Bonus;
+                bestSource = list[i].Source;
             }
         }
         return bestSource == source;
@@ -365,14 +405,24 @@ public static class StaminaCapBonusManager
             return 0f;
 
         var now = Time.time;
-        list.RemoveAll(e => e.ExpiryTime <= now);
+        // 性能优化：手动移除过期条目
+        int w = 0;
+        for (int r = 0; r < list.Count; r++)
+        {
+            if (list[r].ExpiryTime > now)
+            {
+                if (w != r) list[w] = list[r];
+                w++;
+            }
+        }
+        if (w < list.Count) list.RemoveRange(w, list.Count - w);
 
         if (list.Count == 0) return 0f;
 
         float best = 0f;
-        foreach (var entry in list)
-            if (entry.Bonus > best)
-                best = entry.Bonus;
+        for (int i = 0; i < list.Count; i++)
+            if (list[i].Bonus > best)
+                best = list[i].Bonus;
         return best;
     }
 
@@ -386,18 +436,28 @@ public static class StaminaCapBonusManager
             return false;
 
         var now = Time.time;
-        list.RemoveAll(e => e.ExpiryTime <= now);
+        // 性能优化：手动移除过期条目
+        int w = 0;
+        for (int r = 0; r < list.Count; r++)
+        {
+            if (list[r].ExpiryTime > now)
+            {
+                if (w != r) list[w] = list[r];
+                w++;
+            }
+        }
+        if (w < list.Count) list.RemoveRange(w, list.Count - w);
 
         if (list.Count == 0) return false;
 
         float best = 0f;
         string? bestSource = null;
-        foreach (var entry in list)
+        for (int i = 0; i < list.Count; i++)
         {
-            if (entry.Bonus > best)
+            if (list[i].Bonus > best)
             {
-                best = entry.Bonus;
-                bestSource = entry.Source;
+                best = list[i].Bonus;
+                bestSource = list[i].Source;
             }
         }
         return bestSource == source;

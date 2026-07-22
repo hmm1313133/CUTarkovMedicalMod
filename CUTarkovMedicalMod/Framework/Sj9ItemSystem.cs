@@ -488,11 +488,12 @@ public sealed class Sj9EffectController : MonoBehaviour
         return null;
     }
 
-    private static Sprite? TryGetSj9Icon()
+    private static Sprite? _iconSprite;
+        private static Sprite? TryGetSj9Icon()
     {
-        var method = typeof(Sj9ItemSystem).GetMethod("TryLoadIcon",
+        if (_iconSprite != null) return _iconSprite; var method = typeof(Sj9ItemSystem).GetMethod("TryLoadIcon",
             BindingFlags.Static | BindingFlags.NonPublic);
-        return method?.Invoke(null, null) as Sprite;
+        return _iconSprite = method?.Invoke(null, null) as Sprite;
     }
 }
 

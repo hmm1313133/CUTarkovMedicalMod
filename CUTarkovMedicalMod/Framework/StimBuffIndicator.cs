@@ -1,8 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
+using System.Text;
 using UnityEngine;
 using HarmonyLib;
 
@@ -23,6 +23,15 @@ public static class StimBuffIndicator
     private static MethodInfo? _addMoodleMethod;
     private static bool _iconsInjected;
     private static int _maxValidIntensity = 2; // 至少保证 3 个背景图标可用
+
+    // 性能优化：缓冲区复用（节流已移除，确保每帧都能显示 buff）
+    private static readonly List<string> _expiredKeysBuffer = new();
+    private static readonly StringBuilder _descBuilder = new();
+    private static readonly object[] _addMoodleArgs = new object[6];
+    private static FieldInfo? _moodlesField;
+    private static FieldInfo? _img2Field;
+    private static string? _cachedUnrecName;
+    private static string? _cachedUnrecDesc;
 
     public static void ShowBuff(
         string key, string displayName, Sprite? icon,
@@ -259,14 +268,17 @@ public static class StimBuffIndicator
 
     internal static void AddBuffs()
     {
+
         try
         {
-            // 清理已过期/失效的 buff（防止存档切换残留）
-            var expiredKeys = _activeBuffs
-                .Where(kv => !kv.Value.IsActive || kv.Value.Remaining <= 0f)
-                .Select(kv => kv.Key)
-                .ToList();
-            foreach (var key in expiredKeys)
+            // 清理已过期/失效的 buff（for 循环替代 LINQ，复用缓冲区）
+            _expiredKeysBuffer.Clear();
+            foreach (var kv in _activeBuffs)
+            {
+                if (!kv.Value.IsActive || kv.Value.Remaining <= 0f)
+                    _expiredKeysBuffer.Add(kv.Key);
+            }
+            foreach (var key in _expiredKeysBuffer)
             {
                 _activeBuffs.Remove(key);
                 Plugin.Log.LogInfo($"[StimBuff] Auto-cleaned expired buff '{key}'");
@@ -288,8 +300,6 @@ public static class StimBuffIndicator
             }
 
             // 多人模式过滤：仅显示本地 body 上有活跃效果控制器的 buff。
-            // 远程 body 的控制器也会调用 ShowBuff（因为守卫已禁用），
-            // 但其 buff 不应在本地屏幕显示。
             Body? localBody = null;
             if (KrokMpHelper.IsMultiplayer)
             {
@@ -300,8 +310,7 @@ public static class StimBuffIndicator
             {
                 if (!buff.IsActive || buff.Remaining <= 0f) continue;
 
-                // 多人模式：如果 buff key 对应已知效果控制器类型，
-                // 检查本地 body 是否有该控制器的活跃实例。没有则跳过（来自远程 body）。
+                // 多人模式：检查本地 body 是否有该控制器的活跃实例
                 if (localBody != null)
                 {
                     Type? ctrlType = null;
@@ -309,7 +318,6 @@ public static class StimBuffIndicator
                         ctrlType = exactType;
                     else
                     {
-                        // 动态 key 前缀匹配（如 "obdolbos_0" -> "obdolbos"）
                         foreach (var kv in Eff.ControllerTypes)
                         {
                             if (buff.Key.StartsWith(kv.Key + "_"))
@@ -333,8 +341,7 @@ public static class StimBuffIndicator
                     }
                 }
 
-                // 递减 BuffEntry 剩余时间（ShowBuff 每帧覆写不会受影响；临时条目会正常过期）
-                buff.Remaining -= Time.deltaTime;
+                // Remaining 由 ShowBuff 每帧更新，此处无需递减
 
                 var mins = Mathf.Max(0, Mathf.FloorToInt(buff.Remaining / 60f));
                 var secs = Mathf.Max(0, Mathf.FloorToInt(buff.Remaining % 60f));
@@ -343,54 +350,52 @@ public static class StimBuffIndicator
                 bool recognizable = true;
                 try
                 {
-                    if (Item.GlobalItems.TryGetValue(buff.Key, out var info))
+                    if (Item.GlobalItems.TryGetValue(buff.Key, out var info) && info.rec != null)
                         recognizable = info.rec.recognizable;
                 }
-                catch { /* 无法查询时默认可识别 */ }
+                catch { }
 
                 string name;
                 string desc;
 
                 if (!recognizable)
                 {
-                    // 智力不够：只显示"某种药剂"和"药效正在发作"
-                    name = $"{I18n.Tr("fw.unrecognized_name")} ({mins}:{secs:D2})";
-                    desc = I18n.Tr("fw.unrecognized_desc");
+                    // 缓存 I18n 翻译（语言不变时无需每帧查字典）
+                    _cachedUnrecName ??= I18n.Tr("fw.unrecognized_name");
+                    _cachedUnrecDesc ??= I18n.Tr("fw.unrecognized_desc");
+                    name = $"{_cachedUnrecName} ({mins}:{secs:D2})";
+                    desc = _cachedUnrecDesc;
                 }
                 else
                 {
                     name = $"{buff.DisplayName} ({mins}:{secs:D2})";
 
-                    // 清理过期的一次性效果（基于真实时间）
+                    // 清理过期的一次性效果
                     buff.OneTimeEffects.RemoveAll(ot => Time.time >= ot.ExpireTime);
 
-                    // 构建效果描述（正面绿色 / 负面红色 / 一次性灰色）
-                    var descParts = new List<string>();
+                    // 用 StringBuilder 替代 new List<string> + string.Join
+                    _descBuilder.Clear();
                     foreach (var e in buff.PositiveEffects)
-                        descParts.Add($"<color=#4fc3f7>+ {e}</color>");
+                        _descBuilder.Append("<color=#4fc3f7>+ ").Append(e).Append("</color>\n");
                     foreach (var e in buff.NegativeEffects)
-                        descParts.Add($"<color=#ff6666>- {e}</color>");
+                        _descBuilder.Append("<color=#ff6666>- ").Append(e).Append("</color>\n");
                     foreach (var ot in buff.OneTimeEffects)
-                        descParts.Add($"<color=#aaaaaa>{ot.Text}</color>");
-                    desc = descParts.Count > 0
-                        ? string.Join("\n", descParts)
+                        _descBuilder.Append("<color=#aaaaaa>").Append(ot.Text).Append("</color>\n");
+                    desc = _descBuilder.Length > 0
+                        ? _descBuilder.ToString(0, _descBuilder.Length - 1) // 去掉末尾 \n
                         : I18n.TrFmt("fw.buff_default", Mathf.CeilToInt(buff.Remaining));
                 }
 
-                // 使用统一的 intensity，通过 NormalizeMoodleIcon 覆盖背景颜色
-                // Clamp 到 _maxValidIntensity 以防 backgroundIcons 数组越界
                 var sharedIntensity = Mathf.Clamp(1, 0, _maxValidIntensity);
-                var moodleKey = $"stim_{buff.Key}";
 
-                _addMoodleMethod.Invoke(manager, new object[]
-                {
-                    sharedIntensity,
-                    moodleKey,
-                    name,
-                    desc,
-                    false,
-                    false
-                });
+                // 复用 object[] 数组避免每帧 GC 分配
+                _addMoodleArgs[0] = sharedIntensity;
+                _addMoodleArgs[1] = $"stim_{buff.Key}";
+                _addMoodleArgs[2] = name;
+                _addMoodleArgs[3] = desc;
+                _addMoodleArgs[4] = false;
+                _addMoodleArgs[5] = false;
+                _addMoodleMethod.Invoke(manager, _addMoodleArgs);
 
                 // 缩放前景图标
                 ScaleMoodleIcon(manager);
@@ -425,9 +430,9 @@ public static class StimBuffIndicator
     {
         try
         {
-            var moodlesField = typeof(MoodleManager).GetField("moodles",
+            _moodlesField ??= typeof(MoodleManager).GetField("moodles",
                 BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            if (moodlesField?.GetValue(manager) is not Transform moodles) return;
+            if (_moodlesField?.GetValue(manager) is not Transform moodles) return;
             if (moodles.childCount == 0) return;
 
             var moodleGo = moodles.GetChild(moodles.childCount - 1);
@@ -436,12 +441,12 @@ public static class StimBuffIndicator
             var moodleComp = moodleGo.GetComponent<Moodle>();
             if (moodleComp == null) return;
 
-            var img2Field = typeof(Moodle).GetField("img2",
+            _img2Field ??= typeof(Moodle).GetField("img2",
                 BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            if (img2Field?.GetValue(moodleComp) is UnityEngine.UI.Image img2)
+            if (_img2Field?.GetValue(moodleComp) is UnityEngine.UI.Image img2)
                 img2.rectTransform.sizeDelta = new Vector2(24, 24);
         }
-        catch { /* 非关键操作，静默失败 */ }
+        catch { }
     }
 
     internal sealed class BuffEntry

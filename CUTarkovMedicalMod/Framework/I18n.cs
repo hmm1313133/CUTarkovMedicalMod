@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 
 namespace CUTarkovMedicalMod.Framework;
 
@@ -18,6 +17,11 @@ public static class I18n
     private static string _lastDetectedLang = "";
     private static string _pluginDir = "";
     private static readonly List<string> _externalLangDirs = new();
+
+    // 性能优化：节流语言检测（纯计数器，不依赖 Unity Time API，避免任何潜在异常）
+    private static int _callCounter;
+    private static int _lastLangCheckCall = -10000;
+    private const int LangCheckCallInterval = 60; // 每60次调用检测一次语言变化
 
     /// <summary>
     /// 当前实际加载的语言代码。
@@ -88,11 +92,19 @@ public static class I18n
     {
         _lastDetectedLang = "";
         _translations.Clear();
+        _lastLangCheckCall = -10000; // 强制下次重新检测
         EnsureLoaded();
     }
 
     private static void EnsureLoaded()
     {
+        // 性能优化：节流语言检测，用纯计数器替代 Time API
+        // 避免在非主线程或 Unity 未完全初始化时抛异常导致效果控制器 Update 被禁用
+        _callCounter++;
+        if (_translations.Count > 0 && _lastDetectedLang.Length > 0 && _callCounter - _lastLangCheckCall < LangCheckCallInterval)
+            return;
+        _lastLangCheckCall = _callCounter;
+
         var lang = DetectLanguage();
         if (lang == _lastDetectedLang && _translations.Count > 0) return;
 
@@ -108,16 +120,19 @@ public static class I18n
         }
 
         Plugin.Log?.LogInfo($"[I18n] Loaded {_translations.Count} translations for '{_lastDetectedLang}'.");
+
+        // 语言变化后刷新所有模组物品的 fullName/description
+        // 物品注册时一次性写入名称，切换语言后需要手动更新
+        try { ItemI18nRegistry.RefreshAll(); }
+        catch (System.Exception ex) { Plugin.Log?.LogWarning($"[I18n] Failed to refresh item names: {ex.Message}"); }
     }
 
     private static string DetectLanguage()
     {
         try
         {
-            // 直接读取游戏原生 Locale.currentLangName（通过 Publicize 后可直接访问）
-            var field = typeof(Locale).GetField("currentLangName",
-                BindingFlags.Public | BindingFlags.Static);
-            var name = field?.GetValue(null) as string;
+            // AssemblyPublicizer 已将所有成员公开，直接访问无需反射
+            var name = Locale.currentLangName;
             if (!string.IsNullOrEmpty(name)) return name!;
         }
         catch { }
@@ -168,7 +183,7 @@ public static class I18n
     {
         if (string.IsNullOrEmpty(_pluginDir))
         {
-            _pluginDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
+            _pluginDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)
                          ?? BepInEx.Paths.PluginPath;
         }
         return Path.Combine(_pluginDir, "Lang", $"{langCode}.json");

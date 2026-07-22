@@ -155,6 +155,8 @@ public sealed class CUCoreLibMode
                 }
 
                 ItemRegistry.Register(def.ItemId, customInfo, icon);
+                // 捕获 ItemInfo 引用，语言切换时刷新 fullName/description
+                ItemI18nRegistry.CaptureItemInfo(def.ItemId, customInfo);
             }
             catch (Exception ex)
             {

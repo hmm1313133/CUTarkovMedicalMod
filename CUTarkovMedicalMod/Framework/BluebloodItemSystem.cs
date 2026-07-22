@@ -522,11 +522,12 @@ public sealed class BluebloodEffectController : MonoBehaviour
         Plugin.Log.LogInfo("[Blueblood] All bleeding stopped.");
     }
 
-    private static Sprite? TryGetBluebloodIcon()
+    private static Sprite? _iconSprite;
+        private static Sprite? TryGetBluebloodIcon()
     {
-        var method = typeof(BluebloodItemSystem).GetMethod("TryLoadIcon",
+        if (_iconSprite != null) return _iconSprite; var method = typeof(BluebloodItemSystem).GetMethod("TryLoadIcon",
             BindingFlags.Static | BindingFlags.NonPublic);
-        return method?.Invoke(null, null) as Sprite;
+        return _iconSprite = method?.Invoke(null, null) as Sprite;
     }
 
     /// <summary>
