@@ -116,7 +116,10 @@ public static class I18n
         {
             Plugin.Log?.LogInfo($"[I18n] No translation file for '{lang}', falling back to '{FallbackLanguage}'.");
             loaded = TryLoadLanguage(FallbackLanguage);
-            if (loaded) _lastDetectedLang = FallbackLanguage;
+            // 不覆盖 _lastDetectedLang：保持为 DetectLanguage() 返回的原始值，
+            // 这样后续 EnsureLoaded() 检测到相同语言时会跳过重载。
+            // 之前覆盖为 FallbackLanguage 导致每次节流过期后都重新加载，
+            // 进而递归调用 RefreshAll() → I18n.Tr() → EnsureLoaded() → RefreshAll() → 栈溢出
         }
 
         Plugin.Log?.LogInfo($"[I18n] Loaded {_translations.Count} translations for '{_lastDetectedLang}'.");

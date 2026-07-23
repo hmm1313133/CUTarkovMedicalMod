@@ -24,6 +24,9 @@ public static class ItemI18nRegistry
     private static FieldInfo? _registeredItemsField;
     private static bool _registeredItemsFieldChecked;
 
+    // 防止 RefreshAll → I18n.Tr → EnsureLoaded → RefreshAll 递归
+    private static bool _isRefreshing;
+
     /// <summary>
     /// 注册一个模组物品的 i18n 键。应在物品注册后调用。
     /// </summary>
@@ -59,7 +62,10 @@ public static class ItemI18nRegistry
     public static void RefreshAll()
     {
         if (_nameKeys.Count == 0) return;
-
+        if (_isRefreshing) return; // 防止递归：RefreshAll → I18n.Tr → EnsureLoaded → RefreshAll
+        _isRefreshing = true;
+        try
+        {
         // 1. 刷新已捕获的 ItemInfo 引用
         foreach (var kv in _nameKeys)
         {
@@ -118,6 +124,11 @@ public static class ItemI18nRegistry
         catch (Exception ex)
         {
             Plugin.Log?.LogWarning($"[ItemI18nRegistry] Failed to refresh ItemRegistry.RegisteredItems: {ex.Message}");
+        }
+        }
+        finally
+        {
+            _isRefreshing = false;
         }
     }
 
